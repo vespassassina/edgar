@@ -1,0 +1,68 @@
+[project]
+name = "edgar-cli"
+version = "0.0.0"
+description = "The agent harness you can read in an afternoon. Any model. No hidden calls. Nothing is done until it's verified."
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+# Runtime dependencies arrive with the milestone that first imports them (ADR-0019).
+dependencies = []
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Typing :: Typed",
+]
+
+[project.scripts]
+edgar = "edgar.cli.main:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17",
+    "pytest>=8.4",
+    "pytest-cov>=6.2",
+    "ruff>=0.12",
+]
+
+[build-system]
+requires = ["uv_build>=0.8,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "edgar"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# Code blocks in the docs are hand-aligned for reading; ruff must never reflow them.
+extend-exclude = ["*.md", ".venv.nosync"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "PTH", "TID"]
+
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+mypy_path = ["tests/support"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests/support"]
+addopts = ["-ra", "--strict-markers", "--import-mode=importlib"]
+markers = [
+    "timing: wall-clock assertions, generous on shared CI (NFR-1)",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["edgar"]
