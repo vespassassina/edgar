@@ -19,7 +19,6 @@ from collections import deque
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
 
 from edgar import __version__
 from edgar.cli.render import Printer, Renderer
@@ -143,7 +142,6 @@ async def interact(
     home: Path | None = None,
     show_thinking: bool = False,
     color: bool = True,
-    terminal: Mapping[str, Any] | None = None,  # tests pass prompt_toolkit input/output
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -160,7 +158,6 @@ async def interact(
         bottom_toolbar=lambda: " " + status.line(),
         refresh_interval=0.1,
         color_depth=None if color else ColorDepth.MONOCHROME,
-        **(terminal or {}),
     )
 
     async def ask(question: str) -> str:

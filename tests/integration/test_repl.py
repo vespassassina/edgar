@@ -264,6 +264,7 @@ def test_the_terminal_wiring(
     tmp_project: Path, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """prompt_toolkit reads the lines; output goes above the prompt."""
+    from prompt_toolkit.application import create_app_session
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
@@ -271,15 +272,12 @@ def test_the_terminal_wiring(
     monkeypatch.setattr(repl, "_write", out.append)
 
     async def scenario() -> int:
-        with create_pipe_input() as pipe:
+        # An app session with a pipe and a dummy screen: no real console needed,
+        # which Windows CI does not have.
+        with create_pipe_input() as pipe, create_app_session(input=pipe, output=DummyOutput()):
             task = asyncio.create_task(
                 repl.interact(
-                    cwd=tmp_project,
-                    model="fake/test",
-                    mode="read-only",
-                    env={},
-                    home=home,
-                    terminal={"input": pipe, "output": DummyOutput()},
+                    cwd=tmp_project, model="fake/test", mode="read-only", env={}, home=home
                 )
             )
             pipe.send_text("read a.txt\r")
