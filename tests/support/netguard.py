@@ -25,8 +25,11 @@ def _refuse(target: object) -> NoReturn:
 def _called_from_socketpair() -> bool:
     # On Windows, socket.socketpair() is built from a loopback connect, and asyncio
     # needs it for its self-pipe. That one call is allowed; nothing else is.
+    # On Windows the implementation is named _fallback_socketpair.
     frame = sys._getframe(2)
-    return frame.f_code.co_name == "socketpair" and frame.f_globals.get("__name__") == "socket"
+    return frame.f_code.co_name in {"socketpair", "_fallback_socketpair"} and (
+        frame.f_globals.get("__name__") == "socket"
+    )
 
 
 def _connect(self: socket.socket, address: Any) -> None:
