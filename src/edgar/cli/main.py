@@ -19,7 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edgar",
         description="The agent harness you can read in an afternoon.",
-        epilog="Other commands: edgar prompt show",
+        epilog="Other commands: edgar prompt show, edgar models list",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
@@ -34,6 +34,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if argv[:1] == ["prompt"]:
             return _prompt_command(argv[1:])
+        if argv[:1] == ["models"]:
+            return _models_command(argv[1:])
         return _run(build_parser(), argv)
     except EdgarError as exc:
         print(f"edgar: {exc}", file=sys.stderr)
@@ -67,3 +69,12 @@ def _prompt_command(argv: list[str]) -> int:
     tokens = approx_tokens(prompt.text)
     print(f"# {prompt.source} · ~{tokens:,} tokens of 1,500 [NFR-13]", file=sys.stderr)
     return 0
+
+
+def _models_command(argv: list[str]) -> int:
+    if argv != ["list"]:
+        print("usage: edgar models list", file=sys.stderr)
+        return 2
+    from edgar.cli.models import list_models
+
+    return list_models(Path.cwd())

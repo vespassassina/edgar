@@ -32,6 +32,13 @@ async def execute(
         known = ", ".join(registry.names())
         return _failed(call, "not_found", f"unknown tool {call.name!r}; available: {known}")
 
+    if call.malformed is not None:
+        return _failed(
+            call,
+            "validation",
+            f"arguments for {call.name} are not a JSON object: {call.malformed[:200]!r}. "
+            "Send the arguments as one JSON object matching the tool's schema.",
+        )
     problem = _validate(tool.schema, call.args)
     if problem is not None:
         return _failed(call, "validation", problem)

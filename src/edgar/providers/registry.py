@@ -1,36 +1,89 @@
-"""Model string → provider, loaded lazily [PRV-4].
+"""Model string → provider, loaded lazily [PRV-4, PRV-9, PRV-12].
 
 Nothing here imports an adapter at module level: `import_module` runs only when a
-model string names that provider, so startup never pays for an SDK or HTTP client
-it does not use. Real providers and user-defined ones arrive in M2 [PRV-12].
+model string names that provider, so startup never pays for an HTTP client it
+does not use. A name resolves in this order:
+
+1. a built-in: openai, azure, openrouter, ollama, anthropic, fake
+2. a `[providers.NAME]` block in config, which may also adjust a built-in
+3. an `edgar.providers` entry point (v1) [PRV-14]
 """
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from importlib import import_module
-from typing import cast
+from typing import TYPE_CHECKING, Any, cast
 
+from edgar.config.schema import Config
 from edgar.core.errors import ConfigError
 from edgar.providers.base import Provider
 
-_BUILTIN = {
+if TYPE_CHECKING:
+    import httpx
+
+_OPENAI = "edgar.providers.openai_compat"
+_ANTHROPIC = "edgar.providers.anthropic"
+BUILTIN = {
+    "openai": _OPENAI,
+    "azure": _OPENAI,
+    "openrouter": _OPENAI,
+    "ollama": _OPENAI,
+    "anthropic": _ANTHROPIC,
     "fake": "edgar.providers.fake",
 }
+KINDS = {"openai-compatible": _OPENAI, "anthropic": _ANTHROPIC}
 
 
-def resolve(model_string: str) -> tuple[Provider, str]:
-    """`"fake/test"` → (the fake provider, `"test"`)."""
+def split(model_string: str) -> tuple[str, str]:
+    """`"openrouter/openai/gpt-5"` → ("openrouter", "openai/gpt-5")."""
     name, slash, model = model_string.partition("/")
     if not slash or not name or not model:
         raise ConfigError(
             f"model {model_string!r} is not in the form provider/model",
-            hint='for example --model fake/test, or [model] default = "fake/test"',
+            hint='for example --model anthropic/claude-sonnet-5, or [model] default = "…"',
         )
-    module = _BUILTIN.get(name)
+    return name, model
+
+
+def resolve(
+    model_string: str,
+    config: Config | None = None,
+    *,
+    env: Mapping[str, str] | None = None,
+    transport: httpx.AsyncBaseTransport | None = None,
+    **options: Any,
+) -> tuple[Provider, str]:
+    """`"anthropic/claude-sonnet-5"` → (the Anthropic adapter, `"claude-sonnet-5"`).
+    `transport` is for tests: cassettes replay through it [ADR-0009]."""
+    name, model = split(model_string)
+    config = config or Config()
+    block = config.providers.get(name)
+    module = BUILTIN.get(name)
+    if block is not None and block.kind is not None:
+        if module is not None and KINDS.get(block.kind) != module:
+            raise ConfigError(f"[providers.{name}] kind = {block.kind!r} does not match {name}")
+        module = KINDS[block.kind]
     if module is None:
-        known = ", ".join(sorted(_BUILTIN))
+        known = ", ".join(sorted({*BUILTIN, *config.providers}))
         raise ConfigError(
             f"unknown provider {name!r} in model {model_string!r}",
-            hint=f"known providers: {known}. Real providers arrive in milestone M2",
+            hint=f"known: {known}. For another server, add a [providers.{name}] block "
+            'with kind = "openai-compatible" and base_url',
         )
-    return cast(Provider, import_module(module).make()), model
+    adapter = import_module(module)
+    if module == BUILTIN["fake"]:
+        return cast(Provider, adapter.make()), model
+
+    from edgar.providers.pricing import prices
+
+    provider = adapter.make(
+        name,
+        block,
+        env=os.environ if env is None else env,
+        prices=prices(config.pricing),
+        transport=transport,
+        **options,
+    )
+    return cast(Provider, provider), model

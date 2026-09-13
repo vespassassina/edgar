@@ -56,7 +56,7 @@ class TurnStarted(Event):
 class TurnFinished(Event):
     turn_id: str
     usage: Usage
-    cost: float
+    cost: float | None  # None: some request had unknown pricing [BUD-5]
     reason: str
 
 
@@ -83,8 +83,37 @@ class ThinkingDelta(Event):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RequestFinished(Event):
     usage: Usage
-    cost: float
+    cost: float | None  # None: unknown pricing, never a wrong zero [BUD-5]
     cached: int
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ProviderRetry(Event):
+    attempt: int
+    after_s: float
+    reason: str  # "HTTP 429", "HTTP 503", "connection error"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ReasoningDropped(Event):
+    from_origin: str
+    to_family: str  # [PRV-13]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ToolCallRepaired(Event):
+    tool: str
+    repair: str  # which fixed repair applied [PRV-16]
+
+
+# routing [ADR-0013]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ModelSelected(Event):
+    model: str
+    rule: str
+    reason: str
 
 
 # tools

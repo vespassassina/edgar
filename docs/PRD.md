@@ -893,7 +893,6 @@ the milestone that depends on it.
 | ID | Question | Lean | Blocks |
 |---|---|---|---|
 | OQ-1 | `history.md` committed or gitignored by default? | Gitignored, documented opt-in | M12 |
-| OQ-3 | Exact per-provider tokenisers or one approximate with correction factors? | Approximate + correction, exact where usage is returned | M2 |
 | OQ-6 | What counts as "the same task shape" for the repeat trigger (SKL-8d)? | A hash of agent, the ordered set of distinct tool names, and routing tags. Visible, and cheap to compute, but blind to intent. Revisit if it misfires on real telemetry | M14 |
 | OQ-7 | Taint scope: sticky for the session, or cleared when the untrusted result is compacted away? | Sticky per session. A summary can carry injected text forward, and per-turn clearing is hard to explain ([ADR-0021](adr/0021-humans-widen-machines-tighten.md)) | M3 |
 | OQ-8 | When does the OpenAI Responses API adapter land? | When the eval set shows the reasoning gap matters on tool-heavy tasks; v2 at the latest ([ADR-0020](adr/0020-provider-portability.md)) | M15 |
@@ -905,5 +904,6 @@ the milestone that depends on it.
 | ID | Question | Resolution |
 |---|---|---|
 | OQ-2 | May the controller ever touch `AGENTS.md`? | **No.** `AGENTS.md` is part of what constrains the controller; letting it edit its own constraints is a loop with no fixed point and it fails silently. `propose_instruction` emits a diff the human applies. [CTRL-12, ADR-0008] |
+| OQ-3 | Exact per-provider tokenisers or one approximate with correction factors? | **Approximate, corrected by what the provider reports.** Characters over four, scaled by the ratio of the provider's last reported input tokens to edgar's own estimate; exact wherever usage comes back, and no tokeniser to download. [CTX-9, ADR-0031] |
 | OQ-4 | Full TUI or line-oriented with a status line? | **Line-oriented.** The field review found flicker, broken scrollback and unselectable text among the most common TUI complaints; output stays in native scrollback (CLI-23) |
 | OQ-5 | Session storage: pure SQLite or JSONL transcript + DB indices? | **JSONL + DB**, because a greppable transcript is worth a lot in a teaching repo. Compaction appends records rather than rewriting. [ADR-0010, ADR-0016] |

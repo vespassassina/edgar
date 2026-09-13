@@ -157,9 +157,10 @@ edgar/
 │   │   ├── escalation.py           (v2) upward on capability failure
 │   │   ├── openai_compat.py        OpenAI · Azure · OpenRouter · Ollama · user-defined
 │   │   ├── anthropic.py
+│   │   ├── http.py                 shared by both: retries, SSE, error mapping, token counts
 │   │   ├── repair.py               deterministic tool-call repair [PRV-16]
-│   │   ├── quirks.py               per-provider behaviour table, prompt profile
-│   │   ├── pricing.py              cost tables
+│   │   ├── quirks.py               how providers differ, as data
+│   │   ├── pricing.py              dated price table; unknown is None [BUD-5]
 │   │   └── fake.py                 scripted provider for tests
 │   │
 │   ├── tools/
@@ -298,12 +299,15 @@ class ThinkingBlock:
     text: str
     origin: str                      # adapter family + model, e.g. "anthropic:claude-sonnet-5" [PRV-13]
     signature: str | None = None     # Anthropic verifies this on replay
+    redacted: str | None = None      # opaque encrypted reasoning, replayed as given
 
 @dataclass(frozen=True, slots=True)
 class ToolUseBlock:
     id: str
     name: str
     args: dict[str, Any]
+    malformed: str | None = None     # raw arguments that were not a JSON object even after
+                                     # repair; the pipeline returns a validation error [PRV-16]
 
 @dataclass(frozen=True, slots=True)
 class ErrorRecord:                   # computed by the harness, never parsed from tool text [MEM-22]
@@ -672,16 +676,15 @@ class Provider(Protocol):
 
     async def stream(
         self,
-        messages: list[Message],
-        tools: list[ToolSchema],
+        messages: Sequence[Message],
+        tools: Sequence[ToolSchema],
         *,
         model: str,
-        reasoning: bool,             # False after a mid-turn family switch [PRV-13]
-        cancel: CancelScope,
         bus: EventBus,
-    ) -> ProviderResponse: ...
+        reasoning: bool = True,      # False after a mid-turn family switch [PRV-13]
+    ) -> ProviderResponse: ...       # message, usage, stop_reason, cost (None: unknown)
 
-    def count_tokens(self, messages: list[Message]) -> int: ...
+    def count_tokens(self, messages: Sequence[Message]) -> int: ...
 
 @dataclass(frozen=True)
 class Capabilities:
@@ -698,6 +701,18 @@ Capabilities drive explicit degradation [PRV-10]. If a model cannot do tools, th
 harness says so and refuses rather than silently producing a chat-only session that
 appears broken.
 
+Cancellation is asyncio's own: cancelling the task awaiting `stream()` closes the
+HTTP response, and an adapter never swallows the `CancelledError`. `Usage` counts
+every input token, cached ones included, and says when it is `approximate`
+(the provider reported none) and how many tool calls needed `repairs`.
+
+Both HTTP adapters share `providers/http.py`: one POST that retries 408, 409, 429,
+5xx and 529 with full-jitter backoff before the first byte, and never after
+(deltas have already gone out); `Retry-After` wins up to 60 s. Errors are mapped
+with a hint: 401 and 403 name the key, a context-length 400 is `ContextOverflow`,
+a refusal of tools names `native_tools = false` [PRV-7,
+[ADR-0031](adr/0031-provider-layer-as-built.md)].
+
 ### 5.2 The quirks table
 
 `openai_compat.py` serves four named providers and any user-defined one, because
@@ -705,45 +720,52 @@ the differences are data, not control flow. [PRV-3, ADR-0002]
 
 ```python
 # providers/quirks.py
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Quirks:
-    base_url: str | None
-    auth_style: Literal["bearer", "api-key-header", "azure-key", "none"]
-    api: Literal["chat", "responses"] = "chat"   # "responses" needs the optional adapter [OQ-8]
-    api_version_param: bool = False              # Azure
-    model_is_deployment: bool = False            # Azure: model name == deployment name
-    supports_tools: bool | Literal["per-model"] = "per-model"
-    supports_parallel_tools: bool = False
-    system_as_first_message: bool = True
-    strict_schema: bool = False                  # OpenAI structured outputs
-    stream_usage_in_final_chunk: bool = False
-    tool_call_id_required: bool = True
-    cost_source: Literal["table", "response", "none"] = "none"
-    prompt_profile: Literal["auto", "full", "compact"] = "auto"   # compact below 32k context [PRV-17]
-    native_tools: bool = True        # False: tool calls arrive as text and go through repair.py
+    base_url: str | None             # None: the user must configure it (Azure)
+    api_key_env: str | None = None   # None: no key sent
+    base_url_env: str | None = None  # where else base_url may come from
+    auth_style: Literal["bearer", "api-key", "none"] = "bearer"
+    api_version: str | None = None   # Azure: ?api-version=, and the model is the deployment
+    native_tools: bool = True        # False: tools described in text, calls parsed by repair.py
+    parallel_tools: bool = False
+    stream_usage: bool = False       # ask for usage in the final stream chunk
+    max_context: int = 32_768
+    max_output: int = 4_096
+    max_tokens_param: Literal["max_tokens", "max_completion_tokens"] | None = None
+    cost_source: Literal["table", "response", "free"] = "table"
+    reasoning: bool = False          # the server streams reasoning text back
 
 QUIRKS = {
-    "openai":     Quirks(base_url=None, auth_style="bearer", cost_source="table", ...),
-    "azure":      Quirks(base_url=None, auth_style="azure-key", api_version_param=True,
-                         model_is_deployment=True, ...),
-    "openrouter": Quirks(base_url="https://openrouter.ai/api/v1", auth_style="bearer",
-                         cost_source="response", ...),
-    "ollama":     Quirks(base_url="http://localhost:11434/v1", auth_style="none", ...),
+    "openai":     Quirks("https://api.openai.com/v1", "OPENAI_API_KEY", parallel_tools=True, ...),
+    "azure":      Quirks(None, "AZURE_OPENAI_API_KEY", base_url_env="AZURE_OPENAI_ENDPOINT",
+                         auth_style="api-key", api_version="2024-10-21", ...),
+    "openrouter": Quirks("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY",
+                         cost_source="response", reasoning=True, ...),
+    "ollama":     Quirks("http://localhost:11434/v1", auth_style="none", max_context=8_192,
+                         cost_source="free", reasoning=True, ...),
 }
 ```
 
 The defaults are the conservative ones, so a user-defined provider [PRV-12] only
-states what it knows:
+states what it knows. Every key of a `[providers.NAME]` block is a quirk field
+laid over the built-in row (or over the defaults for a new name), plus `kind`,
+`thinking_budget` (Anthropic) and `prompt_profile`:
 
 ```toml
 [providers.lmstudio]
 kind = "openai-compatible"
 base_url = "http://localhost:1234/v1"
 api_key_env = "LMSTUDIO_API_KEY"     # optional
+max_context = 32768                  # what the server really has
 ```
 
-`"per-model"` is the honest encoding of reality for local servers: tool support
-depends on the loaded model, so it is probed once and cached rather than assumed.
+Tool support is not probed with a request of its own: tools go out with the
+first request, and a server that refuses them becomes an error whose hint names
+`native_tools = false`, which switches it to text tool calls
+[ADR-0031](adr/0031-provider-layer-as-built.md). Ollama's window is set on the
+server and it truncates silently past it, so its `max_context` should say what the
+server has.
 
 ### 5.3 Lazy loading and plugins
 
@@ -751,18 +773,18 @@ NFR-1 is enforced structurally, not by discipline. [PRV-4, ADR-0012]
 
 ```python
 # providers/registry.py
-_LOADERS = {
-    "openai":     lambda: import_module(".openai_compat", __package__).make("openai"),
-    "azure":      lambda: import_module(".openai_compat", __package__).make("azure"),
-    "openrouter": lambda: import_module(".openai_compat", __package__).make("openrouter"),
-    "ollama":     lambda: import_module(".openai_compat", __package__).make("ollama"),
-    "anthropic":  lambda: import_module(".anthropic", __package__).make(),
-    "fake":       lambda: import_module(".fake", __package__).make(),
+BUILTIN = {
+    "openai": "edgar.providers.openai_compat",     "azure": "edgar.providers.openai_compat",
+    "openrouter": "edgar.providers.openai_compat", "ollama": "edgar.providers.openai_compat",
+    "anthropic": "edgar.providers.anthropic",      "fake": "edgar.providers.fake",
 }
+KINDS = {"openai-compatible": "edgar.providers.openai_compat",
+         "anthropic": "edgar.providers.anthropic"}
 
-def resolve(model_string: str, config: Config) -> Provider:   # "anthropic/claude-sonnet-5"
-    name, _, model = model_string.partition("/")
-    # 1. built-in loader  2. [providers.NAME] from config  3. entry point "edgar.providers" (v1)
+def resolve(model_string, config=None, *, env=None, transport=None) -> tuple[Provider, str]:
+    name, model = split(model_string)   # "openrouter/openai/gpt-5" → ("openrouter", "openai/gpt-5")
+    # 1. built-in  2. [providers.NAME], by kind  3. entry point "edgar.providers" (v1)
+    # A missing API key is a ConfigError here, before any request. `transport` is for tests.
     ...
 ```
 
@@ -868,18 +890,23 @@ returned to the model and retries turn a model that fails half its tasks into on
 that finishes them (research/hn-2026-09.md). Two mechanisms, both deterministic.
 
 **Tool-call repair** (`providers/repair.py`, PRV-16). A fixed list of syntactic
-repairs, tried in order, each a pure function from text to `ToolUseBlock | None`:
-strip a surrounding code fence; drop text after a complete JSON object; accept a
-single JSON object in plain text naming a known tool, for models without a native
-tool format (`native_tools = False`). Nothing semantic: no guessing argument
-values, no fuzzy tool names. Anything the list cannot repair becomes a validation
-error returned to the model, which is the retry signal models are trained on.
-Each repair emits `ToolCallRepaired`, so the rate is visible per model.
+repairs, tried in order, each a pure function: strip a surrounding code fence
+(`fence`); drop text after a complete JSON object (`trailing-text`); accept a reply
+that is one JSON object naming a known tool (`text-call`). The last applies to the
+whole reply only, so a model explaining JSON is not calling a tool, except on
+servers with `native_tools = false`, where tools travel in the system message on
+the wire and a call may sit inside prose. Nothing semantic: no guessing argument
+values, no fuzzy tool names. Arguments the list cannot repair stay on the call as
+`malformed` and become a validation error returned to the model, the retry signal
+models are trained on. Each repair emits `ToolCallRepaired` and counts in
+`Usage.repairs`, so the rate is visible per model.
 
 **Prompt profiles** (PRV-17). `compact` swaps `prompts/system.md` for
 `prompts/compact.md`, exposes only Core built-ins unless configured otherwise, and
 lowers `compact_at` and `compact_to` by 0.1, so short-context models compact
-earlier. `auto` picks `compact` when `max_context` is under 32k.
+earlier. `auto` picks `compact` when `max_context` is under 32k
+(`context/prompts.choose_profile`). A `[providers.NAME] prompt_profile` wins over
+`[prompt] profile`.
 
 ### 5.7 No implicit models or hosts
 
@@ -1616,6 +1643,14 @@ condenser = "openai/gpt-5-mini"      # v2 history condensing [MEM-14]
 kind = "openai-compatible"
 base_url = "http://localhost:1234/v1"
 
+[providers.anthropic]                 # adjusts a built-in; keys are quirks (§5.2)
+thinking_budget = 4096
+
+[pricing."anthropic/claude-sonnet-5"] # USD per million tokens, from the provider's price page;
+input = 3.0                           # wins over the shipped table. Unpriced models show
+output = 15.0                         # cost as "unknown", never zero [BUD-5]
+cache_read = 0.3                      # (these figures are placeholders)
+
 # routing rules, first match wins (v1) [ROUTE-2]
 [[route]]
 name = "local-for-exploration"
@@ -1723,10 +1758,12 @@ ignored; a known section with an unknown key is an error with a "did you mean".
 
 **The dataclasses are the schema** (`config/schema.py`): a field's type hint is the
 validation rule and its default is the default. Sections that later milestones
-validate (`providers`, `route`, `model.fallback`, `memory`, `hooks`, `mcp`, and the
-rest listed in `LATER`) are accepted and kept untouched until then, so a config
-written against this spec loads today; any other unknown section or key is an
-error.
+validate (`route`, `model.fallback`, `memory`, `hooks`, `mcp`, and the rest listed
+in `LATER`) are accepted and kept untouched until then, so a config written against
+this spec loads today; any other unknown section or key is an error.
+`[providers.NAME]` and `[pricing."provider/model"]` are named blocks, each checked
+against its dataclass (`ProviderSection`, `PriceSection`) with the same messages,
+merged key by key across files, and never set from the environment.
 
 Secrets never live here [CFG-6]: env vars, or the OS keyring with the optional
 extra.

@@ -75,6 +75,37 @@ class ShellSection:
     sandbox: Literal["none", "bwrap", "seatbelt", "container"] = "none"  # [PERM-15]
 
 
+@dataclass(frozen=True, slots=True)
+class ProviderSection:
+    """One `[providers.NAME]` block [PRV-12]. A key left unset keeps the provider's
+    own value from `providers/quirks.py`; a new NAME needs `kind` and `base_url`."""
+
+    kind: Literal["openai-compatible", "anthropic"] | None = None
+    base_url: str | None = None
+    api_key_env: str | None = None  # the variable holding the key, never the key [CFG-6]
+    auth_style: Literal["bearer", "api-key", "none"] | None = None
+    api_version: str | None = None  # Azure
+    native_tools: bool | None = None  # false: tool calls travel as text [PRV-16]
+    parallel_tools: bool | None = None
+    stream_usage: bool | None = None
+    max_context: int | None = None
+    max_output: int | None = None
+    max_tokens_param: Literal["max_tokens", "max_completion_tokens"] | None = None
+    cost_source: Literal["table", "response", "free"] | None = None
+    thinking_budget: int | None = None  # Anthropic extended thinking
+    prompt_profile: Literal["auto", "full", "compact"] | None = None  # [PRV-17]
+
+
+@dataclass(frozen=True, slots=True)
+class PriceSection:
+    """`[pricing."provider/model"]`, USD per million tokens [BUD-5]."""
+
+    input: float
+    output: float
+    cache_read: float | None = None  # unset: billed as input
+    cache_write: float | None = None
+
+
 SECTIONS: dict[str, type] = {
     "model": ModelSection,
     "permissions": PermissionsSection,
@@ -87,12 +118,15 @@ SECTIONS: dict[str, type] = {
     "shell": ShellSection,
 }
 
+# Sections made of named blocks, `[providers.NAME]` and `[pricing."a/b"]`, each block
+# validated against its dataclass.
+TABLES: dict[str, type] = {"providers": ProviderSection, "pricing": PriceSection}
+
 # Accepted now and validated by the milestone that first reads them, so a config
 # written against the full spec loads today. Listed, not guessed: anything else
 # unknown is an error.
 LATER = frozenset(
     {
-        "providers",  # M2
         "route",  # v1
         "model.fallback",  # v1
         "model.escalation",  # v2
@@ -120,6 +154,8 @@ class Config:
     context: ContextSection = field(default_factory=ContextSection)
     instructions: InstructionsSection = field(default_factory=InstructionsSection)
     shell: ShellSection = field(default_factory=ShellSection)
+    providers: dict[str, ProviderSection] = field(default_factory=dict)
+    pricing: dict[str, PriceSection] = field(default_factory=dict)
     # Where each value came from: "default", a file path, "env EDGAR_…" or "flag --…"
     # [CFG-2].
     origins: dict[str, str] = field(default_factory=dict)

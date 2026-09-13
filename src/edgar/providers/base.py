@@ -1,4 +1,8 @@
-"""The Provider port [ADR-0022]. Adapters translate; they never decide [ADR-0002]."""
+"""The Provider port [ADR-0022]. Adapters translate; they never decide [ADR-0002].
+
+Cancellation is asyncio's own: cancelling the task that awaits `stream()` closes
+the HTTP response, and an adapter must not swallow the CancelledError.
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,8 @@ class Usage:
     output_tokens: int = 0
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
+    approximate: bool = False  # the provider reported none; counted by edgar [PRV-6]
+    repairs: int = 0  # tool calls fixed by repair.py [PRV-16]
 
     def __add__(self, other: Usage) -> Usage:
         return Usage(
@@ -26,6 +32,8 @@ class Usage:
             self.output_tokens + other.output_tokens,
             self.cache_read_tokens + other.cache_read_tokens,
             self.cache_write_tokens + other.cache_write_tokens,
+            self.approximate or other.approximate,
+            self.repairs + other.repairs,
         )
 
 
@@ -45,6 +53,7 @@ class ProviderResponse:
     message: Message  # role "assistant", canonical blocks only
     usage: Usage
     stop_reason: str
+    cost: float | None = None  # USD; None is "unknown pricing", never a wrong zero [BUD-5]
 
 
 class Provider(Protocol):
@@ -59,6 +68,7 @@ class Provider(Protocol):
         *,
         model: str,
         bus: EventBus,
+        reasoning: bool = True,  # False after a mid-turn family switch [PRV-13]
     ) -> ProviderResponse: ...
 
     def count_tokens(self, messages: Sequence[Message]) -> int: ...

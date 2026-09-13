@@ -19,13 +19,16 @@ tests/
 ├── contract/                every provider passes identically
 ├── property/                invariants over generated inputs
 ├── integration/             several modules, fake provider, tmp filesystem
-├── cassettes/               recorded HTTP exchanges
+├── cassettes/               one JSON file per provider, one entry per contract scenario
 ├── e2e/                     subprocess the real CLI
 ├── evals/                   outcome-scored tasks, on demand
 ├── support/                 on the test path, not a package:
 │                            netguard.py + sitecustomize.py (socket guard), importgraph.py
 │                            (static import graph), budget.py (size budgets, `just loc`),
-│                            harness.py (Recorder, runtime(), scripted(), run_turn_sync())
+│                            harness.py (Recorder, runtime(), scripted(), run_turn_sync()),
+│                            wire.py (streams in each provider's format), cassettes.py
+│                            (replay, record, scrub), fixture_server.py (a real
+│                            OpenAI-compatible server on loopback), rig.py (the `rig` fixture)
 └── fixtures/
     ├── projects/            sample .edgar/ trees
     ├── skills/
@@ -106,29 +109,40 @@ shared adapter in ADR-0002.
 
 ```python
 # tests/contract/test_provider_contract.py
-PROVIDERS = ["fake", "openai", "azure", "openrouter", "ollama", "anthropic", "compat"]
+PROVIDERS = ["openai", "azure", "openrouter", "ollama", "anthropic", "compat"]
 
-@pytest.mark.parametrize("provider", PROVIDERS)
+@pytest.mark.parametrize("name", PROVIDERS)
 class TestProviderContract:
-    def test_streams_text_deltas(self, provider): ...
-    def test_returns_single_tool_call(self, provider): ...
-    def test_returns_parallel_tool_calls(self, provider): ...
-    def test_round_trips_tool_result(self, provider): ...
-    def test_preserves_own_thinking_blocks(self, provider): ...
-    def test_drops_foreign_thinking_blocks(self, provider): ...          # [PRV-13]
-    def test_repairs_fenced_tool_call(self, provider): ...               # [PRV-16]
-    def test_accepts_tool_turn_after_family_switch(self, provider): ...  # reasoning off
-    def test_reports_usage(self, provider): ...
-    def test_maps_auth_error_to_ProviderError(self, provider): ...
-    def test_retries_429_then_succeeds(self, provider): ...
-    def test_cancellation_stops_stream_promptly(self, provider): ...
-    def test_declares_capabilities_truthfully(self, provider): ...
-    def test_normalises_to_canonical_messages(self, provider): ...
+    def test_streams_text_deltas(self, rig, name): ...
+    def test_returns_single_tool_call(self, rig, name): ...
+    def test_returns_parallel_tool_calls(self, rig, name): ...
+    def test_round_trips_tool_result(self, rig, name): ...
+    def test_preserves_own_thinking_blocks(self, rig, name): ...
+    def test_drops_foreign_thinking_blocks(self, rig, name): ...          # [PRV-13]
+    def test_repairs_fenced_tool_call(self, rig, name): ...               # [PRV-16]
+    def test_accepts_tool_turn_after_family_switch(self, rig, name): ...  # reasoning off
+    def test_merges_a_steer_after_tool_results(self, rig, name): ...      # [CLI-13]
+    def test_reports_usage(self, rig, name): ...
+    def test_maps_auth_error_to_provider_error(self, rig, name): ...
+    def test_retries_429_then_succeeds(self, rig, name): ...
+    def test_cancellation_stops_stream_promptly(self, rig, name): ...
+    def test_declares_capabilities_truthfully(self, rig, name): ...
+    def test_normalises_to_canonical_messages(self, rig, name): ...
 ```
 
+`rig(name, scenario)` builds the provider through `registry.resolve()`, the same
+path the CLI takes, with a transport that replays that scenario's cassette, and
+records the event stream and every request body for assertions.
+
 `compat` is a user-defined provider [PRV-12] pointed at a small local fixture
-server that speaks the OpenAI-compatible protocol, so the config-only path is held
-to the same contract.
+server that speaks the OpenAI-compatible protocol over a real socket, so the
+config-only path is held to the same contract. The socket guard lets through that
+server's exact address and nothing else; a stray request to a local Ollama on its
+default port still fails.
+
+The fake provider is not in the list: the suite tests wire translation, and the
+fake has no wire. The loop tests that depend on it cover it
+([ADR-0031](adr/0031-provider-layer-as-built.md)).
 
 Non-fake providers run against cassettes on PRs and against the live API on the
 scheduled job. Same test bodies, different transport.
@@ -157,20 +171,31 @@ because a fake encodes what you *believe* the API does.
 
 ```
 tests/cassettes/
-├── openai/tool_call_single.json
-├── anthropic/thinking_with_tools.json
-├── ollama/no_tool_support.json
-└── azure/deployment_routing.json
+├── openai.json          {"text": {"source": "synthetic", "exchanges": [...]},
+├── azure.json            "tool_call_single": {"source": "recorded 2026-10-02", ...}, ...}
+├── openrouter.json
+├── ollama.json
+├── anthropic.json
+└── compat.json
 ```
 
 ```bash
-just record-cassettes            # hits live APIs, requires keys
-just record-cassettes --only openai
+just record-cassettes openai     # runs the contract suite against the live API; needs keys
+python tests/support/cassettes.py synthesize   # rewrite synthetic entries, keep recorded ones
 ```
 
-**Secrets are scrubbed on record**, not on commit. Auth headers, keys, org ids and
-account identifiers are replaced with placeholders by the recorder, and a test
-asserts no cassette contains anything matching a secret pattern.
+**Each entry says where it came from.** A `synthetic` entry is written from the
+provider's documented wire format (`tests/support/wire.py`); a `recorded` one is
+a live exchange, and recording replaces the synthetic entry for that scenario. The
+first cassettes were all synthetic: M2 was built with no keys available. So until
+they are recorded, they catch regressions in our code, not mistakes in our beliefs
+about the APIs. Error scenarios (401, 429, a cancelled stream) and the fenced
+tool call stay synthetic, since nobody triggers those on purpose
+([ADR-0031](adr/0031-provider-layer-as-built.md)).
+
+**Secrets are scrubbed on record**, not on commit. Auth headers are never stored,
+key-shaped strings in bodies become `REDACTED`, and a test asserts that no
+cassette holds anything matching a secret pattern.
 
 **Cassettes go stale silently.** That is precisely why layer 5 exists.
 
@@ -465,15 +490,21 @@ def test_auxiliary_roles_never_pick_a_model_the_user_did_not_name(config):
 ### Tool-call repair
 
 ```python
-@given(call=valid_tool_calls(), damage=st.sampled_from(SYNTACTIC_DAMAGE))   # fences, trailing text, bare JSON
-def test_repair_recovers_syntactic_damage(call, damage):
-    assert repair(damage(render(call)), tools=KNOWN) == call            # [PRV-16]
+@given(name=names(), args=arguments(), damage=st.sampled_from(DAMAGE))   # fence, trailing text, bare JSON
+def test_repair_recovers_syntactic_damage(name, args, damage):
+    rendered = json.dumps({"name": name, "arguments": args})
+    assert text_call(DAMAGE[damage](rendered), TOOLS, anywhere=False)[:2] == (name, args)  # [PRV-16]
 
-@given(text=st.text())
-def test_repair_never_invents_a_call(text):
-    out = repair(text, tools=KNOWN)
-    assert out is None or render(out) in normalise(text)                # only what was there
+@given(text=st.text(), anywhere=st.booleans())
+def test_repair_never_invents_a_call(text, anywhere):
+    found = text_call(text, TOOLS, anywhere=anywhere)
+    assert found is None or found[0] in text                            # only a name that was there
 ```
+
+M2's done criterion runs the other way round: a model that fences every call, or
+writes it as bare JSON on a server with `native_tools = false`, completes a small
+task set through the real OpenAI-compatible adapter
+(`tests/integration/test_small_models.py`).
 
 ---
 
@@ -646,7 +677,9 @@ def subprocess_env(tmp_path) -> dict[str, str]:
 ```
 
 `no_network` is applied to every offline suite: unit, property, contract,
-integration and e2e. A monkeypatch does not cross a process boundary, so e2e tests
+integration and e2e; only `--live` and `--record` lift it. A test that opens a
+loopback server calls `netguard.allow(host, port)` for that exact address, and a
+child process gets the same through `EDGAR_TEST_NET_ALLOW=host:port`. A monkeypatch does not cross a process boundary, so e2e tests
 start the CLI with `subprocess_env`, whose `sitecustomize.py` patches `socket` in
 the child. The guard lives entirely in test support; production code has no test
 switch. A test that accidentally reaches the network fails immediately rather than
@@ -679,6 +712,7 @@ just test-unit
 just test-property
 just test-contract
 just test-live         # needs keys
+just record-cassettes openai   # needs that provider's key
 just eval
 just cov
 just check             # ruff + mypy --strict + test

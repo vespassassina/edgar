@@ -23,18 +23,23 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0 (skeleton) and M1 (the loop) are done (https://github.com/vespassassina/edgar).
-`edgar -p "read a.txt" --model fake/test --mode read-only` runs a real turn: the
-message types and pairing invariant (`core/units.py`), the event bus, the loop, the
-fake provider, `read` and `ls`, the tool pipeline with spill, a deny-by-default M1
-policy (reads inside the working directory only), the prompt file, and layered
-config with provenance. Real providers are M2, which is when a real model can be
-tried. Releases go out through trusted publishing when a `v*` GitHub release is
-published; bump the version in both `pyproject.toml` and `src/edgar/__init__.py`.
+M0 (skeleton), M1 (the loop) and M2 (real providers) are done
+(https://github.com/vespassassina/edgar). `edgar -p` runs a real turn against
+OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server:
+the message types and pairing invariant (`core/units.py`), the event bus, the loop,
+`read` and `ls`, the tool pipeline with spill, a deny-by-default policy (reads
+inside the working directory only), the prompt file with profiles, layered config
+with provenance, and `edgar models list`. Provider decisions that differ from the
+Blueprint's first sketch are in ADR-0031. Releases go out through trusted
+publishing when a `v*` GitHub release is published; bump the version in both
+`pyproject.toml` and `src/edgar/__init__.py`.
 
 Tests drive the loop through `tests/support/harness.py` (`scripted()`, `runtime()`,
-`Recorder`); assert on `recorder.names` for event sequences. The recipes for suites that do not exist yet (`test-unit`, `test-live`,
-`record-cassettes`, `eval`) arrive with the milestone that creates them.
+`Recorder`); assert on `recorder.names` for event sequences. Provider tests drive
+adapters through the `rig` fixture (`tests/support/rig.py`), which replays
+`tests/cassettes/<provider>.json`; every cassette entry is still `synthetic` until
+someone with keys runs `just record-cassettes NAME`. The `eval` recipe arrives
+with the milestone that creates evals.
 
 Docs are still most of the product, so treat an edit to `docs/` with the same care as
 code. Ruff is configured to skip `*.md`: the Python blocks in the docs are hand-aligned
@@ -59,7 +64,7 @@ just test-unit
 just test-property
 just test-contract
 just test-live            # hits real providers, needs API keys
-just record-cassettes     # re-record HTTP fixtures; --only openai to scope it
+just record-cassettes openai   # re-record one provider's HTTP fixtures
 just eval                 # outcome-scored tasks, slow and non-blocking
 ```
 

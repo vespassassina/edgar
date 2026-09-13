@@ -28,6 +28,7 @@ def test_read_a_file_with_the_fake_model(
     assert out == "     1\thello\n     2\tworld\n"
     assert err == ""
     assert recorder.names == [
+        "ModelSelected",
         "TurnStarted",
         "RequestStarted",
         "RequestFinished",
@@ -74,5 +75,13 @@ def test_bad_config_names_file_key_and_type(tmp_project: Path, home: Path) -> No
 
 
 def test_unknown_provider_is_a_config_error(tmp_project: Path, home: Path) -> None:
-    with pytest.raises(ConfigError, match="unknown provider 'openai'"):
+    with pytest.raises(ConfigError, match="unknown provider 'gemini'") as info:
+        run_prompt("hi", cwd=tmp_project, model="gemini/pro", mode="ask", env={}, home=home)
+    assert "[providers.gemini]" in (info.value.hint or "")
+
+
+def test_a_missing_key_is_a_config_error_naming_the_variable(tmp_project: Path, home: Path) -> None:
+    # Checked before any request, so a missing key never costs a network call.
+    with pytest.raises(ConfigError, match="OPENAI_API_KEY is not set") as info:
         run_prompt("hi", cwd=tmp_project, model="openai/gpt-5", mode="ask", env={}, home=home)
+    assert info.value.exit_code == 3

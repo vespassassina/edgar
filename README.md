@@ -9,9 +9,10 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** design complete (spec v0.4). Milestone M1 is in: the turn loop runs
-> end to end against a built-in fake model (`edgar -p "read README.md" --model
-> fake/test --mode read-only`). Real models arrive with M2.
+> **Status:** design complete (spec v0.4). Milestones M1 and M2 are in: one-shot
+> runs against real models, with read-only tools so far
+> (`edgar -p "summarise README.md" --model anthropic/claude-sonnet-5 --mode read-only`).
+> Writing, the shell and the verify gate arrive with M3, the REPL with M4.
 > The documents in `docs/` are the spec being built against.
 
 ## Why edgar
@@ -121,6 +122,20 @@ talks, never what it is allowed to do.
 and Ollama share one OpenAI-compatible adapter driven by a quirks table; Anthropic
 has its own. Any other OpenAI-compatible server is a config block. Anything else is
 one module and one registry entry, or a provider plugin package.
+
+```toml
+# .edgar/config.toml
+[model]
+default = "lmstudio/qwen3-coder"
+
+[providers.lmstudio]
+kind = "openai-compatible"
+base_url = "http://localhost:1234/v1"
+```
+
+`edgar models list` shows where each role's prompts go, every provider's endpoint
+and whether its key is set, without contacting anything. Small local models that
+fence their tool calls or write them as plain JSON are repaired, deterministically.
 
 **Subagents with their own models.** Declared in markdown, not code. Run a cheap
 local model for exploration and an expensive one for review, in parallel, each with

@@ -10,10 +10,23 @@ from harness import Recorder
 
 SUPPORT = Path(__file__).parent / "support"
 
+pytest_plugins = ["rig"]  # the contract suite's `rig` fixture
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    group = parser.getgroup("edgar")
+    group.addoption("--live", action="store_true", help="contract suite against real APIs")
+    group.addoption(
+        "--record", metavar="PROVIDER", help="re-record that provider's cassettes (implies --live)"
+    )
+
 
 @pytest.fixture(autouse=True)
-def no_network(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Fail loudly on any socket call. Applied to the whole offline suite."""
+def no_network(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest) -> None:
+    """Fail loudly on any socket call. Applied to the whole offline suite; lifted
+    only by --live or --record, which exist to reach real APIs."""
+    if request.config.getoption("--live") or request.config.getoption("--record"):
+        return
     for owner, name, replacement in netguard.PATCHES:
         monkeypatch.setattr(owner, name, replacement)
 

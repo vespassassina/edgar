@@ -8,6 +8,7 @@ license-files = ["LICENSE"]
 requires-python = ">=3.12"
 # Runtime dependencies arrive with the milestone that first imports them (ADR-0019).
 dependencies = [
+    "httpx>=0.28",
     "jsonschema>=4.23",
 ]
 classifiers = [

@@ -6,6 +6,8 @@ puts this directory on the child's path and the same guard is installed there.
 
 from __future__ import annotations
 
+import os
+
 import netguard
 
-netguard.install()
+netguard.install(os.environ.get("EDGAR_TEST_NET_ALLOW", ""))

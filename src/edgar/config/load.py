@@ -19,24 +19,27 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal, Union, get_args, get_origin, get_type_hints
 
-from edgar.config.schema import LATER, SECTIONS, Config
+from edgar.config.schema import LATER, SECTIONS, TABLES, Config
 from edgar.core.errors import ConfigError
 
 _BOOLS = {"true": True, "1": True, "yes": True, "on": True}
 _BOOLS |= {"false": False, "0": False, "no": False, "off": False}
 
 
-def _fields() -> dict[str, tuple[Any, Any]]:
+def _fields(sections: Mapping[str, type]) -> dict[str, tuple[Any, Any]]:
     out: dict[str, tuple[Any, Any]] = {}
-    for section, cls in SECTIONS.items():
+    for section, cls in sections.items():
         hints = get_type_hints(cls)
         for f in dataclasses.fields(cls):
-            default = f.default_factory() if f.default is dataclasses.MISSING else f.default  # type: ignore[misc]  # a field has one or the other
+            default = f.default
+            if f.default_factory is not dataclasses.MISSING:
+                default = f.default_factory()
             out[f"{section}.{f.name}"] = (hints[f.name], default)
     return out
 
 
-FIELDS = _fields()
+FIELDS = _fields(SECTIONS)
+BLOCK_FIELDS = _fields(TABLES)  # "providers.base_url" → the hint for every [providers.X]
 
 
 def user_config(home: Path) -> Path:
@@ -59,11 +62,18 @@ def load(
     values = {key: default for key, (_, default) in FIELDS.items()}
     origins = dict.fromkeys(FIELDS, "default")
     later: dict[str, Any] = {}
+    blocks: dict[str, dict[str, dict[str, Any]]] = {section: {} for section in TABLES}
 
     for path in (user_config(home or Path.home()), project_config(cwd)):
         if path.is_file():
             for key, value in _read_file(path, later).items():
-                values[key], origins[key] = value, str(path)
+                origins[key] = str(path)
+                section, _, rest = key.partition(".")
+                if section in TABLES:  # blocks merge key by key across files, like the rest
+                    block, _, name = rest.rpartition(".")
+                    blocks[section].setdefault(block, {})[name] = value
+                else:
+                    values[key] = value
 
     for name, raw in (os.environ if env is None else env).items():
         env_key = _env_key(name)
@@ -79,7 +89,33 @@ def load(
         name: cls(**{k.split(".", 1)[1]: v for k, v in values.items() if k.startswith(name + ".")})
         for name, cls in SECTIONS.items()
     }
-    return Config(**sections, origins=origins, later=later)
+    tables = {
+        section: {name: _block(section, name, fields, origins) for name, fields in named.items()}
+        for section, named in blocks.items()
+    }
+    return Config(**sections, **tables, origins=origins, later=later)  # type: ignore[arg-type]  # both dicts are keyed by field name, built from the schema
+
+
+def _block(section: str, name: str, fields: dict[str, Any], origins: dict[str, str]) -> Any:
+    cls = TABLES[section]
+    missing = [
+        f.name
+        for f in dataclasses.fields(cls)
+        if f.default is dataclasses.MISSING and f.name not in fields
+    ]
+    if missing:
+        where = origins[f"{section}.{name}.{next(iter(fields))}"]
+        example = _example(BLOCK_FIELDS[f"{section}.{missing[0]}"][0])
+        raise ConfigError(
+            f"{where}: {_title(section, name)} needs {', '.join(missing)}",
+            hint=f"for example: {missing[0]} = {example}",
+        )
+    return cls(**fields)
+
+
+def _title(section: str, name: str) -> str:
+    bare = name.replace("-", "").replace("_", "").isalnum()
+    return f"[{section}.{name}]" if bare else f'[{section}."{name}"]'
 
 
 def _read_file(path: Path, later: dict[str, Any]) -> dict[str, Any]:
@@ -92,13 +128,25 @@ def _read_file(path: Path, later: dict[str, Any]) -> dict[str, Any]:
         if section in LATER:
             later[section] = table
             continue
-        if section not in SECTIONS:
+        if section not in SECTIONS and section not in TABLES:
             raise ConfigError(
                 f"{path}: unknown section [{section}]",
-                hint=_did_you_mean(section, [*SECTIONS, *LATER]),
+                hint=_did_you_mean(section, [*SECTIONS, *TABLES, *LATER]),
             )
         if not isinstance(table, dict):
             raise ConfigError(f"{path}: {section} must be a table, written [{section}]")
+        if section in TABLES:
+            for block, fields in table.items():
+                if not isinstance(fields, dict):
+                    raise ConfigError(
+                        f"{path}: {section}.{block} must be a table, "
+                        f"written {_title(section, block)}"
+                    )
+                for name, value in fields.items():
+                    key = f"{section}.{block}.{name}"
+                    _check(str(path), key, value)
+                    found[key] = value
+            continue
         for name, value in table.items():
             key = f"{section}.{name}"
             if key in LATER:
@@ -113,6 +161,11 @@ def _env_key(name: str) -> str | None:
     if not name.startswith("EDGAR_"):
         return None
     section, _, rest = name[len("EDGAR_") :].lower().partition("_")
+    if section in TABLES:
+        raise ConfigError(
+            f"environment variable {name}: [{section}] blocks are set in config.toml only",
+            hint=f"write it as [{section}.NAME] in .edgar/config.toml",
+        )
     if section not in SECTIONS:
         return None
     key = f"{section}.{rest}"
@@ -146,16 +199,19 @@ def _parse_env(name: str, key: str, raw: str) -> Any:
 
 def _check(where: str, key: str, value: Any) -> None:
     section, _, name = key.partition(".")
-    if key not in FIELDS:
+    fields, title = FIELDS, f"[{section}]"
+    if section in TABLES:  # "providers.lmstudio.base_url"; a block name may hold dots
+        block, _, name = name.rpartition(".")
+        fields, key, title = BLOCK_FIELDS, f"{section}.{name}", _title(section, block)
+    if key not in fields:
         raise ConfigError(
-            f"{where}: unknown key [{section}] {name}",
-            hint=_did_you_mean(name, _keys_of(section)),
+            f"{where}: unknown key {title} {name}",
+            hint=_did_you_mean(name, _keys_of(section, fields)),
         )
-    hint = FIELDS[key][0]
+    hint = fields[key][0]
     if not _accepts(hint, value):
         raise ConfigError(
-            f"{where}: [{section}] {name} must be {_describe(hint)}, "
-            f"got {_type_name(value)} {value!r}",
+            f"{where}: {title} {name} must be {_describe(hint)}, got {_type_name(value)} {value!r}",
             hint=f"for example: {name} = {_example(hint)}",
         )
 
@@ -214,8 +270,8 @@ def _type_name(value: Any) -> str:
     return kinds.get(type(value), type(value).__name__)
 
 
-def _keys_of(section: str) -> list[str]:
-    return [k.split(".", 1)[1] for k in FIELDS if k.startswith(section + ".")]
+def _keys_of(section: str, fields: Mapping[str, Any] = FIELDS) -> list[str]:
+    return [k.split(".", 1)[1] for k in fields if k.startswith(section + ".")]
 
 
 def _did_you_mean(name: str, options: list[str], prefix: str = "") -> str:

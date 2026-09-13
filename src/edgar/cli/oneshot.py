@@ -12,12 +12,13 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 from edgar.config.load import load
-from edgar.context.prompts import load_prompt
+from edgar.context.prompts import choose_profile, load_prompt, profile_prompt
 from edgar.core.errors import ConfigError, UsageError
-from edgar.core.events import EventBus, Subscriber
+from edgar.core.events import EventBus, ModelSelected, Subscriber
 from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
-from edgar.providers.registry import resolve
+from edgar.providers.registry import resolve, split
+from edgar.providers.routing import RoutingContext, select_model
 from edgar.tools.registry import core_registry
 
 
@@ -45,25 +46,25 @@ def run_prompt(
     if model is not None:
         flags["model.default"] = (model, "flag --model")
     config = load(root, home=home, env=env, flags=flags)
-    if config.model.default is None:
-        raise ConfigError(
-            "no model configured",
-            hint="pass --model provider/model, or set [model] default in .edgar/config.toml",
-        )
+    selection = select_model(RoutingContext(), config.model)
+    provider, provider_model = resolve(selection.model, config, env=env)
+    block = config.providers.get(split(selection.model)[0])
+    setting = block.prompt_profile if block and block.prompt_profile else config.prompt.profile
+    profile = choose_profile(setting, provider.capabilities.max_context)
 
-    provider, provider_model = resolve(config.model.default)
     bus = EventBus()
     for subscriber in subscribers:
         bus.subscribe(subscriber)
+    bus.emit(ModelSelected(model=selection.model, rule=selection.rule, reason=selection.reason))
     runtime = Runtime(
         provider=provider,
         model=provider_model,
         tools=core_registry(),
-        system_prompt=load_prompt(root).text,
+        system_prompt=load_prompt(root, profile_prompt(profile)).text,
         bus=bus,
         max_output_tokens=config.tools.max_output_tokens,
     )
-    session = Session(cwd=root, model=config.model.default, mode=config.permissions.mode)
+    session = Session(cwd=root, model=selection.model, mode=config.permissions.mode)
     result = asyncio.run(run_turn(session, prompt, runtime))
     sys.stdout.write(result.text if result.text.endswith("\n") else result.text + "\n")
     return 0

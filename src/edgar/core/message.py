@@ -35,6 +35,11 @@ class ThinkingBlock:
     text: str
     origin: str  # adapter family + model, e.g. "anthropic:claude-sonnet-5" [PRV-13]
     signature: str | None = None  # Anthropic verifies this on replay
+    redacted: str | None = None  # opaque encrypted reasoning, replayed as given
+
+    @property
+    def family(self) -> str:
+        return self.origin.partition(":")[0]
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +47,9 @@ class ToolUseBlock:
     id: str
     name: str
     args: dict[str, Any]
+    # The raw arguments when they were not a JSON object even after repair. The
+    # pipeline returns this to the model as a validation error [PRV-16, TOOL-2].
+    malformed: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -69,6 +69,7 @@ class FakeProvider:
         *,
         model: str,
         bus: EventBus,
+        reasoning: bool = True,
     ) -> ProviderResponse:
         self.requests.append(list(messages))
         step = self._next(messages, model)
@@ -77,7 +78,7 @@ class FakeProvider:
         if step.raises is not None:
             raise step.raises
         content: list[ContentBlock] = []
-        if step.thinking is not None:
+        if step.thinking is not None and reasoning:
             bus.emit(ThinkingDelta(text=step.thinking))
             content.append(ThinkingBlock(step.thinking, origin=f"fake:{model}"))
         if step.text:
@@ -89,8 +90,10 @@ class FakeProvider:
         usage = step.usage or Usage(
             input_tokens=self.count_tokens(messages),
             output_tokens=approx_tokens(step.text),
+            approximate=True,
         )
-        return ProviderResponse(message, usage, "tool_use" if step.tool_calls else "end_turn")
+        stop = "tool_use" if step.tool_calls else "end_turn"
+        return ProviderResponse(message, usage, stop, cost=0.0)  # it runs nowhere
 
     def count_tokens(self, messages: Sequence[Message]) -> int:
         return approx_message_tokens(messages)

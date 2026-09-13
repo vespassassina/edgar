@@ -42,6 +42,7 @@ that did not need an ADR.
 | [0028](0028-input-during-a-turn.md) | Input during a turn: queue by default, steer on request, btw on the side | Accepted |
 | [0029](0029-session-commands.md) | Session commands: append-only, rewind the conversation not the disk, no hidden titles | Accepted · `/resume` now pairs with `/pause` |
 | [0030](0030-personality-file.md) | A personality file for tone and style, owned by the user | Accepted · complements 0023 |
+| [0031](0031-provider-layer-as-built.md) | The provider layer as built: what the sketch left open | Accepted · refines 0002, 0009, 0020; resolves OQ-3 |
 
 ## Writing a new ADR
 

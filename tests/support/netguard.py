@@ -16,6 +16,24 @@ class NetworkBlocked(RuntimeError):
     pass
 
 
+# Loopback addresses a test opened on purpose: the fixture server for a
+# user-defined provider [PRV-12]. Only an exact (host, port) is let through, so a
+# stray call to a local Ollama on its default port still fails.
+ALLOWED: set[tuple[str, int]] = set()
+
+
+def allow(host: str, port: int) -> None:
+    ALLOWED.add((host, port))
+
+
+def disallow(host: str, port: int) -> None:
+    ALLOWED.discard((host, port))
+
+
+def _allowed(address: Any) -> bool:
+    return isinstance(address, tuple) and len(address) >= 2 and (address[0], address[1]) in ALLOWED
+
+
 def _refuse(target: object) -> NoReturn:
     raise NetworkBlocked(
         f"offline test tried to reach {target!r}; use the fake provider or a cassette"
@@ -33,27 +51,35 @@ def _called_from_socketpair() -> bool:
 
 
 def _connect(self: socket.socket, address: Any) -> None:
-    if self.family == getattr(socket, "AF_UNIX", None) or _called_from_socketpair():
+    unix = self.family == getattr(socket, "AF_UNIX", None)
+    if unix or _called_from_socketpair() or _allowed(address):
         return _real_connect(self, address)
     _refuse(address)
 
 
 def _connect_ex(self: socket.socket, address: Any) -> int:
-    if self.family == getattr(socket, "AF_UNIX", None) or _called_from_socketpair():
+    unix = self.family == getattr(socket, "AF_UNIX", None)
+    if unix or _called_from_socketpair() or _allowed(address):
         return _real_connect_ex(self, address)
     _refuse(address)
 
 
-def _create_connection(address: Any, *args: Any, **kwargs: Any) -> NoReturn:
+def _create_connection(address: Any, *args: Any, **kwargs: Any) -> socket.socket:
+    if _allowed(address):
+        return _real_create_connection(address, *args, **kwargs)
     _refuse(address)
 
 
-def _getaddrinfo(host: Any, *args: Any, **kwargs: Any) -> NoReturn:
+def _getaddrinfo(host: Any, port: Any, *args: Any, **kwargs: Any) -> Any:
+    if _allowed((host, int(port or 0))):
+        return _real_getaddrinfo(host, port, *args, **kwargs)
     _refuse(host)
 
 
 _real_connect = socket.socket.connect
 _real_connect_ex = socket.socket.connect_ex
+_real_create_connection = socket.create_connection
+_real_getaddrinfo = socket.getaddrinfo
 
 PATCHES: list[tuple[object, str, object]] = [
     (socket.socket, "connect", _connect),
@@ -63,6 +89,10 @@ PATCHES: list[tuple[object, str, object]] = [
 ]
 
 
-def install() -> None:
+def install(allowed: str = "") -> None:
+    """`allowed` is "host:port,host:port", from EDGAR_TEST_NET_ALLOW in a child."""
+    for item in filter(None, allowed.split(",")):
+        host, _, port = item.rpartition(":")
+        allow(host, int(port))
     for owner, name, replacement in PATCHES:
         setattr(owner, name, replacement)

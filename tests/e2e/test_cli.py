@@ -67,3 +67,30 @@ def test_child_processes_are_offline_too(subprocess_env: dict[str, str]) -> None
     )
     assert out.returncode != 0
     assert "NetworkBlocked" in out.stderr
+
+
+def test_models_list_shows_where_prompts_can_go(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # Offline by construction: it reads config and the environment, nothing else [PRV-15].
+    config = tmp_project / ".edgar" / "config.toml"
+    config.parent.mkdir()
+    config.write_text(
+        '[model]\ndefault = "anthropic/claude-sonnet-5"\ncompactor = "ollama/qwen3"\n'
+        '[providers.lmstudio]\nkind = "openai-compatible"\nbase_url = "http://localhost:1234/v1"\n',
+        encoding="utf-8",
+    )
+    env = subprocess_env | {"ANTHROPIC_API_KEY": "x"}
+    env.pop("OPENAI_API_KEY", None)
+    out = subprocess.run(
+        [*edgar_argv, "models", "list"], capture_output=True, text=True, env=env, cwd=tmp_project
+    )
+    assert out.returncode == 0, out.stderr
+    lines = {line.split()[0]: line for line in out.stdout.splitlines() if line.strip()}
+    assert "anthropic/claude-sonnet-5" in lines["main"]
+    assert "ollama/qwen3" in lines["compactor"] and "[model] compactor" in lines["compactor"]
+    assert "no model of its own" in lines["controller"]
+    assert "$ANTHROPIC_API_KEY (set)" in lines["anthropic"]
+    assert "$OPENAI_API_KEY (unset)" in lines["openai"]
+    assert "$AZURE_OPENAI_ENDPOINT" in lines["azure"]
+    assert "http://localhost:1234/v1" in lines["lmstudio"] and "no key" in lines["lmstudio"]

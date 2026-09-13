@@ -63,6 +63,7 @@ async def run_turn(session: Session, prompt: str, rt: Runtime) -> TurnResult:
         max_output_tokens=rt.max_output_tokens,
     )
     usage = Usage()
+    cost: float | None = 0.0  # None once any request's pricing is unknown [BUD-5]
 
     while True:
         # The one safe point for /steer: the previous iteration ended on a complete
@@ -79,8 +80,11 @@ async def run_turn(session: Session, prompt: str, rt: Runtime) -> TurnResult:
         )
         response = await rt.provider.stream(messages, rt.tools.schemas(), model=rt.model, bus=bus)
         usage += response.usage
+        cost = None if cost is None or response.cost is None else cost + response.cost
         bus.emit(
-            RequestFinished(usage=response.usage, cost=0.0, cached=response.usage.cache_read_tokens)
+            RequestFinished(
+                usage=response.usage, cost=response.cost, cached=response.usage.cache_read_tokens
+            )
         )
         session.append(response.message)
 
@@ -99,5 +103,5 @@ async def run_turn(session: Session, prompt: str, rt: Runtime) -> TurnResult:
             continue
         break
 
-    bus.emit(TurnFinished(turn_id=turn_id, usage=usage, cost=0.0, reason="completed"))
+    bus.emit(TurnFinished(turn_id=turn_id, usage=usage, cost=cost, reason="completed"))
     return TurnResult(response.message.text, "completed", usage)

@@ -1,0 +1,109 @@
+"""How providers differ, as data [PRV-3, ADR-0002, ADR-0020].
+
+`openai_compat.py` reads these fields and never a provider's name, so a new server
+is a row here or a `[providers.NAME]` block in config, not a branch in code. The
+defaults are the conservative ones: a user-defined server states only what it
+knows [PRV-12].
+"""
+
+from __future__ import annotations
+
+import dataclasses
+from dataclasses import dataclass
+from typing import Literal
+
+from edgar.config.schema import ProviderSection
+from edgar.core.errors import ConfigError
+
+
+@dataclass(frozen=True, slots=True)
+class Quirks:
+    base_url: str | None  # None: the user must configure it (Azure)
+    api_key_env: str | None = None  # None: no key sent
+    base_url_env: str | None = None  # where else base_url may come from
+    auth_style: Literal["bearer", "api-key", "none"] = "bearer"
+    api_version: str | None = None  # Azure: ?api-version=, and the model is the deployment
+    native_tools: bool = True  # False: tools are described in text, calls parsed by repair.py
+    parallel_tools: bool = False
+    stream_usage: bool = False  # ask for usage in the final stream chunk
+    max_context: int = 32_768
+    max_output: int = 4_096
+    max_tokens_param: Literal["max_tokens", "max_completion_tokens"] | None = None
+    cost_source: Literal["table", "response", "free"] = "table"
+    reasoning: bool = False  # the server streams reasoning text back
+
+
+QUIRKS: dict[str, Quirks] = {
+    "openai": Quirks(
+        "https://api.openai.com/v1",
+        "OPENAI_API_KEY",
+        parallel_tools=True,
+        stream_usage=True,
+        max_context=128_000,
+        max_output=16_384,
+    ),
+    "azure": Quirks(
+        None,
+        "AZURE_OPENAI_API_KEY",
+        base_url_env="AZURE_OPENAI_ENDPOINT",
+        auth_style="api-key",
+        api_version="2024-10-21",
+        parallel_tools=True,
+        stream_usage=True,
+        max_context=128_000,
+        max_output=16_384,
+    ),
+    "openrouter": Quirks(
+        "https://openrouter.ai/api/v1",
+        "OPENROUTER_API_KEY",
+        parallel_tools=True,
+        stream_usage=True,
+        max_context=128_000,
+        max_output=16_384,
+        cost_source="response",
+        reasoning=True,
+    ),
+    # Ollama's own context window is set on the server (OLLAMA_CONTEXT_LENGTH) and it
+    # truncates silently past it, so say here what the server really has.
+    "ollama": Quirks(
+        "http://localhost:11434/v1",
+        auth_style="none",
+        stream_usage=True,
+        max_context=8_192,
+        cost_source="free",
+        reasoning=True,
+    ),
+}
+
+# The Anthropic adapter has its own wire format and needs far fewer settings.
+ANTHROPIC = ProviderSection(
+    kind="anthropic",
+    base_url="https://api.anthropic.com",
+    api_key_env="ANTHROPIC_API_KEY",
+    max_context=200_000,
+    max_output=16_384,
+)
+
+_NOT_QUIRKS = {"kind", "thinking_budget", "prompt_profile"}
+
+
+def quirks_for(name: str, block: ProviderSection | None) -> Quirks:
+    """The built-in row for `name`, with the config block's keys laid over it."""
+    base = QUIRKS.get(name)
+    if base is None:
+        if block is None or block.base_url is None:
+            raise ConfigError(
+                f"[providers.{name}] needs base_url",
+                hint=f'for example: [providers.{name}] kind = "openai-compatible", '
+                'base_url = "http://localhost:1234/v1"',
+            )
+        auth: Literal["bearer", "none"] = "bearer" if block.api_key_env else "none"
+        base = Quirks(block.base_url, auth_style=auth, reasoning=True)
+    if block is None:
+        return base
+    stated = {
+        f.name: getattr(block, f.name)
+        for f in dataclasses.fields(block)
+        if f.name not in _NOT_QUIRKS and getattr(block, f.name) is not None
+    }
+    return dataclasses.replace(base, **stated)
