@@ -56,8 +56,6 @@ be (SQLite FTS instead of embeddings) and some are stricter than they need to be
 
 ```mermaid
 flowchart TB
-    you(["you · a script · a program"])
-
     subgraph entry["Ways in"]
         direction LR
         repl["REPL<br/>/queue · /steer · /btw"]
@@ -67,42 +65,29 @@ flowchart TB
 
     subgraph core["Core: one loop, under 200 lines"]
         direction LR
-        loop["turn loop"]
-        ctx["context<br/>prompt file · staged compaction<br/>plan · todos"]
-        exec["tool pipeline<br/>validate → hooks → permissions → run"]
-        verify["verify gate<br/>done = your check passes"]
+        ctx["context<br/>prompt file · compaction<br/>plan · todos"] --> loop["turn loop"]
+        loop --> exec["tool pipeline<br/>validate → hooks<br/>→ permissions → run"]
+        loop --> verify["verify gate<br/>done = your check passes"]
     end
 
     subgraph ports["Ports: swap any of these"]
         direction LR
-        prov["providers<br/>OpenAI · Azure · Anthropic<br/>OpenRouter · Ollama · any compatible"]
-        tools["tools<br/>built-in · command · HTTP · MCP"]
-        skills["skills · agents · extensions"]
-        sandbox["sandbox<br/>none · bwrap · seatbelt · container"]
+        prov["providers<br/>OpenAI · Azure · Anthropic<br/>OpenRouter · Ollama<br/>any compatible server"]
+        tools["tools<br/>built-in · command<br/>HTTP · MCP"]
+        skills["skills · agents<br/>extensions"]
+        sandbox["sandbox<br/>none · bwrap<br/>seatbelt · container"]
     end
 
-    subgraph disk["On disk, readable"]
+    subgraph rest["Out and on disk"]
         direction LR
-        jsonl[("session JSONL<br/>full record")]
-        db[("SQLite<br/>memory · grants · indices")]
+        bus["event bus<br/>stdout: the result<br/>stderr: status"]
+        disk[("session JSONL · SQLite<br/>readable, never rewritten")]
+        v2["v2, removable<br/>learning · controller<br/>scheduling"]
     end
 
-    bus{{"event bus"}}
-    out["stdout: the result<br/>stderr: status"]
-    v2["v2, removable<br/>learning · controller · scheduling"]
-
-    you --> entry --> loop
-    loop <--> ctx
-    loop <--> prov
-    loop --> exec --> tools
-    exec --> sandbox
-    skills --> ctx
-    loop --> verify
-    loop --> bus --> out
-    loop --> jsonl
-    ctx --> db
-    bus -.-> v2
-    v2 -. post-turn gate .-> loop
+    entry --> core
+    core <--> ports
+    core --> rest
 ```
 
 Everything outside the core plugs in through a port; the core imports none of the
