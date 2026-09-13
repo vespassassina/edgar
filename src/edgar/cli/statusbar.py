@@ -16,6 +16,7 @@ from typing import TextIO
 
 from edgar.core.events import (
     AsideFinished,
+    Compacted,
     Event,
     InputQueued,
     Paused,
@@ -55,9 +56,11 @@ class Status:
             self.phase = "writing" if isinstance(event, TextDelta) else "thinking"
         elif isinstance(event, ToolStarted):
             self.phase, self.tools = event.tool, self.tools + 1
-        elif isinstance(event, RequestFinished | AsideFinished):
+        elif isinstance(event, RequestFinished | AsideFinished | Compacted):
             if isinstance(event, RequestFinished):  # an aside is not in the context
                 self.context = event.usage.input_tokens + event.usage.output_tokens
+            elif isinstance(event, Compacted):
+                self.context = event.after
             self.cost = None if self.cost is None or event.cost is None else self.cost + event.cost
         elif isinstance(event, TurnFinished):
             self.phase = ""

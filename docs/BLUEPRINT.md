@@ -640,9 +640,8 @@ would, cut back to the last complete unit (an assistant message whose calls have
 results yet is dropped from the snapshot), appends the question, and sends it with
 no tools. The request shares the cached prefix. The answer is rendered as a
 labelled block at the next boundary between output blocks, charged to the budget,
-and written to the JSONL as
-`{"type": "aside", "question": "…", "answer": "…", "usage": {…}}`, which replay
-skips.
+and written to the JSONL as its `AsideStarted` and `AsideFinished` event lines,
+which replay skips.
 
 ### 4.5 Session commands
 
@@ -657,8 +656,9 @@ records add up to; the JSONL keeps everything.
 | `/title TEXT` | `{"type": "title", "text": "…"}` | the latest title wins |
 | `/model NAME` | `{"type": "model", "model": "…"}` | the session continues on that model |
 
-`/new` and `/clear` start a new JSONL; `/load` replays one; `/save` writes the
-replayed session with blobs inlined to a single file that `/load` and
+`/new` and `/clear` start a new JSONL; `/load ID` replays one, as `--resume ID`
+does at startup. In v1 ([ADR-0037](adr/0037-core-fits-in-5000.md)), `/save` writes
+the replayed session with blobs inlined to a single file that `/load` and
 `edgar --load` accept. A turn runs from one typed prompt to the next, so
 `/undo` always removes whole units and the pairing invariant holds without special
 cases. Undo rewinds the conversation, never the disk (OQ-10).
@@ -1299,8 +1299,9 @@ fake sandbox and run everywhere; backend tests run where the backend exists.
 
 ### 8.1 Assembly
 
-Deterministic, most stable first, and inspectable via `edgar context show` with
-per-section token counts [CTX-1, CTX-2].
+Deterministic, most stable first [CTX-1]. `edgar prompt show` prints the prefix
+with its token counts; `edgar context show`, which adds the transcript and the
+totals, moved to v1 [CTX-2, [ADR-0038](adr/0038-context-and-sessions-as-built.md)].
 
 ```
 ┌─ system prompt ─────────────────── pinned
@@ -1328,8 +1329,11 @@ like everything above the breakpoint it is read once per session.
 effective prompt with its token count. The shipped prompt describes the harness,
 the tools and the safety rules, and nothing about coding style.
 
-**The prefix is byte-stable** [CTX-17]. The builder serialises everything above
-the breakpoint once per session and reuses the bytes. Volatile values (date, time,
+**The prefix is byte-stable** [CTX-17]. `setup()` reads the personality and
+instruction files once (project `AGENTS.md` first, then `~/.edgar/AGENTS.md`), and
+`builder.system_text()` joins them to the system prompt as one system message,
+built once per runtime and reused byte for byte. Tool schemas travel in the
+request's own tools field. Volatile values (date, time,
 cwd listing, git status if configured) are appended to the current turn. A test
 serialises every request in a long fake-provider session and asserts the prefix is
 identical until a compaction.
@@ -1373,26 +1377,37 @@ flowchart LR
   summary of fixed shape (*Goal*, *Decisions*, *Files touched*, *Open threads*,
   *Errors seen*, *Blobs worth re-reading*), folding in any previous summary. One
   call to the `compactor` model. Cuts fall only on turn boundaries
-- **S3 overflow** — elide inside the recent turns except the unit in progress; if
-  still over, raise `ContextOverflow` with a hint [CTX-12]
+- **S3 overflow** — only when the prompt no longer fits the window: elide inside
+  the recent turns, all but the last unit; if still over, raise `ContextOverflow`
+  with a hint [CTX-12]. Between `compact_to` and the window, with nothing old left
+  to fold, the prompt goes as it is ([ADR-0038](adr/0038-context-and-sessions-as-built.md))
 
 Compaction starts at `compact_at` (0.70 of the usable window, which is the context
-window minus the output reserve) and works down to `compact_to` (0.50). The gap is
-what stops a long session from compacting, and invalidating the cache, on every
-request [CTX-3]. After any compaction the prompt is below `compact_to`, so a second
-call is a no-op [CTX-8].
+window minus the output reserve, the reserve capped at half the window) and works
+down to `compact_to` (0.50). The gap is what stops a long session from compacting,
+and invalidating the cache, on every request [CTX-3]. Compacting twice changes
+nothing the second time [CTX-8]; S2 never re-summarises the summary alone, and
+thinking in the turn in progress is never dropped [CTX-4]. The stages are pure
+functions of the view and a cut on a turn boundary (`context/compact.py`: `elide`,
+`fold`, `rewind`, and `apply` to replay a record).
 
 ### 8.3 The record
 
-Compress the prompt, never the record [CTX-14]. A compaction appends a line to the
-session JSONL:
+Compress the prompt, never the record [CTX-14]. `storage/transcript.py` writes
+`.edgar/sessions/<id>.jsonl`: a `session` line, then `message` lines (each block
+tagged with its class name as `kind`), and a compaction appends a line that
+addresses the view by position:
 
 ```json
-{"type": "compaction", "stage": "S2", "replaces": ["u_0003", "u_0041"], "summary": "…", "at": "…"}
+{"type": "compaction", "stage": "S2", "upto": 14, "summary": "…"}
 ```
 
+`event` lines keep permission decisions (the audit trail, PERM-10), turn ends with
+their cost, asides and compactions; a `control` line lists control files that
+changed while the session ran, for the next session to warn about [PERM-12].
+
 `--resume` replays messages and compaction records to rebuild the compacted view;
-`aside` records (§4.4) are kept for the reader and skipped by replay; `reset`,
+aside events (§4.4) are kept for the reader and skipped by replay; `reset`,
 `undo`, `title` and `model` records (§4.5) are applied in order.
 A fork (v1, CLI-22) is a new JSONL whose first line is
 `{"type": "fork", "parent": "01J…", "at_turn": 12}`; replay reads the parent up to

@@ -18,17 +18,10 @@ from typing import Literal
 
 from edgar.cli import trust
 from edgar.cli.render import event_line
-from edgar.cli.setup import authorise_verify, prepare, runtime, setup
+from edgar.cli.setup import authorise_verify, begin, finish, prepare, setup
 from edgar.cli.statusbar import Status, StderrLine, terminal_ready
 from edgar.core.errors import ConfigError
-from edgar.core.events import (
-    Event,
-    EventBus,
-    Subscriber,
-    ThinkingDelta,
-    ToolStarted,
-    TurnFinished,
-)
+from edgar.core.events import Event, EventBus, Subscriber, ThinkingDelta, ToolStarted, TurnFinished
 from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.session import Session
 
@@ -50,6 +43,7 @@ def run_prompt(
     attached: str | None = None,
     verify: str | None = None,
     project_exec: bool = True,
+    resume: str | None = None,
 ) -> int:
     if mode is None:
         # Nobody is there to answer a permission prompt, so the mode must be a
@@ -62,6 +56,8 @@ def run_prompt(
     if project_exec:
         trust.require(root, config, home or Path.home())  # untrusted: exit 3 [PERM-13]
     s = setup(root, config, home=home, env=env, verify=verify, project_exec=project_exec)
+    for warning in s.warnings:
+        print(f"edgar: {warning}", file=sys.stderr)
     bus = EventBus()
     for subscriber in subscribers:
         bus.subscribe(subscriber)
@@ -76,10 +72,15 @@ def run_prompt(
     if not quiet and terminal_ready(sys.stderr):
         status = Status(config.model.default or "")
         bus.subscribe(status)
-    rt = runtime(s, bus)
-    session = Session(cwd=root, model=rt.name, mode=config.permissions.mode)
-    result = asyncio.run(_run(session, prompt, rt, [attached] if attached else [], status))
-    code = 9 if result.reason == "verification_failed" else 5 if s.guard.prompt_denials else 0
+    session, rt = begin(s, bus, resume)
+    if session.log is not None:
+        bus.subscribe(session.log.event)  # the audit trail and the turn's cost [PERM-10]
+    try:
+        result = asyncio.run(_run(session, prompt, rt, [attached] if attached else [], status))
+    finally:
+        finish(s, session)
+    codes = {"verification_failed": 9, "budget_exceeded": 6}
+    code = codes.get(result.reason, 5 if s.guard.prompt_denials else 0)
 
     if output == "json":
         done = finished[-1]
@@ -88,7 +89,7 @@ def run_prompt(
             "usage": asdict(result.usage),
             "cost": done.cost,
             "tools": tools,
-            "reason": result.reason,  # "verification_failed" with exit 9 [VER-5]
+            "reason": result.reason,  # exit 9 for verification_failed, 6 for budget_exceeded
             "model": rt.name,
             "session": session.id,
         }
@@ -99,6 +100,8 @@ def run_prompt(
         print("edgar: a tool call needed permission; see --mode or [permissions]", file=sys.stderr)
     elif code == 9:
         print("edgar: the verify command still fails; out of attempts", file=sys.stderr)
+    elif code == 6:  # the partial result went to stdout above [BUD-3]
+        print("edgar: a cost cap was reached; the result is partial", file=sys.stderr)
     return code
 
 

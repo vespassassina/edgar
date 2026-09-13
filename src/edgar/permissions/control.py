@@ -7,6 +7,7 @@ do (PERM-8, ADR-0021).
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
@@ -17,7 +18,7 @@ _FILES = ("config.toml", "personality.md", "schedules.toml")
 def control_files(cwd: Path, home: Path, instructions: Iterable[str]) -> Callable[[Path], bool]:
     roots = [cwd / ".edgar", home / ".edgar"]
     files = {(root / name).resolve() for root in roots for name in _FILES}
-    files |= {(cwd / name).resolve() for name in instructions}
+    files |= {(base / name).resolve() for base in (cwd, home / ".edgar") for name in instructions}
     trees = [(root / tree).resolve() for root in roots for tree in _TREES]
     learned = [(root / "skills" / "learned").resolve() for root in roots]
 
@@ -29,3 +30,16 @@ def control_files(cwd: Path, home: Path, instructions: Iterable[str]) -> Callabl
         return any(path.is_relative_to(tree) for tree in trees)
 
     return is_control
+
+
+def snapshot(cwd: Path, home: Path, instructions: Iterable[str]) -> dict[str, str]:
+    """Each control file's digest. Compared at session end, it names the files that
+    changed while the session ran, for the next session to warn about [PERM-12]."""
+    roots = [cwd / ".edgar", home / ".edgar"]
+    paths = [root / name for root in roots for name in _FILES]
+    paths += [base / name for base in (cwd, home / ".edgar") for name in instructions]
+    for root in roots:
+        learned = root / "skills" / "learned"  # machine-owned (SKL-13)
+        for tree in _TREES:
+            paths += [p for p in (root / tree).rglob("*") if not p.is_relative_to(learned)]
+    return {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for p in paths if p.is_file()}

@@ -16,6 +16,7 @@ from edgar.core.loop import Runtime
 from edgar.core.message import Message
 from edgar.core.session import Session
 from edgar.core.units import complete_prefix
+from edgar.providers.base import plus
 
 
 def request(session: Session, question: str, system_prompt: str) -> list[Message]:
@@ -30,5 +31,6 @@ async def ask(session: Session, question: str, rt: Runtime) -> str:
         messages, [], model=rt.model, bus=EventBus(), reasoning=False
     )
     answer = response.message.text
+    session.cost = plus(session.cost, response.cost)
     rt.bus.emit(AsideFinished(answer=answer, usage=response.usage, cost=response.cost))
     return answer

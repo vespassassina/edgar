@@ -1,4 +1,10 @@
-"""Session state. In memory for now; JSONL persistence arrives in M5 [ADR-0010]."""
+"""Session state: the conversation as the prompt shows it, and the record behind it.
+
+`transcript` is the view the next request is built from; compaction, `/reset` and
+`/undo` replace it. The record is the session's JSONL (storage/transcript.py):
+every message and every such change is appended there, never rewritten, and
+replaying it rebuilds the view [CTX-14, ADR-0010, ADR-0029].
+"""
 
 from __future__ import annotations
 
@@ -8,8 +14,12 @@ import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from edgar.core.message import Message
+
+if TYPE_CHECKING:
+    from edgar.storage.transcript import Log
 
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
@@ -33,6 +43,8 @@ class Session:
     pending_steers: list[str] = field(default_factory=list)  # drained at the safe point
     title: str | None = None  # first line of the first prompt; never a model call [CLI-28]
     tainted: bool = False  # untrusted content entered the transcript; sticky [PERM-11, OQ-7]
+    cost: float | None = 0.0  # USD so far; None once any price was unknown [BUD-5]
+    log: Log | None = None  # the JSONL record; None keeps the session in memory
     _resumed: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
     def __post_init__(self) -> None:
@@ -57,10 +69,16 @@ class Session:
     def dir(self) -> Path:
         return self.cwd / ".edgar" / "sessions" / self.id
 
+    def record(self, entry: dict[str, Any]) -> None:
+        if self.log is not None:
+            self.log.write(entry)
+
     def append(self, message: Message) -> None:
         if self.title is None and message.role == "user":
             self.title = message.text.strip().split("\n", 1)[0][:60] or None
         self.transcript.append(message)
+        if self.log is not None:
+            self.log.message(message)
 
     def steer(self, text: str) -> None:
         self.pending_steers.append(text)

@@ -1,21 +1,28 @@
-"""`edgar trust` and `edgar permissions list|revoke`: what a human decided, shown
-and changed by a human [PERM-6, PERM-13, CLI-19]."""
+"""The subcommands that look at a project rather than run a turn: `edgar trust`
+and `edgar permissions list|revoke`, what a human decided, shown and changed by a
+human [PERM-6, PERM-13, CLI-19]; `edgar sessions list|show|rm` [CLI-11]."""
 
 from __future__ import annotations
 
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
 from edgar.cli import trust
 from edgar.config.load import load
+from edgar.context.tokens import message_text
 from edgar.storage.db import Store
+from edgar.storage.transcript import conversation, find, listing
 
-USAGE = "usage: edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID"
+USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
+       edgar sessions list | show ID | rm ID"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
     home = home or Path.home()
+    if argv[0] == "sessions" and len(argv) in (2, 3):
+        return _sessions(argv[1:], cwd)
     if argv[0] == "trust" and set(argv[1:]) <= {"--yes"}:
         config = load(cwd, home=home)
         if not trust.executable(cwd, config):
@@ -41,3 +48,20 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         return 1
     print(USAGE, file=sys.stderr)
     return 2
+
+
+def _sessions(argv: list[str], cwd: Path) -> int:
+    if argv == ["list"]:
+        print("\n".join(listing(cwd)) or "no sessions yet")
+    elif argv[0] == "show" and len(argv) == 2:
+        for message in conversation(find(cwd, argv[1])):
+            print(f"{message.role}: {message_text(message)}\n")
+    elif argv[0] == "rm" and len(argv) == 2:
+        path = find(cwd, argv[1])
+        shutil.rmtree(path.with_suffix(""), ignore_errors=True)  # its blobs
+        path.unlink()
+        print(f"removed {path.stem}")
+    else:
+        print(USAGE, file=sys.stderr)
+        return 2
+    return 0

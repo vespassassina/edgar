@@ -12,9 +12,9 @@ Carried forward until done. Newest first.
 - **Try the REPL on a real model.** Start Ollama (`OLLAMA_CONTEXT_LENGTH=16384
   ollama serve`), then `uv run edgar --model ollama/qwen3:8b` from the repo. M4 was
   tested with the fake model and through a pseudo-terminal, not live.
-- **`@path` attachments in prompts** (CLI-3) are not built; piped stdin is. Pick a
-  milestone for them (M5 is the natural one).
-- **Release M1, M2 and M4?** Nothing since 0.0.2 is on PyPI. An interim release would be
+- **`@path` attachments in prompts** (CLI-3) are not built; piped stdin is. M5 did
+  not take them (no lines to spare); pick a milestone.
+- **Release M1 to M5?** Nothing since 0.0.2 is on PyPI. An interim release would be
   0.0.3; the roadmap keeps 0.1 for the Core release (M6). Waiting on the maintainer.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
@@ -23,10 +23,49 @@ Carried forward until done. Newest first.
   the startup import ban.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 4,299 of 5,000 after the review; M5 should take about
-  450 lines and M6 about 200. Next candidates to move if needed: `/history`, then
-  `edgar context show` (ADR-0037).
+- **Size watch.** Core is at 4,806 of 5,000 after M5; M6 has 194 lines. Next
+  candidates to move if needed: `/sessions`, then the personality warning
+  (ADR-0038).
 - Update the GitHub repository description to the headline (optional).
+
+## 2026-09-13 · M5 done: context and sessions
+
+**Asked:** start M5.
+
+**Done**
+- `storage/transcript.py`: the JSONL record in `.edgar/sessions/` (git-ignored),
+  replay, `find` by id or unique prefix, the listing. `--resume [ID]`,
+  `--continue`, `edgar sessions list|show|rm`.
+- `context/compact.py`: S1 elide, S2 fold into one summary (the compactor model,
+  or the main one), S3 only past the window, `ContextOverflow` with a hint; every
+  stage recorded and replayed by position. Runs before every request, so it
+  compacts inside a long tool-calling turn too. `/compact [FOCUS]`.
+- `context/builder.py`: personality and instruction files (project, then
+  `~/.edgar/`) read once and joined to the system prompt; `edgar prompt show`
+  includes the personality.
+- Session commands `/new /clear /reset /undo [N] /retry /title /sessions /load ID`,
+  each an appended record. The REPL prints the conversation on resume.
+- Turn and session cost caps: reason `budget_exceeded`, `-p` exits 6.
+- The control-file check: digests at session start and end, a `control` record,
+  a warning in the next session.
+- Tests: a 200-turn session on a 6,000-token window compacts over and over (mostly
+  S1), with the pairing invariant and an unchanged prefix on every request, and
+  replays to the exact view; a 40-call turn compacts inside itself; overflow;
+  caps; resume; `/undo 2` then replay; property tests for every stage. 419 tests
+  in about 6 s.
+
+**Decided**
+- [ADR-0038](adr/0038-context-and-sessions-as-built.md): records address the view
+  by position (`upto`); S3 only past the window, and CTX-8 reworded to match; the
+  output reserve is at most half the window; a cap is a turn reason, not an
+  exception, and unknown price counts as over; the control check compares within
+  a session; block kinds are class names.
+- Size: M5 as specified left 126 lines for M6. Collapsing trailing-comma splits gave
+  17; `/history` and `edgar cost` moved to M7, `edgar context show` to M11.
+  Core 4,806.
+- CTX-10 (`edgar sessions compact`, a Should) not built; it stays in M11.
+
+**Next:** M6, skills and the Core release (0.1, ask first).
 
 ## 2026-09-13 · Review for size; four features to v1
 

@@ -36,6 +36,7 @@ from edgar.core.message import ToolResultBlock
 from edgar.core.session import Session
 from edgar.core.units import pairing_violations
 from edgar.permissions.guard import Answer
+from edgar.storage.transcript import find, replay, start
 
 
 class Rig:
@@ -65,7 +66,7 @@ class Rig:
         rt = replace(rt, guard=s.guard)
         self.shell = Shell(
             setup=s,
-            session=Session(cwd=root, model="fake/test", mode="read-only"),
+            session=start(Session(cwd=root, model="fake/test", mode="read-only")),
             rt=rt,
             renderer=renderer,
             status=status,
@@ -241,7 +242,8 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
     ("line", "expected"),
     [
         ("/help", "/steer"),
-        ("/undo 2", "/undo arrives in M5"),
+        ("/undo 2", "nothing to undo"),
+        ("/save", "/save arrives in v1"),
         ("/frobnicate", "unknown command /frobnicate"),
         ("/mode auto", "mode: auto"),
         ("/title my work", "title: my work"),
@@ -250,6 +252,12 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/stop", "nothing is running"),
         ("/thinking", "reasoning shown"),
         ("/new", "new session"),
+        ("/undo 0", "usage: /undo [N]"),
+        ("/reset", "conversation emptied"),
+        ("/history", "/history arrives in v1"),
+        ("/sessions", "no sessions yet"),
+        ("/load NOPE", "none found"),
+        ("/compact", "nothing to compact"),
     ],
 )
 def test_commands(tmp_project: Path, line: str, expected: str) -> None:
@@ -257,6 +265,67 @@ def test_commands(tmp_project: Path, line: str, expected: str) -> None:
         await r.type(line)
 
     assert expected in play(tmp_project, scenario).text
+
+
+def texts(n: int) -> list[ScriptedResponse]:
+    return [ScriptedResponse(text=f"answer {i}") for i in range(n)]
+
+
+def test_undo_then_resume_shows_what_the_user_saw(tmp_project: Path) -> None:
+    """[CLI-26, CTX-14]"""
+
+    async def scenario(r: Rig) -> None:
+        for n in range(4):
+            await r.type(f"prompt {n}")
+            await r.settle()
+        await r.type("/undo 2", "/title kept")
+
+    r = play(tmp_project, scenario, texts(4))
+    session = r.shell.session
+    assert [m.text for m in session.transcript if m.role == "user"] == ["prompt 0", "prompt 1"]
+    assert "undid 2 turn(s)" in r.text
+    resumed, _ = replay(find(tmp_project, session.id))
+    assert resumed.transcript == session.transcript and resumed.title == "kept"
+
+
+def test_retry_sends_the_last_prompt_again(tmp_project: Path) -> None:
+    async def scenario(r: Rig) -> None:
+        await r.type("once more")
+        await r.settle()
+        await r.type("/retry")
+        await r.settle()
+
+    r = play(tmp_project, scenario, texts(2))
+    transcript = r.shell.session.transcript
+    assert [m.text for m in transcript] == ["once more", "answer 1"]
+
+
+def test_sessions_and_load(tmp_project: Path) -> None:
+    async def scenario(r: Rig) -> None:
+        await r.type("first session")
+        await r.settle()
+        first = r.shell.session.id
+        await r.type("/reset", "/new", "/sessions")
+        assert first in r.text and "first session" in r.text
+        await r.type(f"/load {first[:12]}")
+        assert r.shell.session.id == first and r.shell.session.transcript == []
+
+    r = play(tmp_project, scenario, texts(1))
+    assert "loaded " in r.text
+
+
+def test_compact_summarises_the_old_turns(tmp_project: Path) -> None:
+    async def scenario(r: Rig) -> None:
+        for n in range(5):
+            await r.type(f"prompt {n}")
+            await r.settle()
+        await r.type("/compact the parser")
+
+    r = play(tmp_project, scenario, [*texts(5), ScriptedResponse(text="Goal: parse")])
+    transcript = r.shell.session.transcript
+    assert transcript[1].meta.get("via") == "summary" and "Goal: parse" in transcript[1].text
+    assert "Focus on: the parser" in r.provider.requests[-1][-1].text  # [CTX-7]
+    assert "compacted " in r.text
 
 
 def test_a_permission_question_is_answered_by_the_next_line(tmp_project: Path) -> None:

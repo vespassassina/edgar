@@ -180,6 +180,17 @@ class ToolFinished(Event):
     blob: str | None
 
 
+# context [CTX-3]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Compacted(Event):
+    stages: str  # "S1", "S1+S2", …
+    before: int  # tokens
+    after: int
+    cost: float | None  # the S2 summary call; 0 without one
+
+
 # input during a turn [CLI-13]
 
 

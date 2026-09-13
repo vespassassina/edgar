@@ -27,7 +27,7 @@ class RoutingContext:
 @dataclass(frozen=True, slots=True)
 class Selection:
     model: str
-    rule: str  # "agent", "role", "default" or "user" (/model) [CLI-28]
+    rule: str  # "agent", "role", "default", "user" (/model) or "resume" [CLI-28]
     reason: str
 
 

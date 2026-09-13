@@ -37,6 +37,11 @@ class Usage:
         )
 
 
+def plus(a: float | None, b: float | None) -> float | None:
+    """Costs add up until one is unknown; then the total is unknown too [BUD-5]."""
+    return None if a is None or b is None else a + b
+
+
 @dataclass(frozen=True, slots=True)
 class Capabilities:
     tools: bool

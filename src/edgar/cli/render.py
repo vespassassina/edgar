@@ -14,6 +14,7 @@ from collections.abc import Callable
 
 from edgar.core.events import (
     AsideFinished,
+    Compacted,
     Event,
     ModelSelected,
     ProviderRetry,
@@ -27,6 +28,8 @@ from edgar.core.events import (
     ToolProposed,
     TurnFinished,
 )
+from edgar.core.message import Message
+from edgar.tools.execute import preview
 
 
 class Printer:
@@ -95,6 +98,19 @@ class Renderer:
         self.printer = printer
         self.show_thinking = show_thinking
 
+    def show(self, messages: list[Message]) -> None:
+        """A conversation as it was printed: a resumed session, or `/history` [CLI-11]."""
+        p = self.printer
+        for m in messages:
+            via = m.meta.get("via")
+            if m.role == "user":
+                p.block(f"{'↪ ' if via else '> '}{m.text}", dim=bool(via))
+            elif m.role == "assistant":
+                if m.text:
+                    p.block(m.text)
+                for call in m.tool_calls:
+                    p.block(f"· {call.name} {preview(call.args)}", dim=True)
+
     def __call__(self, event: Event) -> None:
         p = self.printer
         if event.depth:  # subagents render in their own rows (v1)
@@ -132,6 +148,8 @@ def _notice(event: Event) -> str | None:
         return f"repaired a {event.tool} call ({event.repair})"
     if isinstance(event, ModelSelected):
         return f"model: {event.model} ({event.reason})"
+    if isinstance(event, Compacted):
+        return f"compacted {event.before:,} → {event.after:,} tokens ({event.stages})"
     return None
 
 

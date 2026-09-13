@@ -23,26 +23,30 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0, M1, M2, M4 (the REPL) and M3 (tools, permissions, the verify gate) are done
-(https://github.com/vespassassina/edgar); M5 is next; ADR-0037 moved plan mode and
-`todo`, `/save` and `/load`, `edgar login` and the daily cap to v1 so Core fits in
-5,000 lines. `edgar` opens an
+M0 to M5 are done (https://github.com/vespassassina/edgar); M6 (skills, the Core
+release) is next, with 194 lines of Core budget left. ADR-0037 and ADR-0038 moved
+plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
+`edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
 for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
 OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server.
 Built so far: the message types and pairing invariant (`core/units.py`), the event
 bus, the loop with cancellation (`core/cancel.py`) and pause, `/btw`
-(`core/aside.py`), eight built-in tools plus command and HTTP tools, the tool
+(`core/aside.py`), sessions recorded as JSONL and replayed on `--resume`
+(`storage/transcript.py`), staged compaction as pure functions over the view
+(`context/compact.py`), cost caps, eight built-in tools plus command and HTTP tools, the tool
 pipeline with spill, the permission engine (`permissions/`: pure `decide()`, the
 guard, grants, trust), the verify gate (`core/verify.py`), the prompt file with profiles,
 layered config with provenance, and the model picker. Provider decisions that
-differ from the Blueprint's first sketch are in ADR-0031; the REPL's in ADR-0035. Releases go out through trusted
+differ from the Blueprint's first sketch are in ADR-0031; the REPL's in ADR-0035;
+context and sessions' in ADR-0038. Releases go out through trusted
 publishing when a `v*` GitHub release is published; bump the version in both
 `pyproject.toml` and `src/edgar/__init__.py`.
 
 Tests drive the loop through `tests/support/harness.py` (`scripted()`, `runtime()`,
 `Recorder`, `SlowTool`); assert on `recorder.names` for event sequences. REPL tests
-drive `Shell` directly (`tests/integration/test_repl.py`). Provider tests drive
+drive `Shell` directly (`tests/integration/test_repl.py`); long-session tests use a
+small-window provider in `tests/integration/test_sessions.py`. Provider tests drive
 adapters through the `rig` fixture (`tests/support/rig.py`), which replays
 `tests/cassettes/<provider>.json`; every cassette entry is still `synthetic` until
 someone with keys runs `just record-cassettes NAME`. The `eval` recipe arrives
@@ -76,7 +80,7 @@ just eval                 # outcome-scored tasks, slow and non-blocking
 ```
 
 A single test is plain pytest, for example
-`uv run pytest tests/property/test_compaction.py::test_compaction_is_idempotent -x`.
+`uv run pytest tests/property/test_compaction.py::test_elide_keeps_the_pairing_and_is_idempotent -x`.
 
 The offline suite must stay under 60 s (NFR-2) and applies the `no_network` fixture
 suite-wide, so any accidental socket call fails loudly rather than passing slowly.

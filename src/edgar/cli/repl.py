@@ -23,11 +23,11 @@ from pathlib import Path
 from edgar import __version__
 from edgar.cli import trust
 from edgar.cli.render import Printer, Renderer
-from edgar.cli.setup import Setup, authorise_verify, prepare, runtime, setup
+from edgar.cli.setup import Setup, authorise_verify, begin, finish, prepare, runtime, setup
 from edgar.cli.statusbar import Status
 from edgar.core import aside
 from edgar.core.errors import EdgarError
-from edgar.core.events import EventBus, InputQueued
+from edgar.core.events import Event, EventBus, InputQueued
 from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Answer
@@ -57,6 +57,19 @@ class Shell:
         self.pending_input = ""  # put back on the input line after a cancel
         self.question: asyncio.Future[str] | None = None  # the next line answers it
         self.done = False
+        status.cost = session.cost
+        rt.bus.subscribe(self._record)
+
+    def _record(self, event: Event) -> None:
+        if self.session.log is not None:
+            self.session.log.event(event)  # the audit trail and turn costs [PERM-10]
+
+    def open(self, session: Session) -> None:
+        """`/new`, `/clear`, `/load`: the current session ends, and stays on disk."""
+        finish(self.setup, self.session)
+        self.session, self.status.cost, self.status.context = session, session.cost, 0
+        if session.model != self.rt.name:
+            self.switch(session.model)
 
     def prompt_text(self) -> str:
         return "allow? [y]es once, [s]ession, [a]lways, [n]o > " if self.question else "> "
@@ -111,6 +124,8 @@ class Shell:
                     f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "
                     "still fails after its last attempt; the session goes on"
                 )
+            elif result.reason == "budget_exceeded":  # [BUD-3]
+                self.say("⚠ a cost cap was reached; the turn stopped. See [budget] and /cost")
         except asyncio.CancelledError:
             return  # the loop sealed the transcript; nothing queued runs after a cancel
         except EdgarError as exc:
@@ -147,6 +162,7 @@ class Shell:
         choice = Selection(model, "user", "/model")
         self.rt = runtime(self.setup, self.rt.bus, choice=choice)
         self.session.model = self.status.model = model
+        self.session.record({"type": "model", "model": model})
 
     async def close(self) -> None:
         if self.question and not self.question.done():
@@ -156,6 +172,7 @@ class Shell:
         for task in running:
             task.cancel()
         await asyncio.gather(*running, return_exceptions=True)
+        finish(self.setup, self.session)
 
 
 async def interact(
@@ -169,6 +186,7 @@ async def interact(
     color: bool = True,
     verify: str | None = None,
     project_exec: bool = True,
+    resume: str | None = None,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -204,7 +222,7 @@ async def interact(
     s = setup(
         root, config, home=home, env=env, verify=verify, project_exec=project_exec, asker=permission
     )
-    for warning in s.tools.warnings:
+    for warning in s.warnings:
         print(f"edgar: {warning}")
 
     with patch_stdout(raw=True):
@@ -221,18 +239,12 @@ async def interact(
             if chosen is None:
                 return 3
             s.config = replace(config, model=replace(config.model, default=chosen))
-        rt = runtime(s, bus)
+        session, rt = begin(s, bus, resume)
         status.model = rt.name
-        session = Session(cwd=root, model=rt.name, mode=s.config.permissions.mode)
-        shell = Shell(
-            setup=s,
-            session=session,
-            rt=rt,
-            renderer=renderer,
-            status=status,
-            ask=ask,
-        )
+        shell = Shell(setup=s, session=session, rt=rt, renderer=renderer, status=status, ask=ask)
         shell_ref.append(shell)
+        if resume is not None:  # the conversation as it was left [CLI-11]
+            renderer.show(session.transcript)
         printer.block(f"edgar {__version__} · {rt.name} · {session.mode} · /help", dim=True)
         await _read(shell, prompt.prompt_async)
     return 0

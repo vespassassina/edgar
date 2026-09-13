@@ -29,8 +29,5 @@ def seal(session: Session, *, partial_text: str, results: Sequence[ToolResultBlo
 
 def _cancelled(call: ToolUseBlock) -> ToolResultBlock:
     return ToolResultBlock(
-        call.id,
-        (TextBlock(CANCELLED),),
-        is_error=True,
-        error=ErrorRecord(call.name, "cancelled"),
+        call.id, (TextBlock(CANCELLED),), is_error=True, error=ErrorRecord(call.name, "cancelled")
     )

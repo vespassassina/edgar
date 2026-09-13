@@ -24,8 +24,8 @@ M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record i
 | M2 Real providers | Done | unreleased (`ff4db71`) |
 | M4 REPL, streams, model picker | Done | unreleased |
 | M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
-| M5 Context and sessions | **Next** (ADR-0037 made room) | |
-| M6 Skills, Core release | Planned | 0.1 |
+| M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
+| M6 Skills, Core release | **Next** (194 lines left) | 0.1 |
 | M7–M16 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -201,22 +201,22 @@ units, and a `/btw` answer leaves the transcript unchanged.
 **Goal:** long sessions that do not fall over, and that survive a restart.
 
 - `context/builder.py` — assembly order with the cache breakpoint, byte-stable
-  prefix and its test [CTX-1, CTX-15, CTX-17]
+  prefix and its test, pinned sections [CTX-1, CTX-5, CTX-15, CTX-17]
 - `context/tokens.py` — exact plus approximate [CTX-9]
-- `context/pins.py` [CTX-5]
 - `context/compact.py` — S1 elide, S2 summarise, S3 overflow, hysteresis [CTX-3, CTX-6, CTX-11, CTX-12]
-- `edgar context show` with per-section token counts [CTX-2]
+- ~~`edgar context show`~~ moved to M11 ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) [CTX-2]
 - `/compact` with optional focus [CTX-7]
 - `storage/transcript.py` — JSONL with compaction records [CTX-14, ADR-0010]
 - `--resume`, `--continue`, `edgar sessions list|show|rm` [CLI-11]
-- Session commands as appended records: `/new /clear /reset /history /undo /retry
+- Session commands as appended records: `/new /clear /reset /undo /retry
   /title /sessions /load ID` [CLI-25, CLI-26, CLI-28, ADR-0029]; `/save`, loading a
-  saved file and `edgar --load` moved to M7 ([ADR-0037](adr/0037-core-fits-in-5000.md))
+  saved file and `edgar --load` moved to M7 ([ADR-0037](adr/0037-core-fits-in-5000.md)),
+  and `/history` with them ([ADR-0038](adr/0038-context-and-sessions-as-built.md))
 - `personality.md`, user and project scope, in `edgar prompt show` [CTX-19, ADR-0030]
 - The control-file hash stored at session end, and the warning when it changed
   (moved from M3) [PERM-12]
-- Turn and session cost caps [BUD-2, BUD-3], `/cost`, `edgar cost` [BUD-6]; the daily
-  cap moved to M7
+- Turn and session cost caps [BUD-2, BUD-3], `/cost` [BUD-6]; the daily cap and
+  `edgar cost` moved to M7
 - Idempotency, overflow and spill tests [CTX-8]
 
 **Done when:** a 200-turn session with heavy tool use autocompacts repeatedly,
@@ -268,7 +268,8 @@ M3, [ADR-0033](adr/0033-replan-after-m2.md); `edgar login` to M8,
 - `edgar memory list|add|edit|review|forget|undo` [MEM-5]
 - Contradiction detection for new facts [MEM-10], eviction [MEM-11]
 - `/save`, loading a saved file, `edgar --load` [CLI-25]; the daily cost cap
-  [BUD-2] (both moved from M5, [ADR-0037](adr/0037-core-fits-in-5000.md))
+  [BUD-2] (both moved from M5, [ADR-0037](adr/0037-core-fits-in-5000.md)); `/history`
+  [CLI-25] and `edgar cost` [BUD-6] (moved from M5, [ADR-0038](adr/0038-context-and-sessions-as-built.md))
 
 **Done when:** a fact saved in session 1 changes behaviour in session 4 and is
 editable and revertible; a declined proposal is never injected; a fact saved
@@ -355,6 +356,8 @@ contract kit; a failing `pre_tool` hook denies; and startup time is unchanged.
   reachable host [CFG-5, PRV-15]
 - `config show --resolved` with grant origins [CFG-2]
 - `edgar sessions compact ID` [CTX-10]
+- `edgar context show` with per-section token counts [CTX-2] (moved from M5,
+  [ADR-0038](adr/0038-context-and-sessions-as-built.md))
 - `docs/TOUR.md` — guided walk through BLUEPRINT §18
 - `docs/COOKBOOK.md` — piping, command and HTTP tools, subagents, skills,
   extensions, hooks, a devcontainer for untrusted work

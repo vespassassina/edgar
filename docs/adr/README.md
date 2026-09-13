@@ -49,6 +49,7 @@ that did not need an ADR.
 | [0035](0035-repl-as-built.md) | The REPL as built: a prompt that never blocks, text a line at a time, no rich | Accepted · drops `rich` |
 | [0036](0036-safety-layer-as-built.md) | The safety layer as built: one pure decision, a guard around it, and what moved | Accepted · `/browser` to M8 |
 | [0037](0037-core-fits-in-5000.md) | Core stays under 5,000 lines: simplify first, then move four features to v1 | Accepted · plan and todo, save and load, login, daily cap to v1 |
+| [0038](0038-context-and-sessions-as-built.md) | Context and sessions as built: records by position, S3 only past the window, three commands to v1 | Accepted · `/history`, `edgar cost`, `edgar context show` to v1 |
 
 ## Writing a new ADR
 

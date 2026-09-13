@@ -52,6 +52,21 @@ Core is being built, 0.1 at the Core release (M6).
 - `-p` for programs: `--json` (one object), `--events` (JSON Lines), `--quiet`,
   `--show-thinking`, `--no-color` and `NO_COLOR`; piped stdin is attached as
   context; a status line on stderr when it is a terminal; Ctrl-C exits 7.
+- Sessions (M5): every session is recorded to `.edgar/sessions/<id>.jsonl`
+  (git-ignored, one JSON object per line). `edgar --resume [ID]` and `--continue`
+  reopen one, compacted view and all; `edgar sessions list|show ID|rm ID`; in the
+  REPL `/sessions`, `/load ID`, `/new`, `/reset`, `/undo [N]` (files stay as they
+  are, and it says which) and `/retry`.
+- Long sessions compact themselves (M5): old tool results become one-line stubs,
+  then old turns fold into one summary, cheapest first; `/compact [FOCUS]` does it
+  now. Content that cannot fit the window stops with a hint instead of being cut.
+- Cost caps: `[budget] turn_cost_cap` and `session_cost_cap` stop the turn before
+  the next request; `-p` exits 6 with the partial result. With a cap set, a model
+  of unknown price stops at once.
+- `personality.md` (project `.edgar/` or `~/.edgar/`) for tone and style, shown by
+  `edgar prompt show`; `~/.edgar/AGENTS.md` for instructions in every project.
+- A warning at start when edgar's own control files (AGENTS.md, config, tools)
+  changed during the previous session.
 
 ## 0.0.2 — 2026-09-13
 

@@ -12,18 +12,19 @@ from typing import get_args
 
 from edgar.cli.repl import Shell
 from edgar.config.schema import Mode
+from edgar.context.compact import compact, rewind, turn_starts
 from edgar.core.errors import EdgarError
 from edgar.core.events import Paused, Resumed
 from edgar.core.session import Session
+from edgar.storage.transcript import find, listing, replay, start
 
 Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
 LATER = {
     "M8": "/browser",
-    "M5": "/compact /reset /history /undo /retry /sessions /load",
     "M6": "/skills /tools",
-    "v1": "/plan /go /save /fork /remember /memory /agents /init",
+    "v1": "/plan /go /save /history /fork /remember /memory /agents /init",
 }
 
 
@@ -62,7 +63,8 @@ async def _help(shell: Shell, arg: str) -> None:
 @command("/status", "session, model, mode, context, cost, queue")
 async def _status(shell: Shell, arg: str) -> None:
     s, st, caps = shell.session, shell.status, shell.rt.provider.capabilities
-    cost = "unknown" if st.cost is None else f"${st.cost:.4f}"
+    cost = "unknown" if s.cost is None else f"${s.cost:.4f}"
+    persona = [str(p.source) for p in shell.setup.pinned if p.name == "personality"]
     rows = [
         ("session", f"{s.id} · {s.title or '(untitled)'}"),
         ("model", shell.rt.name),
@@ -75,7 +77,7 @@ async def _status(shell: Shell, arg: str) -> None:
         ("verify", shell.config.verify.command or "none"),
         ("tainted", "yes: shell and network ask in auto" if s.tainted else "no"),
         ("tools", ", ".join(shell.rt.tools.names())),
-        ("personality", "arrives in M5"),
+        ("personality", persona[0] if persona else "none"),
     ]
     shell.say("\n".join(f"  {k:<13} {v}" for k, v in rows))
 
@@ -179,7 +181,7 @@ async def _resume(shell: Shell, arg: str) -> None:
 
 @command("/cost", "tokens and cost so far")
 async def _cost(shell: Shell, arg: str) -> None:
-    cost = shell.status.cost
+    cost = shell.session.cost
     shown = "unknown (a model without a price was used)" if cost is None else f"${cost:.4f}"
     shell.say(f"session cost: {shown}; context now {shell.status.context:,} tokens")
 
@@ -188,18 +190,96 @@ async def _cost(shell: Shell, arg: str) -> None:
 async def _title(shell: Shell, arg: str) -> None:
     if arg:
         shell.session.title = arg[:60]
+        shell.session.record({"type": "title", "text": arg[:60]})
     shell.say(f"title: {shell.session.title or '(untitled)'}")
 
 
-@command("/new", "start a new session")
-async def _new(shell: Shell, arg: str) -> None:
+def _idle(shell: Shell) -> bool:
     if shell.busy:
         shell.say("a turn is running; /stop it first")
+    return not shell.busy
+
+
+@command("/compact", "compact the conversation now; /compact FOCUS steers the summary")
+async def _compact(shell: Shell, arg: str) -> None:
+    if not _idle(shell):
         return
-    old = shell.session
-    shell.session = Session(cwd=old.cwd, model=old.model, mode=old.mode)
-    shell.status.context = 0
-    shell.say(f"new session {shell.session.id} (sessions are saved to disk from M5)")
+    before = list(shell.session.transcript)
+    try:
+        await compact(shell.session, shell.rt, force=True, focus=arg or None)  # [CTX-7]
+    except EdgarError as exc:
+        shell.say(f"edgar: {exc}" + (f"\nhint: {exc.hint}" if exc.hint else ""))
+    if shell.session.transcript == before:
+        shell.say("nothing to compact: every turn is recent (context.keep_last_turns)")
+
+
+@command("/reset", "empty the conversation; the session, model and title stay")
+async def _reset(shell: Shell, arg: str) -> None:
+    if _idle(shell):
+        shell.session.transcript = []
+        shell.session.record({"type": "reset"})
+        shell.status.context = 0
+        shell.say("conversation emptied")
+
+
+@command("/undo", "remove the last N turns (default 1); files stay as they are")
+async def _undo(shell: Shell, arg: str) -> None:
+    if not (arg or "1").isdigit() or int(arg or "1") < 1:
+        shell.say("usage: /undo [N]")
+    elif _idle(shell):
+        _rewind(shell, int(arg or "1"))
+
+
+@command("/retry", "undo the last turn and send its prompt again")
+async def _retry(shell: Shell, arg: str) -> None:
+    if _idle(shell):
+        prompt = _rewind(shell, 1)
+        if prompt:
+            shell.submit(prompt)
+
+
+def _rewind(shell: Shell, turns: int) -> str:
+    """Whole turns go; what `write` and `edit` did in them stays on disk [CLI-26]."""
+    s = shell.session
+    starts = turn_starts(s.transcript)
+    if not starts:
+        shell.say("nothing to undo")
+        return ""
+    first = s.transcript[starts[-min(turns, len(starts))]].text
+    s.transcript, files = rewind(s.transcript, turns)
+    s.record({"type": "undo", "turns": turns, "files": files})
+    kept = f"; files changed in them stay changed: {', '.join(files)}" if files else ""
+    shell.say(f"undid {min(turns, len(starts))} turn(s){kept}")
+    return first
+
+
+@command("/sessions", "list this project's sessions")
+async def _sessions(shell: Shell, arg: str) -> None:
+    shell.say("\n".join(listing(shell.session.cwd)) or "no sessions yet")
+
+
+@command("/load", "open a session: /load ID (a unique start is enough)")
+async def _load(shell: Shell, arg: str) -> None:
+    if not arg:
+        shell.say("usage: /load ID; /sessions lists them")
+    elif _idle(shell):
+        try:
+            session, _ = replay(find(shell.session.cwd, arg))
+        except EdgarError as exc:
+            shell.say(f"edgar: {exc}")
+            return
+        session.mode = shell.session.mode
+        shell.open(session)
+        shell.renderer.show(session.transcript)
+        shell.say(f"loaded {session.id} · {session.title or '(untitled)'}")
+
+
+@command("/new", "start a new session; the old one stays on disk")
+async def _new(shell: Shell, arg: str) -> None:
+    if _idle(shell):
+        old = shell.session
+        shell.open(start(Session(cwd=old.cwd, model=old.model, mode=old.mode)))
+        shell.say(f"new session {shell.session.id}")
 
 
 @command("/clear", "clear the screen and start a new session")

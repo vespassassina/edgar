@@ -242,6 +242,15 @@ recover. It is worth generating thousands of cases. The same assertion runs on
 every transcript the fake-provider tests produce, and on the output of
 cancellation (CLI-12).
 
+As built (M5, [ADR-0038](adr/0038-context-and-sessions-as-built.md)): the stages
+are pure functions of a view and a cut, so `tests/property/test_compaction.py`
+generates conversations and checks each stage keeps the pairing, is idempotent,
+leaves the first prompt and the turn in progress alone, and replays exactly from
+its record. `tests/integration/test_sessions.py` runs a 200-turn session on a
+provider with a 6,000-token window: every request must pass the invariant, carry
+the same system message, and extend the one before it unless a compaction came
+between them [CTX-17]; the replayed JSONL must equal the live view [CTX-14].
+
 ### Input during a turn
 
 Steers arrive at arbitrary moments, so arrival timing is generated too
@@ -267,7 +276,7 @@ def test_aside_snapshot_never_ends_with_unanswered_calls(transcript):
 def test_aside_leaves_the_transcript_unchanged(fake_provider, tmp_session):
     before = list(tmp_session.transcript)
     aside.ask(tmp_session, "quick question")
-    assert tmp_session.transcript == before and last_record(tmp_session)["type"] == "aside"
+    assert tmp_session.transcript == before and last_record(tmp_session)["event"] == "AsideFinished"
 ```
 
 The Anthropic contract test adds a steer after a tool message and checks the

@@ -159,18 +159,18 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save` and saved files; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /fork /remember /memory /skills /agents /tools /init /browser`) | — |
+| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | — |
 | Providers | 1–13, 15–17 | 14, 18 | — |
 | Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
-| Context | 1–9, 11–17, 19 | 10, 18 | — |
+| Context | 1, 3–9, 11–17, 19 | 2, 10, 18 | — |
 | Subagents | — | 1–11 | — |
 | Skills | 1–5, 7 (`list`, `validate`) | 17 | 6, 7 (rest), 8–16 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
 | Controller | — | — | 1–13 |
 | Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
 | Scheduling | — | — | 1–12 |
-| Budget | 1, 2 (turn and session), 3, 5, 6 | 2 (daily), 4 | — |
+| Budget | 1, 2 (turn and session), 3, 5, 6 (`/cost`) | 2 (daily), 4, 6 (`edgar cost`) | — |
 | Config | 1–3, 6–8 | 4, 5 | — |
 | Verification | 1–7 (sources arrive with their features) | — | — |
 | Extensions | 11 (the ports rule holds from M0) | 1–10 | — |
@@ -486,7 +486,7 @@ Rationale for CTX-3 to CTX-14 in [ADR-0016](adr/0016-context-pipeline.md).
 | CTX-5 | Never compacted: system prompt, instruction files, pinned facts, skill index, the first user message, and the unit in progress. The last `context.keep_last_turns` turns (default 4) are exempt from S1 and S2 but not from S3 | Must |
 | CTX-6 | The rolling summary has a fixed shape: *Goal*, *Decisions*, *Files touched*, *Open threads*, *Errors seen*, *Blobs worth re-reading*. A previous summary is folded into the new one, so there is at most one | Must |
 | CTX-7 | Manual `/compact` with optional focus instruction | Must |
-| CTX-8 | Compaction is idempotent: after any compaction the prompt is below `compact_to`, so compacting again is a no-op | Must |
+| CTX-8 | Compaction is idempotent: compacting again changes nothing. After a compaction the prompt is below `compact_to`, or, when the kept recent turns alone are larger, inside the window ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | Must |
 | CTX-9 | Token counting exact where the provider reports usage, approximate with per-provider correction otherwise (OQ-3) | Must |
 | CTX-10 | `edgar sessions compact ID [--focus TEXT]` compacts a stored session outside the REPL, appending a compaction record the next `--resume` picks up | Should |
 | CTX-11 | Compaction runs in stages until under target, and every stage operates on whole units (an assistant tool-call message plus its tool message) and whole turns: **S1 elide** old tool-result content to a one-line stub (tool, argument preview, size, blob path) and drop thinking blocks from completed turns; **S2 summarise** the oldest completed turns with one cheap-model call; **S3 overflow** (CTX-12) | Must |
@@ -720,22 +720,22 @@ edgar -p PROMPT [--mode M]         one-shot, non-interactive
 edgar -p PROMPT --json             machine-readable single object
 edgar -p PROMPT --events           event stream as JSON Lines
 edgar -p PROMPT --verify CMD       done only when CMD exits 0
-edgar -p PROMPT --plan             plan only, read-only; the plan is pinned
 edgar -p PROMPT --show-thinking    render reasoning where the provider exposes it
 edgar --resume [ID] | --continue   restore a session
-edgar --load PATH                  open a session exported with /save
 edgar trust [--yes]                trust this project's executable config
 edgar prompt show                  print the effective system prompt and its token count
 edgar models list
 edgar tools list | describe NAME
 edgar skills list | validate
 edgar permissions list | revoke ID
-edgar context show
 edgar sessions list | show ID | rm ID
-edgar cost
 
 v1.0
+edgar -p PROMPT --plan             plan only, read-only; the plan is pinned
+edgar --load PATH                  open a session exported with /save
 edgar --fork ID[@TURN]             branch a session at a turn
+edgar context show                 the assembled prompt, section by section
+edgar cost                         spend today and in total
 edgar init                         scaffold project config
 edgar doctor [--network]           diagnose environment; list every reachable host
 edgar config show [--resolved]

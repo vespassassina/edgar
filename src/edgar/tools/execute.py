@@ -33,7 +33,7 @@ async def execute(
     tainted: bool = False,
 ) -> ToolResultBlock:
     bus = ctx.bus
-    bus.emit(ToolProposed(id=call.id, tool=call.name, args_preview=_preview(call.args)))
+    bus.emit(ToolProposed(id=call.id, tool=call.name, args_preview=preview(call.args)))
     tool = registry.get(call.name)
     if tool is None:
         known = ", ".join(registry.names())
@@ -123,6 +123,6 @@ def _failed(call: ToolUseBlock, kind: ErrorKind, text: str) -> ToolResultBlock:
     )
 
 
-def _preview(args: dict[str, Any], limit: int = 120) -> str:
+def preview(args: dict[str, Any], limit: int = 120) -> str:
     text = json.dumps(args, ensure_ascii=False, sort_keys=True)
     return text if len(text) <= limit else text[: limit - 1] + "…"

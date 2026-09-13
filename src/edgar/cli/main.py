@@ -20,7 +20,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="edgar",
         description="The agent harness you can read in an afternoon.",
         epilog="Other commands: edgar models [list], edgar trust, "
-        "edgar permissions list|revoke ID, edgar prompt show",
+        "edgar permissions list|revoke ID, edgar prompt show, "
+        "edgar sessions list|show ID|rm ID",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
@@ -30,6 +31,15 @@ def build_parser() -> argparse.ArgumentParser:
     output = parser.add_mutually_exclusive_group()
     output.add_argument("--json", action="store_true", help="with -p: one JSON object")
     output.add_argument("--events", action="store_true", help="with -p: events as JSON Lines")
+    again = parser.add_mutually_exclusive_group()
+    again.add_argument("--resume", nargs="?", const="", metavar="ID", help="reopen a session")
+    again.add_argument(
+        "--continue",
+        action="store_const",
+        const="",
+        dest="resume",
+        help="reopen the latest session",
+    )
     parser.add_argument("--quiet", action="store_true", help="no status line")
     parser.add_argument("--show-thinking", action="store_true", help="show reasoning")
     parser.add_argument("--no-color", action="store_true", help="no colour (also NO_COLOR)")
@@ -47,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
             return _prompt_command(argv[1:])
         if argv[:1] == ["models"]:
             return _models_command(argv[1:])
-        if argv[:1] in (["trust"], ["permissions"]):
+        if argv[:1] in (["trust"], ["permissions"], ["sessions"]):
             from edgar.cli.admin import command
 
             return command(argv, Path.cwd())
@@ -85,6 +95,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
                 color=color_wanted(args.no_color),
                 verify=args.verify,
                 project_exec=not args.no_project_exec,
+                resume=args.resume,
             )
         )
     from edgar.cli.oneshot import run_prompt
@@ -102,6 +113,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         attached=attached or None,
         verify=args.verify,
         project_exec=not args.no_project_exec,
+        resume=args.resume,
     )
 
 
@@ -109,13 +121,17 @@ def _prompt_command(argv: list[str]) -> int:
     if argv != ["show"]:
         print("usage: edgar prompt show", file=sys.stderr)
         return 2
+    from edgar.context.builder import pinned, system_text
     from edgar.context.prompts import load_prompt
     from edgar.context.tokens import approx_tokens
 
     prompt = load_prompt(Path.cwd())
-    sys.stdout.write(prompt.text)
+    personality = pinned(Path.cwd(), Path.home(), [])
+    sys.stdout.write(system_text(prompt.text, personality))
     tokens = approx_tokens(prompt.text)
     print(f"# {prompt.source} · ~{tokens:,} tokens of 1,500 [NFR-13]", file=sys.stderr)
+    for p in personality:
+        print(f"# {p.source} · ~{approx_tokens(p.text):,} tokens [CTX-19]", file=sys.stderr)
     return 0
 
 
