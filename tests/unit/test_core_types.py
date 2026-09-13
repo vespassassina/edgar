@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 from harness import Recorder
+from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.core.errors import ConfigError, ProviderError
 from edgar.core.events import EventBus, TextDelta
 from edgar.core.message import Message, TextBlock, ThinkingBlock
 from edgar.core.session import Session, new_id
 from edgar.providers.base import Usage
-from edgar.providers.fake import FakeProvider, ScriptedResponse
 from edgar.providers.registry import resolve
 
 
@@ -49,14 +49,14 @@ def test_bus_delivers_in_subscription_order() -> None:
     assert seen == [("a", "TextDelta"), ("b", "TextDelta")]
 
 
-def _stream(provider: FakeProvider, messages: list[Message], recorder: Recorder) -> Message:
+def _stream(provider: ScriptedProvider, messages: list[Message], recorder: Recorder) -> Message:
     bus = EventBus()
     bus.subscribe(recorder)
     return asyncio.run(provider.stream(messages, [], model="test", bus=bus)).message
 
 
 def test_fake_streams_chunks_and_thinking(recorder: Recorder) -> None:
-    provider = FakeProvider([ScriptedResponse(text="abcdef", thinking="plan", stream_chunks=3)])
+    provider = ScriptedProvider([ScriptedResponse(text="abcdef", thinking="plan", stream_chunks=3)])
     message = _stream(provider, [Message.user("hi")], recorder)
     assert recorder.names == ["ThinkingDelta", "TextDelta", "TextDelta", "TextDelta"]
     assert message.text == "abcdef"
@@ -66,13 +66,15 @@ def test_fake_streams_chunks_and_thinking(recorder: Recorder) -> None:
 
 def test_fake_script_exhaustion_and_unknown_models(recorder: Recorder) -> None:
     with pytest.raises(ProviderError, match="exhausted"):
-        _stream(FakeProvider([]), [Message.user("hi")], recorder)
+        _stream(ScriptedProvider([]), [Message.user("hi")], recorder)
     with pytest.raises(ProviderError, match="no model 'other'"):
-        asyncio.run(FakeProvider().stream([Message.user("hi")], [], model="other", bus=EventBus()))
+        asyncio.run(
+            ScriptedProvider().stream([Message.user("hi")], [], model="other", bus=EventBus())
+        )
 
 
 def test_fake_rules(recorder: Recorder) -> None:
-    provider = FakeProvider()
+    provider = ScriptedProvider()
     assert _stream(provider, [Message.user("ls src")], recorder).tool_calls[0].args == {
         "path": "src"
     }

@@ -137,7 +137,7 @@ def test_a_block_cannot_change_a_builtin_kind() -> None:
 def test_every_block_key_is_a_quirk_or_says_why_not() -> None:
     quirks = {f.name for f in dataclasses.fields(Quirks)}
     block = {f.name for f in dataclasses.fields(ProviderSection)}
-    assert block - quirks == {"kind", "thinking_budget", "prompt_profile"}
+    assert block - quirks == {"kind", "prompt_profile"}
 
 
 def test_block_keys_override_a_builtin_row() -> None:
@@ -160,6 +160,7 @@ def test_no_builtin_row_names_a_host_the_user_did_not_choose() -> None:
         "azure": None,
         "openrouter": "https://openrouter.ai/api/v1",
         "ollama": "http://localhost:11434/v1",
+        "anthropic": "https://api.anthropic.com",
     }
 
 
@@ -363,10 +364,11 @@ def test_anthropic_replays_redacted_thinking_and_counts_cached_input() -> None:
     assert (response.usage.input_tokens, response.usage.cache_read_tokens) == (121, 100)
 
 
-def test_anthropic_rejects_keys_meant_for_openai_compatible_servers() -> None:
-    config = Config(providers={"anthropic": ProviderSection(native_tools=False)})
-    with pytest.raises(ConfigError, match="does not use"):
-        resolve("anthropic/x", config, env=KEYS)
+def test_an_anthropic_compatible_proxy_starts_from_anthropics_row() -> None:
+    block = ProviderSection(kind="anthropic", base_url="http://proxy:8080")
+    config = Config(providers={"proxy": block})
+    provider, _ = resolve("proxy/claude-x", config, env={"ANTHROPIC_API_KEY": "k"})
+    assert (provider.family, provider.capabilities.max_context) == ("anthropic", 200_000)
 
 
 def test_token_counts_are_corrected_by_what_the_provider_reports() -> None:  # [OQ-3]

@@ -48,6 +48,7 @@ that did not need an ADR.
 | [0034](0034-model-picker.md) | A model picker that asks, lists on request, and never edits your config | Accepted |
 | [0035](0035-repl-as-built.md) | The REPL as built: a prompt that never blocks, text a line at a time, no rich | Accepted · drops `rich` |
 | [0036](0036-safety-layer-as-built.md) | The safety layer as built: one pure decision, a guard around it, and what moved | Accepted · `/browser` to M8 |
+| [0037](0037-core-fits-in-5000.md) | Core stays under 5,000 lines: simplify first, then move four features to v1 | Accepted · plan and todo, save and load, login, daily cap to v1 |
 
 ## Writing a new ADR
 

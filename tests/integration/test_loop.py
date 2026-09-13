@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 from harness import Recorder, new_session, run_turn_sync, runtime, scripted, tool_use
+from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.core.errors import ProviderError
 from edgar.core.events import Event, SteerApplied, TextDelta, ToolProposed
 from edgar.core.units import pairing_violations
-from edgar.providers.fake import FakeProvider, ScriptedResponse
 
 
 def test_loop_executes_tool_and_continues(tmp_project: Path, recorder: Recorder) -> None:
@@ -138,7 +138,7 @@ def test_provider_errors_propagate(tmp_project: Path) -> None:
 
 
 def test_the_rule_based_test_model_reads_a_file(tmp_project: Path) -> None:
-    result = run_turn_sync(new_session(tmp_project), "read a.txt", runtime(FakeProvider()))
+    result = run_turn_sync(new_session(tmp_project), "read a.txt", runtime(ScriptedProvider()))
     assert result.text == "     1\thello\n     2\tworld"
 
 

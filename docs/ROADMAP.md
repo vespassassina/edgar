@@ -24,8 +24,8 @@ M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record i
 | M2 Real providers | Done | unreleased (`ff4db71`) |
 | M4 REPL, streams, model picker | Done | unreleased |
 | M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
-| M5 Context and sessions | **Next**, after the budget decision (ADR-0036) | |
-| M6 Skills, login, Core release | Planned | 0.1 |
+| M5 Context and sessions | **Next** (ADR-0037 made room) | |
+| M6 Skills, Core release | Planned | 0.1 |
 | M7–M16 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -202,8 +202,6 @@ units, and a `/btw` answer leaves the transcript unchanged.
 
 - `context/builder.py` — assembly order with the cache breakpoint, byte-stable
   prefix and its test [CTX-1, CTX-15, CTX-17]
-- `context/working.py`, `todo` tool, plan mode (`/plan`, `/go`, `--plan`)
-  [CTX-18, TOOL-14, CLI-20]
 - `context/tokens.py` — exact plus approximate [CTX-9]
 - `context/pins.py` [CTX-5]
 - `context/compact.py` — S1 elide, S2 summarise, S3 overflow, hysteresis [CTX-3, CTX-6, CTX-11, CTX-12]
@@ -212,41 +210,40 @@ units, and a `/btw` answer leaves the transcript unchanged.
 - `storage/transcript.py` — JSONL with compaction records [CTX-14, ADR-0010]
 - `--resume`, `--continue`, `edgar sessions list|show|rm` [CLI-11]
 - Session commands as appended records: `/new /clear /reset /history /undo /retry
-  /title /sessions /load /save`, `edgar --load` [CLI-25, CLI-26, CLI-28, ADR-0029]
+  /title /sessions /load ID` [CLI-25, CLI-26, CLI-28, ADR-0029]; `/save`, loading a
+  saved file and `edgar --load` moved to M7 ([ADR-0037](adr/0037-core-fits-in-5000.md))
 - `personality.md`, user and project scope, in `edgar prompt show` [CTX-19, ADR-0030]
 - The control-file hash stored at session end, and the warning when it changed
   (moved from M3) [PERM-12]
-- Turn, session and daily cost caps [BUD-2, BUD-3], `/cost`, `edgar cost` [BUD-6]
+- Turn and session cost caps [BUD-2, BUD-3], `/cost`, `edgar cost` [BUD-6]; the daily
+  cap moved to M7
 - Idempotency, overflow and spill tests [CTX-8]
 
 **Done when:** a 200-turn session with heavy tool use autocompacts repeatedly,
 including inside a single long tool-calling turn, without ever producing a
 transcript that fails the invariant; most compactions use S1 only; `--resume`
-rebuilds the compacted view and the working state; the prefix stays byte-identical
+rebuilds the compacted view; the prefix stays byte-identical
 across every request between compactions; and pinned content that alone exceeds
 the window raises `ContextOverflow` with a hint; `/undo 2` followed by
-`--resume` shows exactly the conversation the user saw, and a `/save` file opens
-on another machine.
+`--resume` shows exactly the conversation the user saw. `src/` stays under the
+Core budget with room for M6 (about 250 lines).
 
 ---
 
-## M6 — Skills, login and the Core release · **Core release**
+## M6 — Skills and the Core release · **Core release**
 
-**Goal:** skills, a login that never touches a subscription, and a release people
-can fork. (Custom tools and trust moved to M3, [ADR-0033](adr/0033-replan-after-m2.md).)
+**Goal:** skills, and a release people can fork. (Custom tools and trust moved to
+M3, [ADR-0033](adr/0033-replan-after-m2.md); `edgar login` to M8,
+[ADR-0037](adr/0037-core-fits-in-5000.md).)
 
-- `edgar login PROVIDER` / `edgar logout`: OAuth with PKCE for providers that
-  issue API keys that way (OpenRouter first), key kept in the OS keyring
-  [PRV-18, CFG-6, ADR-0032]
 - `skills/discovery.py` (PyYAML, lazily) and `skills/loader.py` + `skill` tool [SKL-1..5]
 - `edgar tools list|describe`, `edgar skills list|validate` [SKL-7]
 - Collision order with startup warning (without MCP and extensions yet) [TOOL-9]
 - Examples of each in `examples/`
 - Short docs: README quick start, `docs/COOKBOOK.md` first recipes
 
-**Done when:** J3 and J9 pass their acceptance tests end to end; `edgar login
-openrouter` stores a key that `edgar -p` then uses, and a planted keyring value
-never appears in transcript, events or logs; `src/` is under 5,000 LOC.
+**Done when:** J3 and J9 pass their acceptance tests end to end; `src/` is under
+5,000 LOC.
 
 **Release:** 0.1 to PyPI. From here people can use and fork edgar.
 
@@ -270,6 +267,8 @@ never appears in transcript, events or logs; `src/` is under 5,000 LOC.
 - `memory/redact.py` [MEM-15]
 - `edgar memory list|add|edit|review|forget|undo` [MEM-5]
 - Contradiction detection for new facts [MEM-10], eviction [MEM-11]
+- `/save`, loading a saved file, `edgar --load` [CLI-25]; the daily cost cap
+  [BUD-2] (both moved from M5, [ADR-0037](adr/0037-core-fits-in-5000.md))
 
 **Done when:** a fact saved in session 1 changes behaviour in session 4 and is
 editable and revertible; a declined proposal is never injected; a fact saved
@@ -291,6 +290,9 @@ mid-session does not change the prompt prefix until the next session.
   demand [CLI-29, ADR-0029, ADR-0036]
 - OAuth for remote servers: OAuth 2.1 with PKCE, tokens in the keyring [TOOL-7,
   ADR-0032], moved from v2
+- `edgar login PROVIDER` / `edgar logout`, on the same OAuth code: providers that
+  issue API keys that way (OpenRouter first), the key in the keyring and redacted
+  everywhere [PRV-18, CFG-6], moved from M6 ([ADR-0037](adr/0037-core-fits-in-5000.md))
 
 **Done when:** a stdio server and a Streamable HTTP server both work, startup time
 is unchanged with five servers configured, an MCP result taints the session, and
@@ -312,6 +314,8 @@ forty configured MCP tools cost no more than the schema budget per request.
 - `providers/fallback.py`, with reasoning off after a family switch [ROUTE-7, ROUTE-10, PRV-13]
 - `isolation: worktree` for write-capable subagents [SUB-11] *(Should)*
 - `edgar agents list|validate`, example agents in `examples/`
+- Plan mode (`/plan`, `/go`, `--plan`) and the `todo` tool, pinned as working
+  state [CLI-20, TOOL-14, CTX-18], moved from M5 ([ADR-0037](adr/0037-core-fits-in-5000.md))
 
 **Done when:** three subagents on three different providers run in parallel, each
 within its own allowlist and budget, with cost attributed per agent and their

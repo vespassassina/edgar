@@ -13,13 +13,13 @@ from pathlib import Path
 from harness import runtime, slow_registry, tool_use
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.core.aside import request
 from edgar.core.loop import run_turn
 from edgar.core.message import Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.session import Session
 from edgar.core.units import pairing_violations
-from edgar.providers.fake import FakeProvider, ScriptedResponse
 
 
 @st.composite
@@ -43,7 +43,7 @@ def test_cancel_at_any_moment_leaves_a_valid_transcript(
     tmp_project: Path, script: list[ScriptedResponse], at: float
 ) -> None:
     session = Session(cwd=tmp_project, model="fake/test", mode="read-only")
-    rt = runtime(FakeProvider(script), tools=slow_registry())
+    rt = runtime(ScriptedProvider(script), tools=slow_registry())
 
     async def scenario() -> None:
         task = asyncio.create_task(run_turn(session, "go", rt))

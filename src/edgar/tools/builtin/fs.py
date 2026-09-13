@@ -41,25 +41,16 @@ _PATH = {"type": "string", "description": "relative to the working directory"}
 
 
 class Read:
-    schema = ToolSchema(
-        name="read",
-        description=(
-            "Read a text file. Lines are numbered from 1. For long files pass offset "
-            f"(first line) and limit (line count, default {READ_LIMIT})."
-        ),
-        input_schema={
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "relative to the working directory"},
-                "offset": {"type": "integer", "minimum": 1},
-                "limit": {"type": "integer", "minimum": 1},
-            },
-            "required": ["path"],
-            "additionalProperties": False,
+    schema = _schema(
+        "read",
+        "Read a text file. Lines are numbered from 1. For long files pass offset "
+        f"(first line) and limit (line count, default {READ_LIMIT}).",
+        {
+            "path": _PATH,
+            "offset": {"type": "integer", "minimum": 1},
+            "limit": {"type": "integer", "minimum": 1},
         },
-        kind="builtin",
-        origin="builtin",
-        category="read",
+        ["path"],
     )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
@@ -89,20 +80,7 @@ class Read:
 
 
 class Ls:
-    schema = ToolSchema(
-        name="ls",
-        description="List a directory. Directories end with '/'.",
-        input_schema={
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "relative to the working directory"},
-            },
-            "additionalProperties": False,
-        },
-        kind="builtin",
-        origin="builtin",
-        category="read",
-    )
+    schema = _schema("ls", "List a directory. Directories end with '/'.", {"path": _PATH}, [])
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         path = ctx.cwd / args.get("path", ".")

@@ -7,13 +7,14 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from scripted import ScriptedProvider, ScriptedResponse
+
 from edgar.core.events import Event, EventBus
 from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.message import ToolUseBlock
 from edgar.core.session import Session
 from edgar.permissions.guard import Asker, Guard
 from edgar.permissions.policy import Policy
-from edgar.providers.fake import FakeProvider, ScriptedResponse
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry, core_registry
 
@@ -43,7 +44,7 @@ def tool_use(name: str, args: dict[str, Any], id: str | None = None) -> ToolUseB
 
 
 def runtime(
-    provider: FakeProvider,
+    provider: ScriptedProvider,
     recorder: Recorder | None = None,
     *,
     tools: ToolRegistry | None = None,
@@ -66,8 +67,8 @@ def run_turn_sync(session: Session, prompt: str, rt: Runtime) -> TurnResult:
     return asyncio.run(run_turn(session, prompt, rt))
 
 
-def scripted(*steps: ScriptedResponse) -> FakeProvider:
-    return FakeProvider(list(steps))
+def scripted(*steps: ScriptedResponse) -> ScriptedProvider:
+    return ScriptedProvider(list(steps))
 
 
 def new_session(cwd: Path, mode: str = "read-only") -> Session:

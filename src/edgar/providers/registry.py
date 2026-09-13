@@ -72,18 +72,15 @@ def resolve(
             hint=f"known: {known}. For another server, add a [providers.{name}] block "
             'with kind = "openai-compatible" and base_url',
         )
-    adapter = import_module(module)
+    adapter = import_module(module)  # the one place an adapter is imported [PRV-4]
     if module == BUILTIN["fake"]:
         return cast(Provider, adapter.make()), model
 
     from edgar.providers.pricing import prices
+    from edgar.providers.quirks import connect, quirks_for
 
+    quirks, key = connect(name, quirks_for(name, block), os.environ if env is None else env)
     provider = adapter.make(
-        name,
-        block,
-        env=os.environ if env is None else env,
-        prices=prices(config.pricing),
-        transport=transport,
-        **options,
+        name, quirks, api_key=key, prices=prices(config.pricing), transport=transport, **options
     )
     return cast(Provider, provider), model

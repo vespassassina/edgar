@@ -9,6 +9,7 @@ knows [PRV-12].
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Literal
 
@@ -31,6 +32,7 @@ class Quirks:
     max_tokens_param: Literal["max_tokens", "max_completion_tokens"] | None = None
     cost_source: Literal["table", "response", "free"] = "table"
     reasoning: bool = False  # the server streams reasoning text back
+    thinking_budget: int | None = None  # Anthropic: request extended thinking
 
 
 QUIRKS: dict[str, Quirks] = {
@@ -73,22 +75,23 @@ QUIRKS: dict[str, Quirks] = {
         cost_source="free",
         reasoning=True,
     ),
+    # Its own adapter and wire format; only the fields above that it reads matter.
+    "anthropic": Quirks(
+        "https://api.anthropic.com",
+        "ANTHROPIC_API_KEY",
+        parallel_tools=True,
+        max_context=200_000,
+        max_output=16_384,
+        reasoning=True,
+    ),
 }
 
-# The Anthropic adapter has its own wire format and needs far fewer settings.
-ANTHROPIC = ProviderSection(
-    kind="anthropic",
-    base_url="https://api.anthropic.com",
-    api_key_env="ANTHROPIC_API_KEY",
-    max_context=200_000,
-    max_output=16_384,
-)
-
-_NOT_QUIRKS = {"kind", "thinking_budget", "prompt_profile"}
+_NOT_QUIRKS = {"kind", "prompt_profile"}
 
 
 def quirks_for(name: str, block: ProviderSection | None) -> Quirks:
-    """The built-in row for `name`, with the config block's keys laid over it."""
+    """The built-in row for `name`, with the config block's keys laid over it. A new
+    name starts from the conservative defaults, or Anthropic's row for kind anthropic."""
     base = QUIRKS.get(name)
     if base is None:
         if block is None or block.base_url is None:
@@ -99,6 +102,8 @@ def quirks_for(name: str, block: ProviderSection | None) -> Quirks:
             )
         auth: Literal["bearer", "none"] = "bearer" if block.api_key_env else "none"
         base = Quirks(block.base_url, auth_style=auth, reasoning=True)
+        if block.kind == "anthropic":
+            base = QUIRKS["anthropic"]
     if block is None:
         return base
     stated = {
@@ -107,3 +112,25 @@ def quirks_for(name: str, block: ProviderSection | None) -> Quirks:
         if f.name not in _NOT_QUIRKS and getattr(block, f.name) is not None
     }
     return dataclasses.replace(base, **stated)
+
+
+def connect(name: str, quirks: Quirks, env: Mapping[str, str]) -> tuple[Quirks, str | None]:
+    """The endpoint and the key, checked before any request, so a missing key costs
+    no network call. Keys live in the environment, never in config [CFG-6]."""
+    if quirks.base_url is None:
+        # Azure has one host per resource, and edgar never guesses a host [PRV-15].
+        url = env.get(quirks.base_url_env or "")
+        if not url:
+            raise ConfigError(
+                f"{name}: no endpoint configured",
+                hint=f"set base_url in [providers.{name}]"
+                + (f", or {quirks.base_url_env}" if quirks.base_url_env else ""),
+            )
+        quirks = dataclasses.replace(quirks, base_url=url)
+    key = env.get(quirks.api_key_env) if quirks.api_key_env else None
+    if quirks.api_key_env and not key and quirks.auth_style != "none":
+        raise ConfigError(
+            f"{name}: the API key variable {quirks.api_key_env} is not set",
+            hint=f"export {quirks.api_key_env}=… (keys live in the environment, never in config)",
+        )
+    return quirks, key

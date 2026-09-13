@@ -12,44 +12,39 @@ Different enough from Chat Completions to earn its own adapter:
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-import httpx  # loaded only once a model names an Anthropic provider [PRV-4]
-
-from edgar.config.schema import PriceSection, ProviderSection
-from edgar.core.errors import ConfigError, ProviderError
+from edgar.core.errors import ProviderError
 from edgar.core.events import EventBus, ReasoningDropped, TextDelta, ThinkingDelta
 from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock, ToolUseBlock
 from edgar.providers.base import Capabilities, ProviderResponse, Usage
-from edgar.providers.http import HttpAdapter, Retry, events, tool_calls
-from edgar.providers.quirks import ANTHROPIC as DEFAULTS
+from edgar.providers.http import HttpAdapter, events, tool_calls
+from edgar.providers.quirks import Quirks
 
 if TYPE_CHECKING:
     from edgar.tools.base import ToolSchema
 
 FAMILY = "anthropic"
 VERSION = "2023-06-01"
-_USED = {"kind", "base_url", "api_key_env", "max_context", "max_output", "thinking_budget"}
-_USED |= {"prompt_profile"}
 _CACHE = {"type": "ephemeral"}
 
 
 class Anthropic(HttpAdapter):
     family = FAMILY
 
-    def __init__(self, name: str, settings: ProviderSection, **kwargs: Any) -> None:
+    def __init__(self, name: str, quirks: Quirks, **kwargs: Any) -> None:
         super().__init__(name, **kwargs)
-        self.settings = settings
+        self.quirks = quirks
+        self.base = (quirks.base_url or "").rstrip("/")
         self.capabilities = Capabilities(
             tools=True,
             parallel_tool_calls=True,
             streaming=True,
             reasoning=True,
             prompt_caching=True,
-            max_context=settings.max_context or 200_000,
-            max_output=settings.max_output or 16_384,
+            max_context=quirks.max_context,
+            max_output=quirks.max_output,
         )
 
     async def stream(
@@ -75,16 +70,14 @@ class Anthropic(HttpAdapter):
                 {"name": t.name, "description": t.description, "input_schema": t.input_schema}
                 for t in tools
             ]
-        budget = self.settings.thinking_budget
+        budget = self.quirks.thinking_budget
         if budget and reasoning:
             body["thinking"] = {"type": "enabled", "budget_tokens": budget}
 
         blocks: dict[int, dict[str, Any]] = {}
         usage: dict[str, Any] = {}
         stop = "end_turn"
-        url = f"{(self.settings.base_url or '').rstrip('/')}/v1/messages"
-        headers = {"x-api-key": self.api_key or "", "anthropic-version": VERSION}
-        async with self.post(url, body, headers, bus) as response:
+        async with self.post(f"{self.base}/v1/messages", body, self._headers(), bus) as response:
             async for kind, data in events(response):
                 if kind == "error" or data.get("type") == "error":
                     error = data.get("error") or {}
@@ -131,8 +124,10 @@ class Anthropic(HttpAdapter):
         return ProviderResponse(message, counted, stop, cost=self.cost(model, counted))
 
     def listing(self) -> tuple[str, dict[str, str]] | None:
-        url = f"{(self.settings.base_url or '').rstrip('/')}/v1/models"
-        return url, {"x-api-key": self.api_key or "", "anthropic-version": VERSION}
+        return f"{self.base}/v1/models", self._headers()
+
+    def _headers(self) -> dict[str, str]:
+        return {"x-api-key": self.api_key or "", "anthropic-version": VERSION}
 
     def _messages(self, messages: Sequence[Message], bus: EventBus) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -191,35 +186,4 @@ def _delta(block: dict[str, Any], delta: Mapping[str, Any], bus: EventBus) -> No
         block["json"] += delta["partial_json"]
 
 
-def make(
-    name: str,
-    block: ProviderSection | None,
-    *,
-    env: Mapping[str, str],
-    prices: Mapping[str, PriceSection],
-    transport: httpx.AsyncBaseTransport | None = None,
-    retry: Retry | None = None,
-) -> Anthropic:
-    stated = {f.name for f in dataclasses.fields(ProviderSection)}
-    unused = {k for k in stated - _USED if block is not None and getattr(block, k) is not None}
-    if unused:
-        raise ConfigError(
-            f"[providers.{name}] sets {', '.join(sorted(unused))}, which the Anthropic "
-            "adapter does not use",
-            hint="those keys are for OpenAI-compatible servers; remove them",
-        )
-    settings = DEFAULTS if block is None else _over(DEFAULTS, block)
-    if name != "anthropic" and (block is None or block.base_url is None):
-        raise ConfigError(f"[providers.{name}] needs base_url")
-    key = env.get(settings.api_key_env or "")
-    if not key:
-        raise ConfigError(
-            f"{name}: the API key variable {settings.api_key_env} is not set",
-            hint=f"export {settings.api_key_env}=… (keys live in the environment, never in config)",
-        )
-    return Anthropic(name, settings, api_key=key, prices=prices, transport=transport, retry=retry)
-
-
-def _over(base: ProviderSection, block: ProviderSection) -> ProviderSection:
-    stated = {k: v for k, v in dataclasses.asdict(block).items() if v is not None}
-    return dataclasses.replace(base, **stated)
+make = Anthropic  # the registry builds adapters through `make`

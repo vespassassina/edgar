@@ -15,6 +15,7 @@ from typing import Any
 
 import pytest
 from harness import Recorder, slow_registry, tool_use
+from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.cli import repl
 from edgar.cli.render import Printer, Renderer
@@ -35,14 +36,13 @@ from edgar.core.message import ToolResultBlock
 from edgar.core.session import Session
 from edgar.core.units import pairing_violations
 from edgar.permissions.guard import Answer
-from edgar.providers.fake import FakeProvider, ScriptedResponse
 
 
 class Rig:
     def __init__(self, root: Path, steps: Sequence[ScriptedResponse] | None, answers: list[str]):
         self.out: list[str] = []
         self.recorder = Recorder()
-        self.provider = FakeProvider(steps)
+        self.provider = ScriptedProvider(steps)
         bus = EventBus()
         printer = Printer(self.out.append, color=False, width=lambda: 80)
         renderer = Renderer(printer)

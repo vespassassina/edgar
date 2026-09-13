@@ -16,20 +16,16 @@ another family is dropped and announced [PRV-13].
 
 from __future__ import annotations
 
-import dataclasses
 import json
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
-import httpx  # loaded only once a model names an OpenAI-compatible provider [PRV-4]
-
-from edgar.config.schema import PriceSection, ProviderSection
-from edgar.core.errors import ConfigError, ProviderError
+from edgar.core.errors import ProviderError
 from edgar.core.events import EventBus, ReasoningDropped, TextDelta, ThinkingDelta
 from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock
 from edgar.providers.base import Capabilities, ProviderResponse, Usage
-from edgar.providers.http import HttpAdapter, Retry, events, tool_calls
-from edgar.providers.quirks import Quirks, quirks_for
+from edgar.providers.http import HttpAdapter, events, tool_calls
+from edgar.providers.quirks import Quirks
 
 if TYPE_CHECKING:
     from edgar.tools.base import ToolSchema
@@ -267,35 +263,4 @@ def _describe(tools: Sequence[ToolSchema]) -> str:
     )
 
 
-def make(
-    name: str,
-    block: ProviderSection | None,
-    *,
-    env: Mapping[str, str],
-    prices: Mapping[str, PriceSection],
-    transport: httpx.AsyncBaseTransport | None = None,
-    retry: Retry | None = None,
-) -> OpenAICompatible:
-    quirks = quirks_for(name, block)
-    if quirks.base_url is None:
-        # Azure has one host per resource, and edgar never guesses a host [PRV-15].
-        url = env.get(quirks.base_url_env or "")
-        if not url:
-            raise ConfigError(
-                f"{name}: no endpoint configured",
-                hint=f"set base_url in [providers.{name}]"
-                + (f", or {quirks.base_url_env}" if quirks.base_url_env else ""),
-            )
-        quirks = dataclasses.replace(quirks, base_url=url)
-    key = None
-    if quirks.api_key_env:
-        key = env.get(quirks.api_key_env)
-        if not key and quirks.auth_style != "none":
-            raise ConfigError(
-                f"{name}: the API key variable {quirks.api_key_env} is not set",
-                hint=f"export {quirks.api_key_env}=… (keys live in the environment, "
-                "never in config)",
-            )
-    return OpenAICompatible(
-        name, quirks, api_key=key, prices=prices, transport=transport, retry=retry
-    )
+make = OpenAICompatible  # the registry builds adapters through `make`

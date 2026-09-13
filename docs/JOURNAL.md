@@ -23,10 +23,29 @@ Carried forward until done. Newest first.
   the startup import ban.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Decide what moves to v1 before M5.** Core is at 4,415 of 5,000 lines after M3;
-  585 lines cannot hold M5 and M6 as specified (ADR-0036). Options are in the M3
-  entry below.
+- **Size watch.** Core is at 4,299 of 5,000 after the review; M5 should take about
+  450 lines and M6 about 200. Next candidates to move if needed: `/history`, then
+  `edgar context show` (ADR-0037).
 - Update the GitHub repository description to the headline (optional).
+
+## 2026-09-13 · Review for size; four features to v1
+
+**Asked:** a quick review to shave and simplify, then follow the recommendation;
+"core stays core, 5k limit".
+
+**Done**
+- Review: Anthropic became a row in the quirks table, with one `connect()` for
+  endpoint and key checks (both adapters lost their `make()`); the fake
+  provider's scripting moved to `tests/support/scripted.py`; `read` and `ls` use
+  the shared schema helper. 116 lines out, 4,415 → 4,299, all 388 tests green.
+- Moved to v1: plan mode and `todo` (M9), `/save` `/load` `edgar --load` and the
+  daily cost cap (M7), `edgar login` (M8, with MCP OAuth).
+
+**Decided**
+- [ADR-0037](adr/0037-core-fits-in-5000.md): Core stays under 5,000 lines;
+  simplify first, then move whole features.
+
+**Next:** M5.
 
 ## 2026-09-13 · M3 done: tools, permissions, the verify gate
 

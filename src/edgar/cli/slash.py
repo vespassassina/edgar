@@ -21,9 +21,9 @@ COMMANDS: dict[str, tuple[Command, str]] = {}
 
 LATER = {
     "M8": "/browser",
-    "M5": "/compact /plan /go /reset /history /undo /retry /sessions /load /save",
+    "M5": "/compact /reset /history /undo /retry /sessions /load",
     "M6": "/skills /tools",
-    "v1": "/fork /remember /memory /agents /init",
+    "v1": "/plan /go /save /fork /remember /memory /agents /init",
 }
 
 

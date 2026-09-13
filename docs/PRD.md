@@ -109,10 +109,9 @@ Three tiers, each a release with its own size budget. Rationale in
 - Five providers via two adapters (OpenAI, Azure OpenAI, OpenRouter, Ollama through
   one OpenAI-compatible adapter; Anthropic through its own), plus any
   OpenAI-compatible endpoint declared in config
-- Built-in tools: `read` `write` `edit` `ls` `glob` `grep` `shell` `fetch` `skill` `todo`
-- Plan mode and a todo list kept as pinned session state
+- Built-in tools: `read` `write` `edit` `ls` `glob` `grep` `shell` `fetch` `skill`
 - Custom **command** tools (argv templates) and **HTTP** tools (request templates)
-- An interactive model picker; `edgar login` for providers that issue keys by OAuth
+- An interactive model picker
 - No hidden behaviour: no implicit hosts or telemetry, the prompt as a file with a
   token budget, a byte-stable prompt prefix, visible reasoning
 - Small-model support: deterministic tool-call repair and a compact prompt profile
@@ -124,7 +123,7 @@ Three tiers, each a release with its own size budget. Rationale in
   invariant held by construction
 - Sessions as JSONL with `--resume` and `--continue`; SQLite for sessions index,
   grants and trust
-- Turn, session and daily cost caps
+- Turn and session cost caps
 - Layered config with provenance
 - Offline test suite, provider contract suite, CI on three OSes
 
@@ -132,7 +131,10 @@ Three tiers, each a release with its own size budget. Rationale in
 
 - Facts memory: `/remember`, model-proposed facts confirmed by the user, pinned set
   plus `recall`, `memory edit`, session search
-- MCP client (stdio and Streamable HTTP, OAuth for remote servers)
+- MCP client (stdio and Streamable HTTP, OAuth for remote servers); `edgar login`
+  for providers that issue keys by OAuth
+- Plan mode and a todo list kept as pinned session state; `/save`, `/load` of a
+  saved file and `edgar --load`; a daily cost cap ([ADR-0037](adr/0037-core-fits-in-5000.md))
 - Subagents as markdown + frontmatter, parallel fan-out, per-agent model and tools
 - Declarative routing rules and provider fallback
 - Hooks, extension bundles, provider plugins, `edgar.run()` embedding API
@@ -157,18 +159,18 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–13, 15–21, 23–28, 30; CLI-14 subset `/help /status /model /mode /compact /cost /plan /go /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /save /quit` | 22, 29; rest of 14 (`/fork /remember /memory /skills /agents /tools /init /browser`) | — |
-| Providers | 1–13, 15–18 | 14 | — |
-| Tools | 1–6, 9 (without MCP), 10–14; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | `schedule_self` |
+| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save` and saved files; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /fork /remember /memory /skills /agents /tools /init /browser`) | — |
+| Providers | 1–13, 15–17 | 14, 18 | — |
+| Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
-| Context | 1–9, 11–19 | 10 | — |
+| Context | 1–9, 11–17, 19 | 10, 18 | — |
 | Subagents | — | 1–11 | — |
 | Skills | 1–5, 7 (`list`, `validate`) | 17 | 6, 7 (rest), 8–16 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
 | Controller | — | — | 1–13 |
 | Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
 | Scheduling | — | — | 1–12 |
-| Budget | 1–3, 5, 6 | 4 | — |
+| Budget | 1, 2 (turn and session), 3, 5, 6 | 2 (daily), 4 | — |
 | Config | 1–3, 6–8 | 4, 5 | — |
 | Verification | 1–7 (sources arrive with their features) | — | — |
 | Extensions | 11 (the ports rule holds from M0) | 1–10 | — |

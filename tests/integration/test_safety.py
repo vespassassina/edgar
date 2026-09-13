@@ -16,6 +16,7 @@ from typing import Any
 import pytest
 from fixture_server import FixtureServer
 from harness import Recorder, runtime, scripted, tool_use
+from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.cli import admin, trust
 from edgar.cli.oneshot import run_prompt
@@ -30,7 +31,6 @@ from edgar.permissions.control import control_files
 from edgar.permissions.guard import Answer, Guard
 from edgar.permissions.policy import Policy
 from edgar.providers import fake
-from edgar.providers.fake import ScriptedResponse
 from edgar.storage.db import Store
 
 
@@ -148,7 +148,7 @@ def test_untrusted_content_makes_auto_ask_before_the_shell(tmp_project: Path) ->
 
 
 def _with_script(monkeypatch: pytest.MonkeyPatch, *steps: ScriptedResponse) -> None:
-    monkeypatch.setattr(fake, "make", lambda: fake.FakeProvider(list(steps)))
+    monkeypatch.setattr(fake, "make", lambda: ScriptedProvider(list(steps)))
 
 
 def test_p_exits_9_when_verification_is_exhausted(

@@ -17,7 +17,7 @@ from pathlib import Path
 from edgar.config.load import load, project_config, user_config
 from edgar.config.schema import Config
 from edgar.core.errors import ConfigError, EdgarError
-from edgar.providers.quirks import ANTHROPIC, quirks_for
+from edgar.providers.quirks import quirks_for
 from edgar.providers.registry import BUILTIN, resolve
 from edgar.providers.routing import Role, RoutingContext, select_model
 
@@ -41,19 +41,18 @@ def list_models(cwd: Path, env: Mapping[str, str] | None = None) -> int:
 
 
 def _describe(name: str, config: Config, env: Mapping[str, str]) -> str:
-    block = config.providers.get(name)
-    if name == "anthropic" or (block is not None and block.kind == "anthropic"):
-        url, url_env = (block and block.base_url) or ANTHROPIC.base_url, None
-        key_env = (block and block.api_key_env) or ANTHROPIC.api_key_env
-    else:
-        try:
-            quirks = quirks_for(name, block)
-        except ConfigError as exc:
-            return f"({exc})"
-        url, url_env, key_env = quirks.base_url, quirks.base_url_env, quirks.api_key_env
-    if not url:
-        url = f"${url_env}" + ("" if env.get(url_env or "") else " (unset)") if url_env else "?"
-    key = f"${key_env} ({'set' if env.get(key_env) else 'unset'})" if key_env else "no key"
+    try:
+        q = quirks_for(name, config.providers.get(name))
+    except ConfigError as exc:
+        return f"({exc})"
+    url = q.base_url or (
+        f"${q.base_url_env}" + ("" if env.get(q.base_url_env or "") else " (unset)")
+    )
+    key = (
+        f"${q.api_key_env} ({'set' if env.get(q.api_key_env) else 'unset'})"
+        if q.api_key_env
+        else "no key"
+    )
     return f"{url:<36} {key}"
 
 

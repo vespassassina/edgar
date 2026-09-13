@@ -24,8 +24,9 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 ## Current state
 
 M0, M1, M2, M4 (the REPL) and M3 (tools, permissions, the verify gate) are done
-(https://github.com/vespassassina/edgar); M5 is next, once the maintainer decides
-what moves to v1 to fit the Core budget (ADR-0036). `edgar` opens an
+(https://github.com/vespassassina/edgar); M5 is next; ADR-0037 moved plan mode and
+`todo`, `/save` and `/load`, `edgar login` and the daily cap to v1 so Core fits in
+5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
 for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
 OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server.
@@ -149,8 +150,8 @@ capabilities. They are conflated constantly elsewhere and must not be merged her
 folds old turns into one rolling summary, S3 raises `ContextOverflow` if the pinned
 content alone does not fit. Compaction runs from `compact_at` (0.70) down to
 `compact_to` (0.50). The prompt is compressed; the JSONL record never is (ADR-0016).
-The plan and todo list are pinned working state just above the current turn and
-survive compaction (ADR-0025).
+The plan and todo list (v1, ADR-0037) are pinned working state just above the
+current turn and survive compaction (ADR-0025).
 
 **Memory has a security boundary.** An active fact comes only from text a human typed
 or from an `ErrorRecord` the harness computed; everything else (the model's `remember`
