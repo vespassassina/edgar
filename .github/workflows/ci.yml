@@ -54,7 +54,10 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       - run: uv build --wheel --out-dir dist
-      - name: uvx edgar --version
+      - name: uvx edgar-harness --version, and the edgar command
         shell: bash
         working-directory: ${{ runner.temp }}
-        run: uvx --isolated --from "$(ls "$GITHUB_WORKSPACE"/dist/*.whl)" edgar --version
+        run: |
+          wheel="$(ls "$GITHUB_WORKSPACE"/dist/*.whl)"
+          uvx --isolated --from "$wheel" edgar-harness --version
+          uvx --isolated --from "$wheel" edgar --version

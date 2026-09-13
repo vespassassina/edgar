@@ -1,6 +1,6 @@
 [project]
 name = "edgar-harness"
-version = "0.0.1"
+version = "0.0.2"
 description = "The agent harness you can read in an afternoon. Any model. No hidden calls. Nothing is done until it's verified."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
@@ -22,6 +22,8 @@ classifiers = [
 
 [project.scripts]
 edgar = "edgar.cli.main:main"
+# uvx runs the command named after the distribution, so `uvx edgar-harness` needs it.
+edgar-harness = "edgar.cli.main:main"
 
 [dependency-groups]
 dev = [

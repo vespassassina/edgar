@@ -6,13 +6,15 @@ import sys
 import sysconfig
 from pathlib import Path
 
+import pytest
+
 import edgar
 
 
-def _console_script() -> str:
+def _console_script(name: str) -> str:
     scripts = Path(sysconfig.get_path("scripts"))
-    found = shutil.which("edgar", path=str(scripts))
-    assert found, f"edgar console script not installed in {scripts}"
+    found = shutil.which(name, path=str(scripts))
+    assert found, f"{name} console script not installed in {scripts}"
     return found
 
 
@@ -23,9 +25,10 @@ def test_module_entry_point(edgar_argv: list[str], subprocess_env: dict[str, str
     assert (out.returncode, out.stdout, out.stderr) == (0, f"edgar {edgar.__version__}\n", "")
 
 
-def test_console_script(subprocess_env: dict[str, str]) -> None:
+@pytest.mark.parametrize("name", ["edgar", "edgar-harness"])  # uvx needs the second
+def test_console_scripts(name: str, subprocess_env: dict[str, str]) -> None:
     out = subprocess.run(
-        [_console_script(), "--version"], capture_output=True, text=True, env=subprocess_env
+        [_console_script(name), "--version"], capture_output=True, text=True, env=subprocess_env
     )
     assert (out.returncode, out.stdout) == (0, f"edgar {edgar.__version__}\n")
 
