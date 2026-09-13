@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from harness import Recorder
 
 from edgar.cli.oneshot import run_prompt
 from edgar.core.errors import ConfigError
+from edgar.core.message import Message, TextBlock
 
 
 def test_read_a_file_with_the_fake_model(
@@ -85,3 +88,96 @@ def test_a_missing_key_is_a_config_error_naming_the_variable(tmp_project: Path, 
     with pytest.raises(ConfigError, match="OPENAI_API_KEY is not set") as info:
         run_prompt("hi", cwd=tmp_project, model="openai/gpt-5", mode="ask", env={}, home=home)
     assert info.value.exit_code == 3
+
+
+def test_json_is_one_object_with_the_result_and_what_it_took(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:  # [CLI-7]
+    run_prompt(
+        "read a.txt",
+        cwd=tmp_project,
+        model="fake/test",
+        mode="read-only",
+        env={},
+        home=home,
+        output="json",
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["result"] == "     1\thello\n     2\tworld"
+    assert (payload["tools"], payload["reason"], payload["cost"]) == (["read"], "completed", 0.0)
+    assert payload["usage"]["input_tokens"] > 0 and payload["model"] == "fake/test"
+
+
+def test_events_are_json_lines_on_stdout(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:  # [CLI-18]
+    run_prompt(
+        "read a.txt",
+        cwd=tmp_project,
+        model="fake/test",
+        mode="read-only",
+        env={},
+        home=home,
+        output="events",
+    )
+    lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+    names = [line["event"] for line in lines]
+    assert names[0] == "ModelSelected" and names[-1] == "TurnFinished"
+    assert "ToolFinished" in names and all("agent_id" in line for line in lines)
+
+
+def test_stdin_is_attached_context_not_the_prompt(tmp_project: Path, home: Path) -> None:  # [CLI-3]
+    from edgar.providers import fake
+
+    seen: list[Message] = []
+    original = fake.FakeProvider.stream
+
+    async def spy(self: fake.FakeProvider, messages: Any, *args: Any, **kwargs: Any) -> Any:
+        seen.extend(messages)
+        return await original(self, messages, *args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(fake.FakeProvider, "stream", spy)
+        run_prompt(
+            "review this",
+            cwd=tmp_project,
+            model="fake/test",
+            mode="read-only",
+            env={},
+            home=home,
+            attached="diff --git a/x b/x",
+        )
+    prompt, context = seen[-1].content
+    assert isinstance(prompt, TextBlock) and isinstance(context, TextBlock)
+    assert (prompt.text, prompt.attached) == ("review this", False)
+    assert context.attached and "<attached>\ndiff --git a/x b/x\n</attached>" in context.text
+
+
+def test_the_status_line_never_reaches_stdout(
+    tmp_project: Path,
+    home: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:  # [CLI-5, CLI-6]: `edgar -p hi > out.txt` has no ANSI bytes, even on a terminal
+    from edgar.cli import oneshot
+
+    monkeypatch.setattr(oneshot, "terminal_ready", lambda stream: True)
+    run_prompt("hi", cwd=tmp_project, model="fake/test", mode="read-only", env={}, home=home)
+    out, err = capsys.readouterr()
+    assert out == "fake/test heard: hi\n" and "\x1b" not in out
+    assert "\x1b[2K" in err  # it drew, and cleared, on stderr
+
+
+def test_quiet_turns_the_status_line_off(
+    tmp_project: Path,
+    home: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:  # [CLI-8]
+    from edgar.cli import oneshot
+
+    monkeypatch.setattr(oneshot, "terminal_ready", lambda stream: True)
+    run_prompt(
+        "hi", cwd=tmp_project, model="fake/test", mode="read-only", env={}, home=home, quiet=True
+    )
+    assert capsys.readouterr().err == ""

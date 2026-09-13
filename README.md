@@ -9,10 +9,10 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** design complete (spec v0.4). Milestones M1 and M2 are in: one-shot
-> runs against real models, with read-only tools so far
-> (`edgar -p "summarise README.md" --model anthropic/claude-sonnet-5 --mode read-only`).
-> Writing, the shell and the verify gate arrive with M3, the REPL with M4.
+> **Status:** design complete (spec v0.4). Milestones M1, M2 and M4 are in: the
+> interactive REPL and one-shot runs against real models, with read-only tools so
+> far (`edgar --model ollama/qwen3:8b`, or `edgar models` to pick one). Writing,
+> the shell, the verify gate and CLI/HTTP tools arrive with M3.
 > The documents in `docs/` are the spec being built against.
 
 ## Why edgar

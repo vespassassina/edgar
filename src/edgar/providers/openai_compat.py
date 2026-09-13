@@ -130,6 +130,11 @@ class OpenAICompatible(HttpAdapter):
             cost=self._cost(model, counted, usage.get("cost")),
         )
 
+    def listing(self) -> tuple[str, dict[str, str]] | None:
+        if self.quirks.api_version:  # Azure lists base models, not your deployments
+            return None
+        return f"{(self.quirks.base_url or '').rstrip('/')}/models", self._headers()
+
     def _url(self, model: str) -> str:
         base = (self.quirks.base_url or "").rstrip("/")
         version = self.quirks.api_version

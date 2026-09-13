@@ -47,6 +47,7 @@ class ScriptedResponse:
     raises: Exception | None = None
     delay_s: float = 0.0  # exercise cancellation
     stream_chunks: int = 1  # exercise partial-stream handling
+    stall_s: float = 0.0  # pause after the first chunk: a stream to cut mid-generation
 
 
 class FakeProvider:
@@ -82,8 +83,10 @@ class FakeProvider:
             bus.emit(ThinkingDelta(text=step.thinking))
             content.append(ThinkingBlock(step.thinking, origin=f"fake:{model}"))
         if step.text:
-            for chunk in _chunks(step.text, step.stream_chunks):
+            for n, chunk in enumerate(_chunks(step.text, step.stream_chunks)):
                 bus.emit(TextDelta(text=chunk))
+                if n == 0 and step.stall_s:
+                    await asyncio.sleep(step.stall_s)
             content.append(TextBlock(step.text))
         content.extend(step.tool_calls)
         message = Message("assistant", tuple(content))
@@ -94,6 +97,9 @@ class FakeProvider:
         )
         stop = "tool_use" if step.tool_calls else "end_turn"
         return ProviderResponse(message, usage, stop, cost=0.0)  # it runs nowhere
+
+    async def models(self) -> list[str]:
+        return ["test"]
 
     def count_tokens(self, messages: Sequence[Message]) -> int:
         return approx_message_tokens(messages)

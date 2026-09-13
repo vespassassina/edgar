@@ -92,6 +92,23 @@ class HttpAdapter:
         if usage.input_tokens and approx and not usage.approximate:
             self._ratio = usage.input_tokens / approx
 
+    async def models(self) -> list[str]:
+        """GET the provider's model list; the adapter says where (`listing`)."""
+        where = self.listing()
+        if where is None:
+            return []
+        url, headers = where
+        try:
+            response = await self.client().get(url, headers=headers)
+        except httpx.TransportError as exc:
+            raise ProviderError(f"{self.name}: cannot reach {httpx.URL(url).host}: {exc}") from exc
+        if response.status_code >= 400:
+            raise self.error(response)
+        return sorted(str(m["id"]) for m in response.json().get("data", []) if "id" in m)
+
+    def listing(self) -> tuple[str, dict[str, str]] | None:
+        return None
+
     def cost(self, model: str, usage: Usage) -> float | None:
         return cost_of(f"{self.name}/{model}", usage, self.prices)
 

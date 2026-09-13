@@ -10,9 +10,10 @@ Event names and fields are part of the 1.0 format freeze [EXT-10].
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from edgar.providers.base import Usage
@@ -27,6 +28,10 @@ class Event:
     def name(self) -> str:
         return type(self).__name__
 
+    def to_dict(self) -> dict[str, Any]:
+        """The `--events` line: the event's name, then its fields [CLI-18]."""
+        return {"event": self.name, **dataclasses.asdict(self)}
+
 
 Subscriber = Callable[[Event], None]
 
@@ -37,6 +42,9 @@ class EventBus:
 
     def subscribe(self, subscriber: Subscriber) -> None:
         self._subscribers.append(subscriber)
+
+    def unsubscribe(self, subscriber: Subscriber) -> None:
+        self._subscribers.remove(subscriber)
 
     def emit(self, event: Event) -> None:
         for subscriber in self._subscribers:
@@ -152,6 +160,34 @@ class ToolFinished(Event):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class InputQueued(Event):
+    text: str
+    position: int
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SteerApplied(Event):
     turn_id: str
     text: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Paused(Event):
+    turn_id: str  # [CLI-27]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Resumed(Event):
+    turn_id: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class AsideStarted(Event):
+    question: str  # [CLI-24]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class AsideFinished(Event):
+    answer: str
+    usage: Usage
+    cost: float | None

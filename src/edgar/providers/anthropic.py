@@ -130,6 +130,10 @@ class Anthropic(HttpAdapter):
         message = Message("assistant", tuple(content))
         return ProviderResponse(message, counted, stop, cost=self.cost(model, counted))
 
+    def listing(self) -> tuple[str, dict[str, str]] | None:
+        url = f"{(self.settings.base_url or '').rstrip('/')}/v1/models"
+        return url, {"x-api-key": self.api_key or "", "anthropic-version": VERSION}
+
     def _messages(self, messages: Sequence[Message], bus: EventBus) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
         dropped: set[str] = set()

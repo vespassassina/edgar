@@ -129,11 +129,13 @@ edgar/
 │   │
 │   ├── cli/
 │   │   ├── main.py                 arg parsing, mode dispatch, exit codes, v2 gate loading
-│   │   ├── repl.py                 interactive loop, input, /queue /steer /btw
+│   │   ├── setup.py                config and runtime, shared by -p and the REPL
+│   │   ├── repl.py                 Shell (queue, /steer, /btw, /stop) + the prompt_toolkit wiring
 │   │   ├── oneshot.py              -p mode, stdin attachment, --json, --events
 │   │   ├── slash.py                slash command dispatch (§4.5)
-│   │   ├── render.py               markdown → terminal, stdout discipline
-│   │   ├── statusbar.py            stderr status line, multi-agent rows
+│   │   ├── models.py               `edgar models [list]`, the model picker [CLI-30]
+│   │   ├── render.py               line-at-a-time printing, notices, --events lines
+│   │   ├── statusbar.py            status line: REPL toolbar, or one stderr line with -p
 │   │   ├── prompt_ui.py            permission and fact prompts, one queue for all agents
 │   │   └── trust.py                project trust prompt and `edgar trust`
 │   │
@@ -594,6 +596,12 @@ every `ToolUseBlock` without a result gets
 A stream cut mid-generation keeps its partial text with `meta["interrupted"] = True`
 and discards any partial tool call. The transcript always satisfies the invariant,
 so `--resume` never meets a 400.
+
+As built ([ADR-0035](adr/0035-repl-as-built.md)): cancellation is asyncio's. The
+REPL cancels the task running the turn; `run_turn` catches the `CancelledError`,
+calls `core/cancel.seal()`, emits `TurnFinished(reason="cancelled")` and re-raises.
+Results that came in before the cancel are kept. Under `-p`, Ctrl-C does the same
+and exits 7.
 
 Queued and undelivered steered text goes back to the input line, unsent
 [CLI-13].
@@ -1608,8 +1616,11 @@ a self-rescheduling loop cannot run away. On Windows, Task Scheduler runs
 
 ## 13. Status bar
 
-Renders on stderr, only when stderr is a TTY [CLI-5, CLI-6]. Driven purely by the
-event bus, which is why it works identically for one agent or four.
+Driven purely by the event bus (`cli/statusbar.Status`), which is why it works
+identically for one agent or four. With `-p` it is one line on stderr, only when
+stderr is a TTY and `--quiet` is off [CLI-5, CLI-6, CLI-8], cleared before the
+result prints. In the REPL it is prompt_toolkit's bottom toolbar, under the prompt
+that stays open while a turn runs ([ADR-0035](adr/0035-repl-as-built.md)).
 
 ```
 ⠋ reading src/auth.py · 3 tools · 12.4k tok · $0.031 · 8s                [single]
@@ -1797,9 +1808,8 @@ Budget is eight direct, counting optional extras [NFR-5].
 | `jsonschema` | Tool arguments, controller proposals, extension manifests | Imported at first validation |
 | `PyYAML` | Frontmatter in skills and agents, `safe_load` only | Imported at first discovery |
 | `prompt_toolkit` | REPL input, history, steering | Interactive path only |
-| `rich` | Markdown rendering, status bar | Interactive path only; never on `-p --json` or `--events` |
 | `keyring` *(optional extra)* | OS keyring secrets | `edgar-harness[keyring]` |
-| *(two free)* | | |
+| *(three free)* | | `rich` was dropped in M4: text streams as written, a line at a time ([ADR-0035](adr/0035-repl-as-built.md)) |
 
 Standard library for everything else: `sqlite3`, `asyncio`, `pathlib`, `argparse`,
 `dataclasses`, `tomllib`, `json`, `shlex`, `fnmatch`, `zoneinfo`. Dropped from v0.2:

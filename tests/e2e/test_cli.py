@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 import sys
@@ -94,3 +95,32 @@ def test_models_list_shows_where_prompts_can_go(
     assert "$OPENAI_API_KEY (unset)" in lines["openai"]
     assert "$AZURE_OPENAI_ENDPOINT" in lines["azure"]
     assert "http://localhost:1234/v1" in lines["lmstudio"] and "no key" in lines["lmstudio"]
+
+
+def test_piped_stdin_events_and_no_escapes_on_stdout(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # `git diff | edgar -p "review this" --events` from a program [CLI-3, CLI-18].
+    argv = [*edgar_argv, "-p", "review this", "--model", "fake/test", "--mode", "read-only"]
+    out = subprocess.run(
+        [*argv, "--events"],
+        input="diff --git",
+        capture_output=True,
+        text=True,
+        env=subprocess_env,
+        cwd=tmp_project,
+    )
+    assert out.returncode == 0, out.stderr
+    events = [json.loads(line) for line in out.stdout.splitlines()]
+    assert events[-1]["event"] == "TurnFinished" and "\x1b" not in out.stdout
+    texts = "".join(e["text"] for e in events if e["event"] == "TextDelta")
+    assert "review this" in texts and "diff --git" in texts
+
+
+def test_no_terminal_and_no_prompt_is_a_usage_error(
+    edgar_argv: list[str], subprocess_env: dict[str, str]
+) -> None:  # [CLI-4]
+    out = subprocess.run(
+        edgar_argv, stdin=subprocess.DEVNULL, capture_output=True, text=True, env=subprocess_env
+    )
+    assert out.returncode == 2 and "use -p" in out.stderr

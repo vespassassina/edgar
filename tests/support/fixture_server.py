@@ -49,6 +49,9 @@ class FixtureServer:
         server = self
 
         class Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                self.do_POST()
+
             def do_POST(self) -> None:
                 length = int(self.headers.get("content-length", 0))
                 body = json.loads(self.rfile.read(length) or b"null")

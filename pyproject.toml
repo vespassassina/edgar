@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28",
     "jsonschema>=4.23",
+    "prompt-toolkit>=3.0.48",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",

@@ -273,6 +273,22 @@ def test_aside_leaves_the_transcript_unchanged(fake_provider, tmp_session):
 The Anthropic contract test adds a steer after a tool message and checks the
 request is accepted with tool results and text merged into one user message.
 
+### The REPL
+
+The REPL's logic lives in `cli/repl.Shell`, which tests drive with the fake
+provider and no terminal: type a line, let the turn run, type another, assert on
+what was printed, the events and the transcript
+(`tests/integration/test_repl.py`). A slow test tool (`harness.SlowTool`) holds a
+turn in a tool call so `/steer`, `/pause` and `/stop` can arrive mid-call. One test
+drives `interact()` through prompt_toolkit's pipe input to cover the wiring.
+
+```python
+@given(script=steps(), at=st.floats(0, 0.03))    # tool calls, streamed text, a cancel at `at`
+def test_cancel_at_any_moment_leaves_a_valid_transcript(script, at):
+    ...
+    assert pairing_violations(session.transcript) == []
+```
+
 ### Session commands
 
 Every command appends a record, so the test is always the same shape: act, replay

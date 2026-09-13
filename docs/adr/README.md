@@ -46,6 +46,7 @@ that did not need an ADR.
 | [0032](0032-oauth-keys-and-mcp.md) | OAuth for issuing keys and for MCP servers, never for subscriptions | Accepted · MCP OAuth moves from v2 to v1 |
 | [0033](0033-replan-after-m2.md) | The REPL before the safety milestone, and CLI and API tools with it | Accepted · order M4 before M3; custom tools and trust move to M3 |
 | [0034](0034-model-picker.md) | A model picker that asks, lists on request, and never edits your config | Accepted |
+| [0035](0035-repl-as-built.md) | The REPL as built: a prompt that never blocks, text a line at a time, no rich | Accepted · drops `rich` |
 
 ## Writing a new ADR
 

@@ -12,6 +12,7 @@ from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.message import ToolUseBlock
 from edgar.core.session import Session
 from edgar.providers.fake import FakeProvider, ScriptedResponse
+from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry, core_registry
 
 
@@ -68,3 +69,26 @@ def new_session(cwd: Path, mode: str = "read-only") -> Session:
 
 def texts(steps: Sequence[str]) -> list[ScriptedResponse]:
     return [ScriptedResponse(text=t) for t in steps]
+
+
+class SlowTool:
+    """A read-only tool that takes `seconds` to answer: something to cancel mid-call."""
+
+    schema = ToolSchema(
+        name="slow",
+        description="Wait, then answer.",
+        input_schema={"type": "object", "properties": {"seconds": {"type": "number"}}},
+        kind="builtin",
+        origin="builtin",
+        category="read",
+    )
+
+    async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
+        await asyncio.sleep(float(args.get("seconds", 0.05)))
+        return ToolResult("slept")
+
+
+def slow_registry() -> ToolRegistry:
+    from edgar.tools.builtin.fs import BUILTINS
+
+    return ToolRegistry([*BUILTINS, SlowTool()])

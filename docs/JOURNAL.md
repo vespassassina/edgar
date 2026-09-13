@@ -9,9 +9,12 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 Carried forward until done. Newest first.
 
-- **Stop the local Ollama server when done testing.** It runs as `ollama serve` in a
-  terminal (not as a brew service): Ctrl-C there, or `pkill -x ollama`.
-- **Release M1 and M2?** Nothing since 0.0.2 is on PyPI. An interim release would be
+- **Try the REPL on a real model.** Start Ollama (`OLLAMA_CONTEXT_LENGTH=16384
+  ollama serve`), then `uv run edgar --model ollama/qwen3:8b` from the repo. M4 was
+  tested with the fake model and through a pseudo-terminal, not live.
+- **`@path` attachments in prompts** (CLI-3) are not built; piped stdin is. Pick a
+  milestone for them (M5 is the natural one).
+- **Release M1, M2 and M4?** Nothing since 0.0.2 is on PyPI. An interim release would be
   0.0.3; the roadmap keeps 0.1 for the Core release (M6). Waiting on the maintainer.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
@@ -20,9 +23,39 @@ Carried forward until done. Newest first.
   the startup import ban.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 2,409 of 5,000 lines after M2, with M3 to M6 still
-  to build. M4 and M3 need to stay lean.
+- **Size watch.** Core is at 3,353 of 5,000 lines after M4, leaving 1,647 for M3,
+  M5 and M6. M3 is the largest; anything that does not fit moves to v1 (ADR-0035).
 - Update the GitHub repository description to the headline (optional).
+
+## 2026-09-13 · M4 done: the REPL
+
+**Asked:** start M4 (the interactive shell and model picker, per the replan).
+
+**Done**
+- `edgar` on a terminal opens the REPL: a prompt that stays open while a turn runs,
+  text streamed a line at a time above it, and the status line as its toolbar.
+  Plain text queues, `/steer` lands at the loop's safe point, `/btw` answers on the
+  side without touching the transcript, `/stop` and Ctrl-C cancel (twice exits),
+  `/pause` and `/resume` hold at the safe point. Also `/status /model /mode
+  /thinking /queue /cost /title /new /clear /help /quit`; commands that need later
+  milestones say which.
+- Cancellation seals the transcript (`core/cancel.py`): unanswered calls get
+  "cancelled by user", streamed text is kept marked interrupted. A property test
+  cancels at generated moments and checks the pairing invariant every time.
+- `edgar models` and `/model` pick a provider, then one of its models, fetched
+  from that provider only when asked; `edgar models` writes the default into a new
+  config file, never an existing one.
+- `-p`: `--json`, `--events`, `--quiet`, `--show-thinking`, `--no-color`; piped
+  stdin attached as context; a status line on stderr; Ctrl-C exits 7.
+- 329 tests in about 4.5 s. The REPL was also driven through a pseudo-terminal
+  against the fake model.
+
+**Decided**
+- [ADR-0035](adr/0035-repl-as-built.md): prompt_toolkit owns the bottom of the
+  screen, text streams a line at a time, no Markdown rendering, and `rich` is
+  dropped from the dependencies; the REPL's logic is a plain `Shell` class.
+
+**Next:** M3, tools, permissions, the verify gate, and CLI/HTTP tools.
 
 ## 2026-09-13 · M2 done; first real model; replan
 

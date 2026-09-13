@@ -22,8 +22,8 @@ M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record i
 | M0 Skeleton | Done | 0.0.1, 0.0.2 |
 | M1 The loop | Done | unreleased (`2c25162`) |
 | M2 Real providers | Done | unreleased (`ff4db71`) |
-| M4 REPL, streams, model picker | **Next** | |
-| M3 Tools, permissions, verify, custom tools, trust | Planned | |
+| M4 REPL, streams, model picker | Done | unreleased |
+| M3 Tools, permissions, verify, custom tools, trust | **Next** | |
 | M5 Context and sessions | Planned | |
 | M6 Skills, login, Core release | Planned | 0.1 |
 | M7–M16 | Planned | 1.0, 2.0 |
@@ -167,9 +167,11 @@ non-interactive run exits 3.
 
 - `cli/repl.py` — input, history, streaming [CLI-1]
 - `cli/statusbar.py` — stderr, TTY-only, throttled, shows taint [CLI-5, CLI-6]
-- `cli/render.py` — markdown, `NO_COLOR`, stdout discipline [CLI-15]
+- `cli/render.py` — line-at-a-time output, `NO_COLOR`, stdout discipline [CLI-15];
+  Markdown is left as written ([ADR-0035](adr/0035-repl-as-built.md))
 - `cli/slash.py` — `/help /model /mode /compact /cost /quit` [CLI-14]
-- `cli/prompt_ui.py` — one prompt queue [TOOL-12]
+- One prompt queue: questions go through the REPL's own prompt (`Shell.ask`); the
+  permission prompts that use it arrive with M3 [TOOL-12]
 - Terminal-native output: no alternate screen, native scrollback [CLI-23]
 - `--show-thinking`, `/thinking` [CLI-21]
 - Ctrl-C once cancels, twice exits; cancelled calls get synthetic results [CLI-12]

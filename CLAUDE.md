@@ -23,19 +23,23 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0 (skeleton), M1 (the loop) and M2 (real providers) are done
-(https://github.com/vespassassina/edgar). `edgar -p` runs a real turn against
-OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server:
-the message types and pairing invariant (`core/units.py`), the event bus, the loop,
-`read` and `ls`, the tool pipeline with spill, a deny-by-default policy (reads
-inside the working directory only), the prompt file with profiles, layered config
-with provenance, and `edgar models list`. Provider decisions that differ from the
-Blueprint's first sketch are in ADR-0031. Releases go out through trusted
+M0 (skeleton), M1 (the loop), M2 (real providers) and M4 (the REPL) are done
+(https://github.com/vespassassina/edgar); M3 is next (ADR-0033). `edgar` opens an
+interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
+for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
+OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server.
+Built so far: the message types and pairing invariant (`core/units.py`), the event
+bus, the loop with cancellation (`core/cancel.py`) and pause, `/btw`
+(`core/aside.py`), `read` and `ls`, the tool pipeline with spill, a deny-by-default
+policy (reads inside the working directory only), the prompt file with profiles,
+layered config with provenance, and the model picker. Provider decisions that
+differ from the Blueprint's first sketch are in ADR-0031; the REPL's in ADR-0035. Releases go out through trusted
 publishing when a `v*` GitHub release is published; bump the version in both
 `pyproject.toml` and `src/edgar/__init__.py`.
 
 Tests drive the loop through `tests/support/harness.py` (`scripted()`, `runtime()`,
-`Recorder`); assert on `recorder.names` for event sequences. Provider tests drive
+`Recorder`, `SlowTool`); assert on `recorder.names` for event sequences. REPL tests
+drive `Shell` directly (`tests/integration/test_repl.py`). Provider tests drive
 adapters through the `rig` fixture (`tests/support/rig.py`), which replays
 `tests/cassettes/<provider>.json`; every cassette entry is still `synthetic` until
 someone with keys runs `just record-cassettes NAME`. The `eval` recipe arrives

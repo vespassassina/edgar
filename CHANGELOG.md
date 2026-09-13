@@ -25,6 +25,16 @@ Core is being built, 0.1 at the Core release (M6).
 - `edgar models list`: where each role's prompts go and whether each provider's
   key is set, without contacting anything.
 - A compact system prompt for models with under 32k tokens of context.
+- The interactive REPL (M4): `edgar` on a terminal. Keep typing while it works:
+  plain text queues the next prompt, `/steer` corrects the turn in flight, `/btw`
+  asks a side question without touching the conversation. `/stop` or Ctrl-C
+  cancels (twice exits), `/pause` and `/resume`, `/status`, `/cost`, `/mode`,
+  `/thinking`, `/title`, `/new`, `/clear`, `/help`. A status line under the prompt.
+- `edgar models` and `/model`: pick a provider and one of its models; the default
+  goes into a new config file, never into an existing one.
+- `-p` for programs: `--json` (one object), `--events` (JSON Lines), `--quiet`,
+  `--show-thinking`, `--no-color` and `NO_COLOR`; piped stdin is attached as
+  context; a status line on stderr when it is a terminal; Ctrl-C exits 7.
 
 ## 0.0.2 — 2026-09-13
 

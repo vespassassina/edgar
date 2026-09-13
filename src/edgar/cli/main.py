@@ -19,13 +19,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edgar",
         description="The agent harness you can read in an afternoon.",
-        epilog="Other commands: edgar prompt show, edgar models list",
+        epilog="Other commands: edgar models, edgar models list, edgar prompt show",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
     parser.add_argument("--model", help="provider/model, for example fake/test")
     parser.add_argument("--mode", choices=get_args(Mode), help="permission mode; required with -p")
     parser.add_argument("--cwd", type=Path, help="working directory (default: here)")
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--json", action="store_true", help="with -p: one JSON object")
+    output.add_argument("--events", action="store_true", help="with -p: events as JSON Lines")
+    parser.add_argument("--quiet", action="store_true", help="no status line")
+    parser.add_argument("--show-thinking", action="store_true", help="show reasoning")
+    parser.add_argument("--no-color", action="store_true", help="no colour (also NO_COLOR)")
     return parser
 
 
@@ -42,19 +48,48 @@ def main(argv: list[str] | None = None) -> int:
         if exc.hint:
             print(f"hint: {exc.hint}", file=sys.stderr)
         return exc.exit_code
+    except KeyboardInterrupt:
+        # The turn was cancelled and its transcript sealed before we got here.
+        print("edgar: cancelled", file=sys.stderr)
+        return 7
 
 
 def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
     args = parser.parse_args(argv)
     if args.prompt is None:
-        # The REPL arrives in M4. Until then, saying so with a usage exit code beats
-        # pretending to work.
-        parser.print_usage(sys.stderr)
-        print("edgar: the interactive REPL arrives in M4; use -p for now", file=sys.stderr)
-        return 2
+        if args.json or args.events:
+            parser.error("--json and --events go with -p")
+        if not (sys.stdin.isatty() and sys.stdout.isatty()):
+            parser.print_usage(sys.stderr)
+            print("edgar: no terminal for the REPL; use -p PROMPT", file=sys.stderr)  # [CLI-4]
+            return 2
+        import asyncio
+
+        from edgar.cli.repl import color_wanted, interact
+
+        return asyncio.run(
+            interact(
+                cwd=args.cwd,
+                model=args.model,
+                mode=args.mode,
+                show_thinking=args.show_thinking,
+                color=color_wanted(args.no_color),
+            )
+        )
     from edgar.cli.oneshot import run_prompt
 
-    return run_prompt(args.prompt, cwd=args.cwd, model=args.model, mode=args.mode)
+    # Piped stdin is context for the prompt, never the prompt itself [CLI-3].
+    attached = None if sys.stdin is None or sys.stdin.isatty() else sys.stdin.read()
+    return run_prompt(
+        args.prompt,
+        cwd=args.cwd,
+        model=args.model,
+        mode=args.mode,
+        output="json" if args.json else "events" if args.events else "text",
+        quiet=args.quiet,
+        show_thinking=args.show_thinking,
+        attached=attached or None,
+    )
 
 
 def _prompt_command(argv: list[str]) -> int:
@@ -72,9 +107,13 @@ def _prompt_command(argv: list[str]) -> int:
 
 
 def _models_command(argv: list[str]) -> int:
-    if argv != ["list"]:
-        print("usage: edgar models list", file=sys.stderr)
-        return 2
-    from edgar.cli.models import list_models
+    if argv == ["list"]:
+        from edgar.cli.models import list_models
 
-    return list_models(Path.cwd())
+        return list_models(Path.cwd())
+    if argv == [] and sys.stdin.isatty():
+        from edgar.cli.models import pick_command
+
+        return pick_command(Path.cwd())
+    print("usage: edgar models [list]", file=sys.stderr)
+    return 2
