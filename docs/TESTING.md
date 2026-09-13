@@ -187,11 +187,16 @@ python tests/support/cassettes.py synthesize   # rewrite synthetic entries, keep
 **Each entry says where it came from.** A `synthetic` entry is written from the
 provider's documented wire format (`tests/support/wire.py`); a `recorded` one is
 a live exchange, and recording replaces the synthetic entry for that scenario. The
-first cassettes were all synthetic: M2 was built with no keys available. So until
+first cassettes were all synthetic: M2 was built with no keys available. Ollama's
+were then recorded against `qwen3:8b` on 2026-09-13. So until
 they are recorded, they catch regressions in our code, not mistakes in our beliefs
 about the APIs. Error scenarios (401, 429, a cancelled stream) and the fenced
 tool call stay synthetic, since nobody triggers those on purpose
 ([ADR-0031](adr/0031-provider-layer-as-built.md)).
+
+**The first test to use a scenario owns its recording.** Several tests reuse a
+scenario with different transcripts to check what is sent; they replay whatever
+was recorded and assert on the request, not on the reply.
 
 **Secrets are scrubbed on record**, not on commit. Auth headers are never stored,
 key-shaped strings in bodies become `REDACTED`, and a test asserts that no

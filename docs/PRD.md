@@ -112,6 +112,7 @@ Three tiers, each a release with its own size budget. Rationale in
 - Built-in tools: `read` `write` `edit` `ls` `glob` `grep` `shell` `fetch` `skill` `todo`
 - Plan mode and a todo list kept as pinned session state
 - Custom **command** tools (argv templates) and **HTTP** tools (request templates)
+- An interactive model picker; `edgar login` for providers that issue keys by OAuth
 - No hidden behaviour: no implicit hosts or telemetry, the prompt as a file with a
   token budget, a byte-stable prompt prefix, visible reasoning
 - Small-model support: deterministic tool-call repair and a compact prompt profile
@@ -131,7 +132,7 @@ Three tiers, each a release with its own size budget. Rationale in
 
 - Facts memory: `/remember`, model-proposed facts confirmed by the user, pinned set
   plus `recall`, `memory edit`, session search
-- MCP client (stdio and Streamable HTTP)
+- MCP client (stdio and Streamable HTTP, OAuth for remote servers)
 - Subagents as markdown + frontmatter, parallel fan-out, per-agent model and tools
 - Declarative routing rules and provider fallback
 - Hooks, extension bundles, provider plugins, `edgar.run()` embedding API
@@ -149,7 +150,6 @@ passes its suite with the v2 packages deleted [NFR-12].
 - Skill synthesis from verified work, distill, optional curator
 - Escalation, `route suggest`, budget-aware downgrade
 - Scheduling via `tick`, host installers, `schedule_self`
-- MCP OAuth for remote servers
 
 **Requirement map.** IDs keep their numbers; this table says which tier delivers
 them. A constraint (for example MEM-9) applies from the tier in which its mechanism
@@ -157,8 +157,8 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–13, 15–21, 23–28; CLI-14 subset `/help /status /model /mode /compact /cost /plan /go /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /save /quit` | 22, 29; rest of 14 (`/fork /remember /memory /skills /agents /tools /init /browser`) | — |
-| Providers | 1–13, 15–17 | 14 | — |
+| CLI | 1–13, 15–21, 23–28, 30; CLI-14 subset `/help /status /model /mode /compact /cost /plan /go /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /save /quit` | 22, 29; rest of 14 (`/fork /remember /memory /skills /agents /tools /init /browser`) | — |
+| Providers | 1–13, 15–18 | 14 | — |
 | Tools | 1–6, 9 (without MCP), 10–14; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
 | Context | 1–9, 11–19 | 10 | — |
@@ -189,6 +189,7 @@ Written down so scope creep has something to argue with.
 | Full TUI framework | Line-oriented output pipes cleanly. See OQ-4. |
 | Plugin marketplace or skill hub | Files in a folder, discovered on disk. That is the plugin system. Skills and extensions are copied in (`edgar ext add` copies a path or git URL), never installed from an index, search or update service. |
 | Provider count race | Five providers, deeply correct, beats fifty shallow. |
+| Signing in with a vendor subscription | Vendors restrict consumer plans to their own products and cut off harnesses that use them; API keys and compatible endpoints keep users free to switch. OAuth only issues keys and authenticates MCP servers ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)). |
 | Agent-to-agent protocols | Subagents are function calls, not a network. |
 | Messaging gateway (Telegram, Slack, Discord…) | Needs a long-running process. A `session_end` hook covers delivery. |
 | User modelling (Honcho-style profiles) | A model of the user built by a model is invisible state. Facts with provenance are the visible version. |
@@ -404,7 +405,8 @@ Requirements are numbered for traceability. Each milestone in
 | CLI-26 | Rewind: `/undo [N]` removes the last N prompts (default 1) and everything after them from the conversation; `/retry` is `/undo 1` followed by the same prompt. Both append an `undo` record, act on whole turns (CTX-4), and list the files that `write` and `edit` changed in the undone turns without reverting them | Must |
 | CLI-27 | Turn control: `/stop` cancels the current turn exactly like one Ctrl-C (CLI-12); `/pause` holds the turn at the loop's next safe point without cancelling anything, and `/resume` continues it. While paused, `/status`, `/history`, `/steer`, `/queue` and `/btw` work | Must |
 | CLI-28 | `/status` shows session id and title, model, mode, context use against the window, cost, queued inputs, pending steers, paused state, taint, trust, the verify command and the personality file in use. `/title [TEXT]` shows or sets the title; the default is the first line of the first prompt, trimmed to 60 characters, and no model is ever asked for a title (PRV-15). `/model` lists configured models; `/model NAME` switches for the rest of the session, emits `ModelSelected` with rule `user`, and appends a `model` record | Must |
-| CLI-29 | `/browser` connects the browser MCP server configured under `[browser]` (for example Playwright MCP or Chrome DevTools MCP): spawned on demand, tools loaded with deferred schemas (TOOL-15), output untrusted (TOOL-13, PERM-11). Without a `[browser]` block it prints the configuration to add and starts nothing | Should |
+| CLI-29 | `/browser` connects the browser configured under `[browser]`: either a browser CLI declared as a command tool (TOOL-6), which costs only its schema, or a browser MCP server (for example Playwright MCP or Chrome DevTools MCP), spawned on demand with deferred schemas (TOOL-15). Output is untrusted either way (TOOL-13, PERM-11). Without a `[browser]` block it prints the configuration to add and starts nothing ([ADR-0033](adr/0033-replan-after-m2.md)) | Should |
+| CLI-30 | `edgar models`, and `/model` with no argument, is an interactive picker: it lists providers with their endpoints and key status, fetches the chosen provider's model list from that provider only after the user picks it, and switches the session (`/model`) or sets the default (`edgar models`). Setting the default creates the config file when it does not exist and otherwise prints the lines to add; it never edits an existing file, and never asks for or stores a key ([ADR-0034](adr/0034-model-picker.md)) | Must |
 
 ### 7.2 Providers
 
@@ -426,6 +428,7 @@ Requirements are numbered for traceability. Each milestone in
 | PRV-14 | Provider plugins register through the `edgar.providers` entry point, read only when a model string names an unknown provider; the contract suite ships as `edgar.testing.contract` for plugin authors | Must |
 | PRV-15 | **No implicit models, hosts or telemetry.** Every request goes to a model named in config or on the command line; auxiliary roles (compactor, controller, condenser) default to the main model; edgar contacts no host except those in config and those reached by an allowed tool call; no telemetry, update checks or remote configuration. `edgar doctor --network` lists every host the config can reach ([ADR-0023](adr/0023-no-hidden-behaviour.md)) | Must |
 | PRV-16 | Tool-call repair: when a model emits a malformed tool call (JSON in a code fence, trailing text, a single JSON object in plain text where the provider has no native tool format), the adapter applies a fixed, deterministic syntactic repair; anything it cannot repair returns to the model as a validation error (TOOL-2). Repairs are counted in usage and events | Must |
+| PRV-18 | `edgar login PROVIDER` and `edgar logout PROVIDER`: OAuth 2.0 with PKCE (or device code) for providers that issue an API key through OAuth, starting with OpenRouter. The host is printed before the browser opens; the key goes to the OS keyring (CFG-6) and is redacted like any secret; without the `keyring` extra the key is printed once and not stored. Never used to sign in with a subscription ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)) | Should |
 | PRV-17 | Prompt profiles: `full` or `compact`. `compact` uses `prompts/compact.md`, exposes Core built-ins only unless configured, and lowers `compact_at` and `compact_to` by 0.1. Chosen automatically for models with `max_context` under 32k, overridable per model | Must |
 
 ### 7.3 Tools
@@ -438,7 +441,7 @@ Requirements are numbered for traceability. Each milestone in
 | TOOL-4 | Output over `tools.max_output_tokens` is head/tail truncated with an explicit marker, and the full output is spilled to `.edgar/sessions/<id>/blobs/<tool_use_id>.txt`, named in the marker so the model can `read` it with an offset (CTX-13) | Must |
 | TOOL-5 | Built-ins: `read` `write` `edit` `ls` `glob` `grep` `shell` `fetch` `skill` (Core); `task` `remember` `recall` (v1); `schedule_self` (v2) | Must |
 | TOOL-6 | Custom tools declared in TOML, of two kinds: **command** (an `argv` template; arguments substituted as whole argv elements, never through a shell) and **HTTP** (method, URL and body templates; the host is fixed by the template; `${env:NAME}` resolves only in base URL and headers, never from model arguments, and is redacted everywhere). Both carry a JSON Schema, a timeout and an optional `read_only` flag ([ADR-0018](adr/0018-extension-model.md)) | Must |
-| TOOL-7 | MCP client: stdio and Streamable HTTP transports, discovery, namespacing as `mcp__server__tool`. Legacy HTTP+SSE is not supported; remote servers take static headers from env in v1, OAuth in v2. Server annotations never drive permission decisions | Must |
+| TOOL-7 | MCP client: stdio and Streamable HTTP transports, discovery, namespacing as `mcp__server__tool`. Legacy HTTP+SSE is not supported; remote servers take static headers from env or OAuth 2.1 with PKCE, tokens in the keyring ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)). Server annotations never drive permission decisions | Must |
 | TOOL-8 | MCP servers spawn lazily on first use, not at startup | Must |
 | TOOL-9 | Tool names collide-resolve deterministically: project custom > user custom > extensions (by name) > MCP > built-in, with a startup warning | Must |
 | TOOL-10 | Every tool call is cancellable | Must |

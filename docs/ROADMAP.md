@@ -10,6 +10,24 @@ milestone ships something that works, is tested, and is documented. Nothing is
 | **v1** | M7–M11 | 1.0 | Extensible and remembers; extension formats frozen | ≤ 8,000 LOC |
 | **v2** | M12–M16 | 2.0 | Learns and runs unattended; removable | ≤ 11,000 LOC |
 
+## Status
+
+Milestone IDs keep their numbers; the order of work is **M0, M1, M2, M4, M3, M5,
+M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record is
+[`JOURNAL.md`](JOURNAL.md); user-visible changes are in
+[`CHANGELOG.md`](../CHANGELOG.md).
+
+| Milestone | Status | Shipped in |
+|---|---|---|
+| M0 Skeleton | Done | 0.0.1, 0.0.2 |
+| M1 The loop | Done | unreleased (`2c25162`) |
+| M2 Real providers | Done | unreleased (`ff4db71`) |
+| M4 REPL, streams, model picker | **Next** | |
+| M3 Tools, permissions, verify, custom tools, trust | Planned | |
+| M5 Context and sessions | Planned | |
+| M6 Skills, login, Core release | Planned | 0.1 |
+| M7–M16 | Planned | 1.0, 2.0 |
+
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
 platforms, and its docs are written. If a milestone pushes its tier over budget,
@@ -99,9 +117,12 @@ through repair.
 
 ---
 
-## M3 — Tools, permissions and the verify gate
+## M3 — Tools, permissions, the verify gate and custom tools
 
-**Goal:** the safety boundary, exhaustively tested, and "done means verified".
+**Built after M4** ([ADR-0033](adr/0033-replan-after-m2.md)).
+
+**Goal:** the safety boundary, exhaustively tested, and "done means verified";
+and the agent gets CLIs and APIs without MCP or Python.
 
 - `permissions/policy.py` — pure `decide()` with `tainted` and control paths [PERM-1..5, PERM-11, PERM-12]
 - `permissions/matcher.py` — hostile paths, shell segments [PERM-5, PERM-14]
@@ -115,6 +136,12 @@ through repair.
 - `core/verify.py` — the verification gate, authorised before the turn [VER-1..7]
 - `--verify`, `verify.command`, `verify.max_attempts`; exit 9 [CLI-17, VER-5]
 - `edgar permissions list|revoke`
+- `tools/custom.py` — command tools (argv templates) and HTTP tools (request
+  templates, fixed host, `${env:…}` in headers only, redaction) [TOOL-6], moved
+  from M6: a few dozen tokens each, where an MCP server costs thousands
+- `cli/trust.py` — project trust, `edgar trust`, `--no-project-exec` [PERM-13,
+  CLI-19], moved from M6 because project config can now declare a command tool
+- `/browser` with a browser CLI as a command tool [CLI-29]; the MCP form is M8
 - Property tests: hostile paths, control files never auto-allowed outside `yolo`,
   tainted `auto` never allows shell by mode default, deny-any-segment; 100% branch
   coverage on the package
@@ -122,14 +149,19 @@ through repair.
 **Done when:** the permission matrix is exhaustively tested and no generated
 hostile path escapes the root; with the fake provider a turn that fails its check
 twice exits 9 with the event sequence `VerifyStarted` → `VerifyFinished(ok=False)`
-→ `RequestStarted` → … asserted in a test; and a `write` to `.edgar/config.toml`
-in `auto` mode prompts.
+→ `RequestStarted` → … asserted in a test; a `write` to `.edgar/config.toml`
+in `auto` mode prompts; a command-tool argument containing `; rm -rf ~` reaches
+the program as one argv element, an HTTP tool cannot be pointed at another host,
+the token never appears in transcript, events or logs, and an untrusted
+non-interactive run exits 3.
 
 **Resolves:** OQ-7 (taint scope).
 
 ---
 
-## M4 — The CLI: REPL, status line, streams
+## M4 — The CLI: REPL, status line, streams, model picker
+
+**Built next, before M3** ([ADR-0033](adr/0033-replan-after-m2.md)).
 
 **Goal:** the daily driver, and a clean surface for programs.
 
@@ -145,6 +177,9 @@ in `auto` mode prompts.
   point, `/btw` side questions via `core/aside.py` [CLI-13, CLI-24, ADR-0028]
 - Turn control and status: `/stop`, `/pause`, `/resume`, `/status`, `/model` with
   mid-session switching [CLI-27, CLI-28, ADR-0029]
+- `edgar models` and `/model` with no argument: an interactive picker that lists
+  a provider's models on request and creates a config but never edits one
+  [CLI-30, ADR-0034]
 - `core/cancel.py` — cancellation scopes [TOOL-10]
 - Windows VT enablement with plain-line fallback
 - `--quiet`, `--json`, `--events` [CLI-7, CLI-8, CLI-18]
@@ -189,24 +224,23 @@ on another machine.
 
 ---
 
-## M6 — Custom tools, skills and trust · **Core release**
+## M6 — Skills, login and the Core release · **Core release**
 
-**Goal:** the agent gets CLIs and APIs without Python, and a cloned repo cannot
-run code on launch.
+**Goal:** skills, a login that never touches a subscription, and a release people
+can fork. (Custom tools and trust moved to M3, [ADR-0033](adr/0033-replan-after-m2.md).)
 
-- `tools/custom.py` — command tools (argv templates) and HTTP tools (request
-  templates, fixed host, `${env:…}` in headers only, redaction) [TOOL-6]
+- `edgar login PROVIDER` / `edgar logout`: OAuth with PKCE for providers that
+  issue API keys that way (OpenRouter first), key kept in the OS keyring
+  [PRV-18, CFG-6, ADR-0032]
 - `skills/discovery.py` (PyYAML, lazily) and `skills/loader.py` + `skill` tool [SKL-1..5]
 - `edgar tools list|describe`, `edgar skills list|validate` [SKL-7]
 - Collision order with startup warning (without MCP and extensions yet) [TOOL-9]
-- `cli/trust.py` — project trust, `edgar trust`, `--no-project-exec` [PERM-13, CLI-19]
 - Examples of each in `examples/`
 - Short docs: README quick start, `docs/COOKBOOK.md` first recipes
 
-**Done when:** J3 and J9 pass their acceptance tests: a command-tool argument
-containing `; rm -rf ~` reaches the program as one argv element, an HTTP tool
-cannot be pointed at another host, the token never appears in transcript, events or
-logs, and an untrusted non-interactive run exits 3. `src/` is under 5,000 LOC.
+**Done when:** J3 and J9 pass their acceptance tests end to end; `edgar login
+openrouter` stores a key that `edgar -p` then uses, and a planted keyring value
+never appears in transcript, events or logs; `src/` is under 5,000 LOC.
 
 **Release:** 0.1 to PyPI. From here people can use and fork edgar.
 
@@ -248,6 +282,8 @@ mid-session does not change the prompt prefix until the next session.
 - Project MCP servers require trust [PERM-13]
 - `edgar mcp list|test`
 - `/browser`: the `[browser]` MCP preset, spawned on demand [CLI-29, ADR-0029]
+- OAuth for remote servers: OAuth 2.1 with PKCE, tokens in the keyring [TOOL-7,
+  ADR-0032], moved from v2
 
 **Done when:** a stdio server and a Streamable HTTP server both work, startup time
 is unchanged with five servers configured, an MCP result taints the session, and
@@ -420,7 +456,6 @@ twice, never moves down the chain, and never exceeds `max_escalations`.
 - Per-entry mode, agent, model, allowlist, verify [SCH-8]
 - Run transcripts, `session_end` hook [SCH-9, SCH-10]
 - `schedule_self` in the `self_schedules` table, with guardrails [SCH-11]
-- MCP OAuth for remote servers [TOOL-7]
 
 **Done when:** frozen-clock tests cover every catch-up policy, overlap is
 prevented, a self-schedule never touches `schedules.toml`, and the v2.0 success

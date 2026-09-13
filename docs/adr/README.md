@@ -43,6 +43,9 @@ that did not need an ADR.
 | [0029](0029-session-commands.md) | Session commands: append-only, rewind the conversation not the disk, no hidden titles | Accepted · `/resume` now pairs with `/pause` |
 | [0030](0030-personality-file.md) | A personality file for tone and style, owned by the user | Accepted · complements 0023 |
 | [0031](0031-provider-layer-as-built.md) | The provider layer as built: what the sketch left open | Accepted · refines 0002, 0009, 0020; resolves OQ-3 |
+| [0032](0032-oauth-keys-and-mcp.md) | OAuth for issuing keys and for MCP servers, never for subscriptions | Accepted · MCP OAuth moves from v2 to v1 |
+| [0033](0033-replan-after-m2.md) | The REPL before the safety milestone, and CLI and API tools with it | Accepted · order M4 before M3; custom tools and trust move to M3 |
+| [0034](0034-model-picker.md) | A model picker that asks, lists on request, and never edits your config | Accepted |
 
 ## Writing a new ADR
 

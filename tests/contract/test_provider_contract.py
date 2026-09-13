@@ -131,7 +131,7 @@ class TestProviderContract:
         foreign = ThinkingBlock("theirs", FOREIGN, "sig")
         transcript = [system(), user("Read a.txt."), *call_and_result("call_sw", foreign)]
         response = r.run(transcript, reasoning=False)
-        assert response.message.text
+        assert response.message.content  # accepted: a reply came back
         assert "thinking" not in r.body  # no reasoning requested
         assert "call_sw" in sent(r)
 
@@ -198,8 +198,9 @@ class TestProviderContract:
         assert r.provider.family in ("openai-compatible", "anthropic")
 
     def test_normalises_to_canonical_messages(self, rig: MakeRig, name: str) -> None:
-        for scenario in ("text", "tool_calls_parallel"):
-            response = rig(name, scenario).run([system(), user("Go.")])
+        prompts = {"text": "Say hello.", "tool_calls_parallel": "Read a.txt, list src."}
+        for scenario, prompt in prompts.items():
+            response = rig(name, scenario).run([system(), user(prompt)])
             message = response.message
             assert message.role == "assistant"
             for block in message.content:

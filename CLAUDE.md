@@ -209,9 +209,11 @@ Requirement IDs in brackets trace to `docs/PRD.md`. Cite them in commits and tes
 
 ## Working on a milestone
 
-Roadmap order: **Core** M0 skeleton, M1 loop with the fake provider and config loading,
-M2 real providers, M3 tools, permissions and the verify gate, M4 REPL and streams, M5
-context and sessions, M6 custom tools, skills and trust (Core release). **v1** M7 memory
+Roadmap order (ADR-0033 moved M4 ahead of M3; IDs keep their numbers): **Core** M0
+skeleton, M1 loop with the fake provider and config loading, M2 real providers, M4
+REPL, streams and the model picker, M3 tools, permissions, the verify gate, command
+and HTTP tools and project trust, M5 context and sessions, M6 skills, `edgar login`
+and the Core release. **v1** M7 memory
 and session search, M8 MCP, M9 subagents, routing rules and fallback, M10 extensions,
 hooks, plugins and `edgar.run()`, M11 init, doctor and docs (1.0). **v2** M12 learning
 foundations, M13 controller, M14 skill synthesis, M15 escalation and route suggest,
@@ -227,6 +229,18 @@ Before building anything, check the "Never" list at the end of `ROADMAP.md` and 
 non-goals in `PRD.md` §5.2. Skill hub, messaging gateway, user modelling and memory
 nudges are on it deliberately. If the spec is wrong, say so and change the doc and the code
 together rather than deviating quietly.
+
+## Keeping track
+
+The maintainer's standing rule: everything we do leaves a written trace in the
+repo, in the same commit as the work.
+
+- `docs/JOURNAL.md`: a dated entry per session with what was asked, done, decided
+  and still pending. Requests not acted on yet go in its pending list.
+- `CHANGELOG.md`: user-visible changes under "Unreleased"; moved under a version
+  on release.
+- `docs/ROADMAP.md`: the status table at the top.
+- `docs/adr/`: an ADR for any decision a reasonable person could make differently.
 
 ## Environment notes
 

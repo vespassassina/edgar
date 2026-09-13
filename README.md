@@ -134,7 +134,12 @@ base_url = "http://localhost:1234/v1"
 ```
 
 `edgar models list` shows where each role's prompts go, every provider's endpoint
-and whether its key is set, without contacting anything. Small local models that
+and whether its key is set, without contacting anything.
+
+No API credit? `ollama pull qwen3:8b`, then `edgar --model ollama/qwen3:8b` runs
+entirely on your machine for free. edgar does not sign in with a vendor
+subscription: vendors keep those for their own apps
+([ADR-0032](docs/adr/0032-oauth-keys-and-mcp.md)). Small local models that
 fence their tool calls or write them as plain JSON are repaired, deterministically.
 
 **Subagents with their own models.** Declared in markdown, not code. Run a cheap

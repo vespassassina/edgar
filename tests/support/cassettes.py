@@ -117,7 +117,16 @@ def save(provider: str, scenarios: dict[str, dict[str, Any]]) -> None:
     (CASSETTES / f"{provider}.json").write_text(text, encoding="utf-8", newline="\n")
 
 
+_RECORDED: set[tuple[str, str]] = set()
+
+
 def record(provider: str, scenario: str, exchanges: list[dict[str, Any]]) -> None:
+    """The first test to use a scenario records it; later ones in the same run only
+    replay-check against the live API. Otherwise the last writer wins, and a test
+    that reuses a scenario with a looser prompt overwrites the one that owns it."""
+    if (provider, scenario) in _RECORDED:
+        return
+    _RECORDED.add((provider, scenario))
     scenarios = load(provider)
     today = datetime.date.today().isoformat()
     scenarios[scenario] = {"source": f"recorded {today}", "exchanges": exchanges}

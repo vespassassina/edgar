@@ -1062,7 +1062,8 @@ properties.service = { type = "string" }
 
 `tools/mcp/`, [TOOL-7, TOOL-8]. JSON-RPC over **stdio** or **Streamable HTTP**.
 Legacy HTTP+SSE is not supported. Remote servers take static headers from the
-environment in v1; OAuth arrives in v2. Tools are namespaced `mcp__server__tool`,
+environment, or OAuth 2.1 with PKCE with tokens in the keyring
+([ADR-0032](adr/0032-oauth-keys-and-mcp.md)). Tools are namespaced `mcp__server__tool`,
 results are untrusted, and server annotations such as `readOnlyHint` are displayed
 but never used in `decide()`.
 
@@ -1688,9 +1689,11 @@ shell = "ask"
 program = "auto"                      # [TOOL-11]
 sandbox = "none"                      # none | bwrap | seatbelt | container (v1) [PERM-15]
 
-[browser]                             # what /browser connects (v1) [CLI-29]
-command = "npx"
-args = ["@playwright/mcp@X.Y.Z"]      # pin the version you reviewed; edgar never picks one
+[browser]                             # what /browser connects [CLI-29, ADR-0033]
+tool = "browse"                       # a command tool wrapping a browser CLI: costs its schema only
+# or an MCP server (v1), when the browser is only available that way:
+# command = "npx"
+# args = ["@playwright/mcp@X.Y.Z"]    # pin the version you reviewed; edgar never picks one
 
 [tools]
 max_output_tokens = 8000              # spill threshold [TOOL-4]
