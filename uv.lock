@@ -179,7 +179,7 @@ wheels = [
 ]
 
 [[package]]
-name = "edgar-cli"
+name = "edgar-harness"
 version = "0.0.0"
 source = { editable = "." }
 

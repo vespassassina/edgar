@@ -4,7 +4,7 @@
 Any model. No hidden calls. Nothing is done until it's verified.
 
 ```bash
-uvx edgar-cli                                    # interactive
+uvx edgar-harness                                # interactive
 git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```

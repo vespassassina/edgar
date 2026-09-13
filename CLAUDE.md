@@ -26,7 +26,7 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 M0 (skeleton) is in place: `pyproject.toml`, `src/edgar/` with only `edgar --version`,
 the four guard tests (startup imports, tier isolation, core imports no adapter, size
 budget), CI and release workflows. M0 is done once the GitHub repo exists and
-`uvx edgar-cli --version` works from PyPI. M1 (the loop with the fake provider) is
+`uvx edgar-harness --version` works from PyPI. M1 (the loop with the fake provider) is
 next. The recipes for suites that do not exist yet (`test-unit`, `test-live`,
 `record-cassettes`, `eval`) arrive with the milestone that creates them.
 

@@ -1640,7 +1640,7 @@ Budget is eight direct, counting optional extras [NFR-5].
 | `PyYAML` | Frontmatter in skills and agents, `safe_load` only | Imported at first discovery |
 | `prompt_toolkit` | REPL input, history, steering | Interactive path only |
 | `rich` | Markdown rendering, status bar | Interactive path only; never on `-p --json` or `--events` |
-| `keyring` *(optional extra)* | OS keyring secrets | `edgar-cli[keyring]` |
+| `keyring` *(optional extra)* | OS keyring secrets | `edgar-harness[keyring]` |
 | *(two free)* | | |
 
 Standard library for everything else: `sqlite3`, `asyncio`, `pathlib`, `argparse`,

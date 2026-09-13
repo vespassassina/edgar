@@ -5,7 +5,7 @@
 | **Status** | Draft v0.4, ready to build against. v0.2 added verification and skill synthesis ([ADR-0014](adr/0014-verification-and-skill-synthesis.md)); v0.3 added release tiers, staged compression, the learning boundary, the extension model and permission hardening (ADRs 0015–0021); v0.4 adds the findings of a field review of 11,647 Hacker News comments: ports and adapters, no hidden behaviour, lexical memory, working state ([research](research/hn-2026-09.md), ADRs 0022–0025, [DECISIONS](DECISIONS.md)) |
 | **Owner** | Diego |
 | **Command** | `edgar` |
-| **Package** | `edgar-cli` (PyPI) |
+| **Package** | `edgar-harness` (PyPI) |
 | **Licence** | AGPL-3.0-or-later ([ADR-0026](adr/0026-licence-agpl.md)) |
 | **Runtime** | Python 3.12+ |
 | **Platforms** | Windows, macOS, Linux |
@@ -212,7 +212,7 @@ Each journey names the tier in which its acceptance test first passes.
 
 ```
 $ cd ~/projects/thing
-$ uvx edgar-cli init
+$ uvx edgar-harness init
 ```
 
 `init` writes `.edgar/config.toml`, an `AGENTS.md` stub, and a `.gitignore`

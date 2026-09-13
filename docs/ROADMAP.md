@@ -37,7 +37,7 @@ proves it.
 - **[NFR-14] `SECURITY.md` with a monitored contact, hash-pinned lockfile, trusted
   publishing configured before the first release**
 
-**Done when:** `uvx edgar-cli --version` works on all three OSes from a clean machine.
+**Done when:** `uvx edgar-harness --version` works on all three OSes from a clean machine.
 
 ---
 

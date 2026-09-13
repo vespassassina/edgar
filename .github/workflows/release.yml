@@ -3,7 +3,7 @@ name: release
 # Publishes to PyPI through trusted publishing: no API token exists anywhere, and
 # every file carries a build attestation [NFR-14]. Runs only for a published GitHub
 # release. Before the first one, register this repository, this workflow file and
-# the "pypi" environment as a trusted publisher for `edgar-cli` on pypi.org.
+# the "pypi" environment as a trusted publisher for `edgar-harness` on pypi.org.
 
 on:
   release:

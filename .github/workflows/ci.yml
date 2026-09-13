@@ -40,7 +40,7 @@ jobs:
         run: uv run python tests/support/budget.py
 
   clean-install:
-    # "Done when uvx edgar-cli --version works from a clean machine" (M0): build the
+    # "Done when uvx edgar-harness --version works from a clean machine" (M0): build the
     # wheel, then run it through uvx with nothing from the repo on the path.
     name: clean install (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
