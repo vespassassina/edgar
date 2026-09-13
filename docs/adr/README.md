@@ -1,0 +1,46 @@
+# Architecture Decision Records
+
+Numbered, immutable once accepted. Superseding an ADR means writing a new one that
+references it, not editing the old one. The Status column below records which
+later ADRs amend an earlier one; read them together.
+
+Format: Context → Options → Decision → Consequences → Rejected alternatives.
+
+[`../DECISIONS.md`](../DECISIONS.md) summarises the v0.3 revision (ADRs 0015–0021)
+and the v0.4 field review (ADRs 0022–0025) in one page, including the smaller fixes
+that did not need an ADR.
+
+| ADR | Title | Status |
+|---|---|---|
+| [0001](0001-python-uv-runtime.md) | Python 3.12 with uv-first distribution | Accepted |
+| [0002](0002-provider-adapter-strategy.md) | Two adapters for five providers | Accepted · amended by 0020 |
+| [0003](0003-mcp-in-v1.md) | MCP client in v1, no server mode | Accepted · amended by 0018 |
+| [0004](0004-permission-model.md) | Four-mode policy engine, explicit mode when piped | Accepted · amended by 0021 |
+| [0005](0005-tick-scheduling.md) | Tick model over daemon or emit-only | Accepted · v2 tier (0015); `schedule_self` storage per 0021 |
+| [0006](0006-subagent-context.md) | Fresh context, parallel from v1 | Accepted |
+| [0007](0007-memory-architecture.md) | Four surfaces, SQLite store with markdown interface | Accepted · amended by 0017, reaffirmed by 0024 |
+| [0008](0008-controller-guardrails.md) | Deterministic triggers, typed proposals, tighten-only | Accepted · amended by 0017 (`learn` removed) |
+| [0009](0009-testing-strategy.md) | Offline-first with contract suite and scheduled live smoke | Accepted |
+| [0010](0010-session-storage.md) | JSONL transcripts with SQLite indices | Accepted · compaction records per 0016 |
+| [0011](0011-events-not-callbacks.md) | Event bus for all output | Accepted |
+| [0012](0012-startup-budget.md) | 150 ms startup as an enforced constraint | Accepted · import list per 0019 |
+| [0013](0013-model-routing.md) | Routing, escalation and fallback are three mechanisms | Accepted · amended by 0020 |
+| [0014](0014-verification-and-skill-synthesis.md) | Verify before done, synthesise skills only from verified work | Accepted · amended by 0017 |
+| [0015](0015-release-tiers.md) | Ship in three tiers: Core, v1, v2 | Accepted |
+| [0016](0016-context-pipeline.md) | Context is compressed in stages, cheapest first, on whole units | Accepted |
+| [0017](0017-learning-boundary.md) | Only human-typed text and harness-computed errors create active facts | Accepted |
+| [0018](0018-extension-model.md) | Tools, skills and extensions: one vocabulary, files first, Python last | Accepted · plugin surfaces amended by 0022 |
+| [0019](0019-dependency-budget.md) | Five required dependencies | Accepted |
+| [0020](0020-provider-portability.md) | Any OpenAI-compatible endpoint, reasoning tagged by origin | Accepted |
+| [0021](0021-humans-widen-machines-tighten.md) | Humans widen, machines tighten: taint, control files, project trust | Accepted |
+| [0022](0022-ports-and-adapters.md) | One core, ports for everything outside it, one distribution | Accepted |
+| [0023](0023-no-hidden-behaviour.md) | No hidden behaviour: no implicit hosts, the prompt is a file, the prefix is stable | Accepted |
+| [0024](0024-lexical-memory.md) | Memory stays lexical; a retriever port for embeddings or graphs | Accepted |
+| [0025](0025-working-state.md) | Plans, todos and forks are session state, not prompts | Accepted |
+| [0026](0026-licence-agpl.md) | License edgar under AGPL-3.0-or-later | Accepted |
+
+## Writing a new ADR
+
+Copy `TEMPLATE.md`. Number sequentially. An ADR is warranted when a decision is
+hard to reverse, when a reasonable person would choose differently, or when you
+will otherwise be asked "why is it like this" more than twice.
