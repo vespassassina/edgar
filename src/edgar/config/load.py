@@ -225,6 +225,9 @@ def _accepts(hint: Any, value: Any) -> bool:
     if origin is list:
         (item,) = get_args(hint)
         return isinstance(value, list) and all(_accepts(item, v) for v in value)
+    if origin is dict:
+        _, item = get_args(hint)
+        return isinstance(value, dict) and all(_accepts(item, v) for v in value.values())
     if hint is type(None):
         return value is None
     if hint is bool:
@@ -244,6 +247,8 @@ def _describe(hint: Any) -> str:
         return " or ".join(_describe(a) for a in get_args(hint) if a is not type(None))
     if origin is list:
         return "a list of strings"
+    if origin is dict:
+        return f"a table of {_describe(get_args(hint)[1])}"
     names = {bool: "true or false", int: "an integer", float: "a number", str: "a string"}
     return names.get(hint, str(hint))
 
@@ -254,6 +259,8 @@ def _example(hint: Any) -> str:
         return f'"{get_args(hint)[0]}"'
     if get_origin(hint) is list:
         return '["…"]'
+    if get_origin(hint) is dict:
+        return '{ shell = "ask" }'
     return {bool: "true", int: "8000", float: "0.5"}.get(hint, '"…"')
 
 

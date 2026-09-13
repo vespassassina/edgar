@@ -14,16 +14,23 @@ import json
 import time
 from typing import Any
 
-from edgar.core.events import PermissionResolved, ToolFinished, ToolProposed, ToolStarted
+from edgar.core.events import ToolFinished, ToolProposed, ToolStarted
 from edgar.core.message import ErrorKind, ErrorRecord, TextBlock, ToolResultBlock, ToolUseBlock
-from edgar.permissions.policy import Deny, decide
+from edgar.permissions.guard import Guard
+from edgar.permissions.policy import Deny
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry
 from edgar.tools.spill import spill
 
 
 async def execute(
-    call: ToolUseBlock, *, registry: ToolRegistry, ctx: ToolContext, mode: str
+    call: ToolUseBlock,
+    *,
+    registry: ToolRegistry,
+    ctx: ToolContext,
+    guard: Guard,
+    mode: str,
+    tainted: bool = False,
 ) -> ToolResultBlock:
     bus = ctx.bus
     bus.emit(ToolProposed(id=call.id, tool=call.name, args_preview=_preview(call.args)))
@@ -43,17 +50,27 @@ async def execute(
     if problem is not None:
         return _failed(call, "validation", problem)
 
-    decision = decide(tool.schema, call.args, mode=mode, cwd=ctx.cwd)
+    described = getattr(tool, "subject", None)  # command and HTTP tools say what they touch
+    decision = await guard.check(
+        tool.schema,
+        call.args,
+        cwd=ctx.cwd,
+        mode=mode,
+        tainted=tainted,
+        call_id=call.id,
+        bus=bus,
+        subject=described(call.args, ctx.cwd) if described else None,
+    )
     if isinstance(decision, Deny):
-        bus.emit(PermissionResolved(id=call.id, decision="deny", source=decision.source))
         return _failed(call, "permission_denied", f"denied: {decision.reason}")
 
     bus.emit(ToolStarted(id=call.id, tool=call.name))
+    timeout = getattr(tool, "timeout_s", None) or ctx.timeout_s
     started = time.monotonic()
     try:
-        result = await asyncio.wait_for(tool.run(call.args, ctx), ctx.timeout_s)
+        result = await asyncio.wait_for(tool.run(call.args, ctx), timeout)
     except TimeoutError:
-        result = ToolResult(f"timed out after {ctx.timeout_s:g} s", error="timeout")
+        result = ToolResult(f"timed out after {timeout:g} s", error="timeout")
     except Exception as exc:  # a crashing tool must not take the turn down with it
         result = ToolResult(f"{call.name} failed: {type(exc).__name__}: {exc}", error="internal")
 
@@ -70,7 +87,9 @@ async def execute(
         is_error=result.error is not None,
         truncated=out.truncated,
         untrusted=tool.schema.untrusted_output,
-        error=ErrorRecord(call.name, result.error) if result.error else None,
+        error=ErrorRecord(call.name, result.error, result.exit_code, result.program)
+        if result.error
+        else None,
         blob=out.blob.as_posix() if out.blob else None,
     )
     bus.emit(

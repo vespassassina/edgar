@@ -7,8 +7,9 @@ results back, and stop when it stops asking. A subagent is this same loop with a
 different session (ADR-0006).
 
 Cancelling the task that runs a turn (Ctrl-C, `/stop`) seals the transcript first
-(core/cancel.py). Still to join, each in its milestone: the budget check and the
-verify gate (M3), compaction (M5) and the post-turn gate for v2.
+(core/cancel.py). When the model stops after changing something, the verify gate
+runs the declared check (core/verify.py). Still to join: the budget check and
+compaction (M5), and the post-turn gate for v2.
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
 from edgar.context.builder import build
 from edgar.core.cancel import seal
@@ -24,6 +26,7 @@ from edgar.core.events import (
     EventBus,
     RequestFinished,
     RequestStarted,
+    SessionTainted,
     SteerApplied,
     TextDelta,
     TurnFinished,
@@ -32,6 +35,9 @@ from edgar.core.events import (
 from edgar.core.message import Message, TextBlock, ToolResultBlock
 from edgar.core.session import Session, new_id
 from edgar.core.units import assert_pairing
+from edgar.core.verify import Check, verify
+from edgar.permissions.guard import Guard
+from edgar.permissions.policy import Policy, category
 from edgar.providers.base import Provider, Usage
 from edgar.tools.base import ToolContext
 from edgar.tools.execute import execute
@@ -49,12 +55,14 @@ class Runtime:
     bus: EventBus
     max_output_tokens: int = 8000  # [TOOL-4]
     name: str = ""  # the full model string, e.g. "fake/test"
+    guard: Guard | None = None  # None: the policy's defaults, nobody to ask
+    verify: Check | None = None  # the gate's command, authorised before the turn [VER-4]
 
 
 @dataclass(frozen=True, slots=True)
 class TurnResult:
     text: str
-    reason: str  # "completed"; later "verification_failed", "cancelled"
+    reason: str  # "completed" or "verification_failed"; a cancel raises instead
     usage: Usage
 
 
@@ -78,6 +86,8 @@ async def run_turn(
     cost: float | None = 0.0  # None once any request's pricing is unknown [BUD-5]
     partial: list[str] = []  # text streamed so far, kept if the turn is cancelled
     results: list[ToolResultBlock] = []
+    guard = rt.guard or Guard(Policy(mode=session.mode, cwd=session.cwd, home=Path.home()))
+    acted, attempt, reason = False, 0, "completed"  # the verify gate's state [VER-2]
 
     def collect(event: Event) -> None:
         if isinstance(event, TextDelta) and event.depth == session.depth:
@@ -116,15 +126,39 @@ async def run_turn(
                 # results, so the model can recover; nothing here raises.
                 results.clear()
                 for call in calls:
-                    results.append(
-                        await execute(call, registry=rt.tools, ctx=ctx, mode=session.mode)
+                    result = await execute(
+                        call,
+                        registry=rt.tools,
+                        ctx=ctx,
+                        guard=guard,
+                        mode=session.mode,
+                        tainted=session.tainted,
                     )
+                    results.append(result)
+                    acted = acted or _acted(rt, call.name, result)
+                    if result.untrusted and not session.tainted:  # sticky [PERM-11]
+                        session.tainted = True
+                        bus.emit(SessionTainted(by_tool=call.name))
                 session.append(Message("tool", tuple(results)))
                 assert_pairing(session.transcript)  # [CTX-4]
                 continue
 
             if session.steers_pending():  # the model stopped, but the user steered
                 continue
+            if rt.verify and acted:  # done means the check passed [VER-2, VER-3]
+                attempt += 1
+                feedback = await verify(
+                    rt.verify,
+                    attempt,
+                    cwd=session.cwd,
+                    blob_dir=ctx.blob_dir,
+                    bus=bus,
+                    max_tokens=rt.max_output_tokens,
+                )
+                if feedback is not None and attempt < rt.verify.max_attempts:
+                    session.append(Message.user(feedback, via="verify"))
+                    continue
+                reason = "completed" if feedback is None else "verification_failed"
             break
     except asyncio.CancelledError:
         seal(session, partial_text="".join(partial), results=results)
@@ -134,5 +168,15 @@ async def run_turn(
     finally:
         bus.unsubscribe(collect)
 
-    bus.emit(TurnFinished(turn_id=turn_id, usage=usage, cost=cost, reason="completed"))
-    return TurnResult(response.message.text, "completed", usage)
+    bus.emit(TurnFinished(turn_id=turn_id, usage=usage, cost=cost, reason=reason))
+    return TurnResult(response.message.text, reason, usage)
+
+
+def _acted(rt: Runtime, name: str, result: ToolResultBlock) -> bool:
+    """A non-read tool that actually ran: what makes the verify gate run [VER-2]."""
+    tool = rt.tools.get(name)
+    refused = result.error is not None and result.error.kind in NOT_RUN
+    return tool is not None and category(tool.schema) != "read" and not refused
+
+
+NOT_RUN = frozenset({"permission_denied", "validation", "not_found"})

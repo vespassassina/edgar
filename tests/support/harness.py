@@ -11,6 +11,8 @@ from edgar.core.events import Event, EventBus
 from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.message import ToolUseBlock
 from edgar.core.session import Session
+from edgar.permissions.guard import Asker, Guard
+from edgar.permissions.policy import Policy
 from edgar.providers.fake import FakeProvider, ScriptedResponse
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry, core_registry
@@ -29,6 +31,11 @@ class Recorder:
 
     def of(self, kind: type[Event]) -> list[Any]:
         return [e for e in self.events if isinstance(e, kind)]
+
+
+def guard(cwd: Path, mode: str = "read-only", asker: Asker | None = None) -> Guard:
+    """The permission guard with config defaults; `asker` answers any Ask."""
+    return Guard(Policy(mode=mode, cwd=cwd, home=cwd.parent / "home"), asker=asker)
 
 
 def tool_use(name: str, args: dict[str, Any], id: str | None = None) -> ToolUseBlock:
@@ -89,6 +96,6 @@ class SlowTool:
 
 
 def slow_registry() -> ToolRegistry:
-    from edgar.tools.builtin.fs import BUILTINS
+    from edgar.tools.builtin.fs import builtins
 
-    return ToolRegistry([*BUILTINS, SlowTool()])
+    return ToolRegistry([*builtins(), SlowTool()])

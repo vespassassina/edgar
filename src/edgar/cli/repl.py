@@ -21,15 +21,16 @@ from dataclasses import replace
 from pathlib import Path
 
 from edgar import __version__
+from edgar.cli import trust
 from edgar.cli.render import Printer, Renderer
-from edgar.cli.setup import prepare, runtime
+from edgar.cli.setup import Setup, authorise_verify, prepare, runtime, setup
 from edgar.cli.statusbar import Status
-from edgar.config.schema import Config
 from edgar.core import aside
 from edgar.core.errors import EdgarError
 from edgar.core.events import EventBus, InputQueued
 from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
+from edgar.permissions.guard import Answer
 from edgar.providers.routing import Selection
 
 Ask = Callable[[str], Awaitable[str]]
@@ -39,16 +40,14 @@ class Shell:
     def __init__(
         self,
         *,
-        config: Config,
-        root: Path,
-        env: Mapping[str, str] | None,
+        setup: Setup,
         session: Session,
         rt: Runtime,
         renderer: Renderer,
         status: Status,
         ask: Ask,
     ) -> None:
-        self.config, self.root, self.env = config, root, env
+        self.setup, self.config = setup, setup.config
         self.session, self.rt = session, rt
         self.renderer, self.printer, self.status = renderer, renderer.printer, status
         self.ask = ask
@@ -56,7 +55,22 @@ class Shell:
         self.turn: asyncio.Task[None] | None = None
         self.asides: set[asyncio.Task[None]] = set()
         self.pending_input = ""  # put back on the input line after a cancel
+        self.question: asyncio.Future[str] | None = None  # the next line answers it
         self.done = False
+
+    def prompt_text(self) -> str:
+        return "allow? [y]es once, [s]ession, [a]lways, [n]o > " if self.question else "> "
+
+    async def permission(self, tool: str, subject: str, reason: str) -> Answer:
+        """Asked from inside a turn; answered by the next line typed. One question at a
+        time, through the one prompt [PERM-6, TOOL-12]."""
+        self.say(f"{tool} wants {subject}\n  ({reason})")
+        self.question = asyncio.get_running_loop().create_future()
+        try:
+            answer = (await self.question).strip().lower()[:1]
+        finally:
+            self.question = None
+        return {"y": "once", "s": "session", "a": "always"}.get(answer, "deny")  # type: ignore[return-value]  # the Answer literals
 
     @property
     def busy(self) -> bool:
@@ -66,6 +80,9 @@ class Shell:
         self.printer.block(text)
 
     async def handle(self, line: str) -> None:
+        if self.question is not None and not self.question.done():
+            self.question.set_result(line)  # the line answers the pending question
+            return
         text = line.strip()
         if not text:
             return
@@ -87,7 +104,13 @@ class Shell:
 
     async def _run(self, text: str) -> None:
         try:
-            await run_turn(self.session, text, self.rt)
+            await authorise_verify(self.rt, self.session)
+            result = await run_turn(self.session, text, self.rt)
+            if result.reason == "verification_failed":  # [VER-5]
+                self.say(
+                    f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "
+                    "still fails after its last attempt; the session goes on"
+                )
         except asyncio.CancelledError:
             return  # the loop sealed the transcript; nothing queued runs after a cancel
         except EdgarError as exc:
@@ -122,10 +145,12 @@ class Shell:
     def switch(self, model: str) -> None:
         """`/model NAME`: the rest of the session runs on `model` [CLI-28]."""
         choice = Selection(model, "user", "/model")
-        self.rt = runtime(self.config, self.root, self.rt.bus, env=self.env, choice=choice)
+        self.rt = runtime(self.setup, self.rt.bus, choice=choice)
         self.session.model = self.status.model = model
 
     async def close(self) -> None:
+        if self.question and not self.question.done():
+            self.question.set_result("n")
         self.stop()
         running = [t for t in (self.turn, *self.asides) if t is not None and not t.done()]
         for task in running:
@@ -142,6 +167,8 @@ async def interact(
     home: Path | None = None,
     show_thinking: bool = False,
     color: bool = True,
+    verify: str | None = None,
+    project_exec: bool = True,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -149,9 +176,15 @@ async def interact(
     from prompt_toolkit.output import ColorDepth
     from prompt_toolkit.patch_stdout import patch_stdout
 
-    root, config = prepare(cwd, model=model, mode=mode, env=env, home=home)
+    root, config = prepare(cwd, model=model, mode=mode, env=env, home=home, confirm_yolo=_yolo)
+    home = home or Path.home()
+    if project_exec and not trust.trusted(root, config, home):  # [PERM-13]
+        print(trust.describe(root, config))
+        project_exec = input("trust this project and let it run? [y/N] ").strip().lower() == "y"
+        if project_exec:
+            trust.trust(root, config, home)
     status = Status("")
-    history = (home or Path.home()) / ".edgar" / "history"
+    history = home / ".edgar" / "history"
     history.parent.mkdir(parents=True, exist_ok=True)
     prompt: PromptSession[str] = PromptSession(
         history=FileHistory(str(history)),
@@ -162,6 +195,17 @@ async def interact(
 
     async def ask(question: str) -> str:
         return await prompt.prompt_async(question)
+
+    shell_ref: list[Shell] = []
+
+    async def permission(tool: str, subject: str, reason: str) -> Answer:
+        return await shell_ref[0].permission(tool, subject, reason)
+
+    s = setup(
+        root, config, home=home, env=env, verify=verify, project_exec=project_exec, asker=permission
+    )
+    for warning in s.tools.warnings:
+        print(f"edgar: {warning}")
 
     with patch_stdout(raw=True):
         printer = Printer(_write, color=color, width=lambda: shutil.get_terminal_size().columns)
@@ -176,20 +220,19 @@ async def interact(
             chosen = await pick(config, env, ask, printer.block)
             if chosen is None:
                 return 3
-            config = replace(config, model=replace(config.model, default=chosen))
-        rt = runtime(config, root, bus, env=env)
+            s.config = replace(config, model=replace(config.model, default=chosen))
+        rt = runtime(s, bus)
         status.model = rt.name
-        session = Session(cwd=root, model=rt.name, mode=config.permissions.mode)
+        session = Session(cwd=root, model=rt.name, mode=s.config.permissions.mode)
         shell = Shell(
-            config=config,
-            root=root,
-            env=env,
+            setup=s,
             session=session,
             rt=rt,
             renderer=renderer,
             status=status,
             ask=ask,
         )
+        shell_ref.append(shell)
         printer.block(f"edgar {__version__} · {rt.name} · {session.mode} · /help", dim=True)
         await _read(shell, prompt.prompt_async)
     return 0
@@ -200,8 +243,11 @@ async def _read(shell: Shell, read: Callable[..., Awaitable[str]]) -> None:
     while not shell.done:
         default, shell.pending_input = shell.pending_input, ""
         try:
-            line = await read("> ", default=default)
+            line = await read(shell.prompt_text, default=default)
         except KeyboardInterrupt:
+            if shell.question is not None:
+                shell.question.set_result("n")  # Ctrl-C at a question means no
+                continue
             now = time.monotonic()
             if shell.busy or shell.queue:
                 shell.pending_input = shell.stop()  # once: cancel the turn [CLI-12]
@@ -215,6 +261,11 @@ async def _read(shell: Shell, read: Callable[..., Awaitable[str]]) -> None:
             break
         await shell.handle(line)
     await shell.close()
+
+
+def _yolo() -> bool:
+    """A typed confirmation, never a keypress: yolo turns off every check [PERM-9]."""
+    return input("yolo turns off every permission check. Type yolo to confirm: ") == "yolo"
 
 
 def _write(text: str) -> None:

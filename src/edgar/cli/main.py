@@ -19,7 +19,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edgar",
         description="The agent harness you can read in an afternoon.",
-        epilog="Other commands: edgar models, edgar models list, edgar prompt show",
+        epilog="Other commands: edgar models [list], edgar trust, "
+        "edgar permissions list|revoke ID, edgar prompt show",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
@@ -32,6 +33,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--quiet", action="store_true", help="no status line")
     parser.add_argument("--show-thinking", action="store_true", help="show reasoning")
     parser.add_argument("--no-color", action="store_true", help="no colour (also NO_COLOR)")
+    parser.add_argument("--verify", metavar="CMD", help="the check that decides done [CLI-17]")
+    parser.add_argument(
+        "--no-project-exec", action="store_true", help="ignore this project's tools and verify"
+    )
     return parser
 
 
@@ -42,6 +47,10 @@ def main(argv: list[str] | None = None) -> int:
             return _prompt_command(argv[1:])
         if argv[:1] == ["models"]:
             return _models_command(argv[1:])
+        if argv[:1] in (["trust"], ["permissions"]):
+            from edgar.cli.admin import command
+
+            return command(argv, Path.cwd())
         return _run(build_parser(), argv)
     except EdgarError as exc:
         print(f"edgar: {exc}", file=sys.stderr)
@@ -74,6 +83,8 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
                 mode=args.mode,
                 show_thinking=args.show_thinking,
                 color=color_wanted(args.no_color),
+                verify=args.verify,
+                project_exec=not args.no_project_exec,
             )
         )
     from edgar.cli.oneshot import run_prompt
@@ -89,6 +100,8 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         quiet=args.quiet,
         show_thinking=args.show_thinking,
         attached=attached or None,
+        verify=args.verify,
+        project_exec=not args.no_project_exec,
     )
 
 

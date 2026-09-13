@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Sequence
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from harness import Recorder, slow_registry, tool_use
 from edgar.cli import repl
 from edgar.cli.render import Printer, Renderer
 from edgar.cli.repl import Shell
+from edgar.cli.setup import setup
 from edgar.cli.statusbar import Status
 from edgar.config.schema import Config, ModelSection
 from edgar.core.events import (
@@ -32,6 +34,7 @@ from edgar.core.loop import Runtime
 from edgar.core.message import ToolResultBlock
 from edgar.core.session import Session
 from edgar.core.units import pairing_violations
+from edgar.permissions.guard import Answer
 from edgar.providers.fake import FakeProvider, ScriptedResponse
 
 
@@ -53,10 +56,15 @@ class Rig:
             self.out.append(question)
             return self.answers.pop(0)
 
+        config = Config(model=ModelSection(default="fake/test"))
+
+        async def permission(tool: str, subject: str, reason: str) -> Answer:
+            return await self.shell.permission(tool, subject, reason)
+
+        s = setup(root, config, home=root.parent / "home", env={}, asker=permission)
+        rt = replace(rt, guard=s.guard)
         self.shell = Shell(
-            config=Config(model=ModelSection(default="fake/test")),
-            root=root,
-            env={},
+            setup=s,
             session=Session(cwd=root, model="fake/test", mode="read-only"),
             rt=rt,
             renderer=renderer,
@@ -236,7 +244,6 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/undo 2", "/undo arrives in M5"),
         ("/frobnicate", "unknown command /frobnicate"),
         ("/mode auto", "mode: auto"),
-        ("/mode yolo", "arrives in M3"),
         ("/title my work", "title: my work"),
         ("/cost", "session cost: $0.0000"),
         ("/queue", "queue empty"),
@@ -250,6 +257,38 @@ def test_commands(tmp_project: Path, line: str, expected: str) -> None:
         await r.type(line)
 
     assert expected in play(tmp_project, scenario).text
+
+
+def test_a_permission_question_is_answered_by_the_next_line(tmp_project: Path) -> None:
+    steps = [
+        ScriptedResponse(tool_calls=[tool_use("write", {"path": "n.txt", "content": "hi"})]),
+        ScriptedResponse(text="written"),
+    ]
+
+    async def scenario(r: Rig) -> None:
+        r.shell.session.mode = "ask"
+        await r.type("make a file")
+        for _ in range(100):
+            if r.shell.question is not None:
+                break
+            await asyncio.sleep(0.01)
+        assert r.shell.prompt_text().startswith("allow?")
+        await r.type("y")
+        await r.settle()
+
+    r = play(tmp_project, scenario, steps)
+    assert (tmp_project / "n.txt").read_text(encoding="utf-8") == "hi"
+    assert "write wants" in r.text and "written" in r.text
+
+
+def test_yolo_needs_the_word_typed(tmp_project: Path) -> None:  # [PERM-9]
+    async def scenario(r: Rig) -> None:
+        await r.type("/mode yolo")
+        assert r.shell.session.mode == "read-only"
+        await r.type("/mode yolo")
+        assert r.shell.session.mode == "yolo"
+
+    play(tmp_project, scenario, answers=["y", "yolo"])
 
 
 def test_quit(tmp_project: Path) -> None:

@@ -16,8 +16,9 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Literal
 
+from edgar.cli import trust
 from edgar.cli.render import event_line
-from edgar.cli.setup import prepare, runtime
+from edgar.cli.setup import authorise_verify, prepare, runtime, setup
 from edgar.cli.statusbar import Status, StderrLine, terminal_ready
 from edgar.core.errors import ConfigError
 from edgar.core.events import (
@@ -47,6 +48,8 @@ def run_prompt(
     quiet: bool = False,
     show_thinking: bool = False,
     attached: str | None = None,
+    verify: str | None = None,
+    project_exec: bool = True,
 ) -> int:
     if mode is None:
         # Nobody is there to answer a permission prompt, so the mode must be a
@@ -56,6 +59,9 @@ def run_prompt(
             hint="add --mode read-only to look, or --mode ask|auto|yolo",
         )
     root, config = prepare(cwd, model=model, mode=mode, env=env, home=home)
+    if project_exec:
+        trust.require(root, config, home or Path.home())  # untrusted: exit 3 [PERM-13]
+    s = setup(root, config, home=home, env=env, verify=verify, project_exec=project_exec)
     bus = EventBus()
     for subscriber in subscribers:
         bus.subscribe(subscriber)
@@ -70,9 +76,10 @@ def run_prompt(
     if not quiet and terminal_ready(sys.stderr):
         status = Status(config.model.default or "")
         bus.subscribe(status)
-    rt = runtime(config, root, bus, env=env)
+    rt = runtime(s, bus)
     session = Session(cwd=root, model=rt.name, mode=config.permissions.mode)
     result = asyncio.run(_run(session, prompt, rt, [attached] if attached else [], status))
+    code = 9 if result.reason == "verification_failed" else 5 if s.guard.prompt_denials else 0
 
     if output == "json":
         done = finished[-1]
@@ -81,14 +88,18 @@ def run_prompt(
             "usage": asdict(result.usage),
             "cost": done.cost,
             "tools": tools,
-            "reason": result.reason,
+            "reason": result.reason,  # "verification_failed" with exit 9 [VER-5]
             "model": rt.name,
             "session": session.id,
         }
         sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
     elif output == "text":
         sys.stdout.write(result.text if result.text.endswith("\n") else result.text + "\n")
-    return 0
+    if code == 5:  # an Ask with nobody to answer is a denial, and the run says so [PERM-7]
+        print("edgar: a tool call needed permission; see --mode or [permissions]", file=sys.stderr)
+    elif code == 9:
+        print("edgar: the verify command still fails; out of attempts", file=sys.stderr)
+    return code
 
 
 async def _run(
@@ -97,6 +108,7 @@ async def _run(
     line = StderrLine(status) if status else None
     ticker = asyncio.create_task(line.run()) if line else None
     try:
+        await authorise_verify(rt, session)
         return await run_turn(session, prompt, rt, attached=attached)
     finally:
         if ticker and line:

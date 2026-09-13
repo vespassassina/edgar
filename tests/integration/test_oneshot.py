@@ -36,6 +36,7 @@ def test_read_a_file_with_the_fake_model(
         "RequestStarted",
         "RequestFinished",
         "ToolProposed",
+        "PermissionResolved",
         "ToolStarted",
         "ToolFinished",
         "RequestStarted",

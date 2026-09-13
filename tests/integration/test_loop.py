@@ -29,6 +29,7 @@ def test_loop_executes_tool_and_continues(tmp_project: Path, recorder: Recorder)
         "RequestStarted",
         "RequestFinished",
         "ToolProposed",
+        "PermissionResolved",
         "ToolStarted",
         "ToolFinished",
         "RequestStarted",

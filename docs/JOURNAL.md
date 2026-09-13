@@ -23,9 +23,46 @@ Carried forward until done. Newest first.
   the startup import ban.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 3,353 of 5,000 lines after M4, leaving 1,647 for M3,
-  M5 and M6. M3 is the largest; anything that does not fit moves to v1 (ADR-0035).
+- **Decide what moves to v1 before M5.** Core is at 4,415 of 5,000 lines after M3;
+  585 lines cannot hold M5 and M6 as specified (ADR-0036). Options are in the M3
+  entry below.
 - Update the GitHub repository description to the headline (optional).
+
+## 2026-09-13 · M3 done: tools, permissions, the verify gate
+
+**Asked:** start M3.
+
+**Done**
+- `permissions/`: a pure `decide()` over a `Policy`, the mode table from the
+  Blueprint cell by cell, rules, exact grants in `.edgar/edgar.db`, taint, control
+  files, credentials, and hostile paths resolved before matching. The guard asks
+  in the REPL (answer with the next line: once, session, always, no) and denies
+  with `-p`, which then exits 5. 100% branch coverage.
+- Built-ins `write`, `edit`, `glob`, `grep`, `shell`, `fetch`; processes are killed
+  as a group on cancel or timeout.
+- Command and HTTP tools from `.edgar/tools/*.toml` and `~/.edgar/tools/`,
+  project over user over built-in with a warning; project trust with
+  `edgar trust` and `--no-project-exec`.
+- The verify gate (`--verify`, `[verify] command`): authorised before the turn,
+  run when the model stops after a non-read tool, feedback on failure, exit 9
+  when exhausted.
+- yolo only through `EDGAR_YOLO=1` or a typed confirmation.
+- 388 tests in about 5.5 s.
+
+**Decided**
+- [ADR-0036](adr/0036-safety-layer-as-built.md): outside the working directory
+  asks rather than denies; the audit trail is the event stream until M5; `/browser`
+  moves to M8 and the control-file hash warning to M5.
+
+**Budget.** M3 took about 1,060 lines against a target of 800. Core is at 4,415 of
+5,000, with 585 left for M5 (context, compaction, sessions, session commands,
+personality, cost caps, plan and todo) and M6 (skills, `edgar login`, release).
+They will not both fit. Candidates for v1, by how separable they are: `/save` and
+`/load` with `edgar --load`; plan mode and the `todo` tool; the daily cost cap;
+`edgar login`; skills. Alternatively the Core budget is raised by an ADR, which
+the roadmap says it should not be.
+
+**Next:** the maintainer decides what moves; then M5.
 
 ## 2026-09-13 · M4 done: the REPL
 

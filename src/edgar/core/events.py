@@ -136,9 +136,33 @@ class ToolProposed(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PermissionResolved(Event):
+    """Every decision, with what it was about and why: the audit trail [PERM-10]."""
+
     id: str
-    decision: str
-    source: str  # rule | mode | grant | hook | taint | control
+    decision: str  # allow | deny
+    source: str  # hard | rule | grant | mode | taint | control | tool | user
+    tool: str = ""
+    subject: str = ""
+    reason: str = ""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SessionTainted(Event):
+    by_tool: str  # [PERM-11]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class VerifyStarted(Event):
+    command: str
+    attempt: int  # [VER-6]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class VerifyFinished(Event):
+    ok: bool
+    exit_code: int | None
+    attempt: int
+    duration_ms: int
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

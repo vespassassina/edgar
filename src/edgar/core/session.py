@@ -32,6 +32,7 @@ class Session:
     parent_id: str | None = None
     pending_steers: list[str] = field(default_factory=list)  # drained at the safe point
     title: str | None = None  # first line of the first prompt; never a model call [CLI-28]
+    tainted: bool = False  # untrusted content entered the transcript; sticky [PERM-11, OQ-7]
     _resumed: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
     def __post_init__(self) -> None:

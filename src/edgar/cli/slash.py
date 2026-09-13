@@ -20,7 +20,7 @@ Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
 LATER = {
-    "M3": "/browser",
+    "M8": "/browser",
     "M5": "/compact /plan /go /reset /history /undo /retry /sessions /load /save",
     "M6": "/skills /tools",
     "v1": "/fork /remember /memory /agents /init",
@@ -73,7 +73,8 @@ async def _status(shell: Shell, arg: str) -> None:
         ("steers", str(len(s.pending_steers))),
         ("turn", ("paused" if s.paused else "running") if shell.busy else "idle"),
         ("verify", shell.config.verify.command or "none"),
-        ("taint, trust", "arrive in M3"),
+        ("tainted", "yes: shell and network ask in auto" if s.tainted else "no"),
+        ("tools", ", ".join(shell.rt.tools.names())),
         ("personality", "arrives in M5"),
     ]
     shell.say("\n".join(f"  {k:<13} {v}" for k, v in rows))
@@ -84,7 +85,7 @@ async def _model(shell: Shell, arg: str) -> None:
     if not arg:
         from edgar.cli.models import pick
 
-        arg = await pick(shell.config, shell.env, shell.ask, shell.say) or ""
+        arg = await pick(shell.config, shell.setup.env, shell.ask, shell.say) or ""
         if not arg:
             return
     try:
@@ -97,8 +98,11 @@ async def _model(shell: Shell, arg: str) -> None:
 async def _mode(shell: Shell, arg: str) -> None:
     if not arg:
         shell.say(f"mode: {shell.session.mode}")
-    elif arg == "yolo":
-        shell.say("yolo needs its typed confirmation, which arrives in M3")
+    elif arg == "yolo":  # a typed confirmation, never config [PERM-9]
+        typed = await shell.ask("yolo turns off every permission check. Type yolo to confirm: ")
+        if typed.strip() == "yolo":
+            shell.session.mode = "yolo"
+        shell.say(f"mode: {shell.session.mode}")
     elif arg in get_args(Mode):
         shell.session.mode = arg
         shell.say(f"mode: {arg}")

@@ -30,6 +30,7 @@ class PermissionsSection:
     write_paths: list[str] = field(default_factory=lambda: ["./**"])
     shell_allow: list[str] = field(default_factory=list)
     shell_deny: list[str] = field(default_factory=list)
+    tools: dict[str, Literal["allow", "ask", "deny"]] = field(default_factory=dict)  # [PERM-2]
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,7 +131,6 @@ LATER = frozenset(
         "route",  # v1
         "model.fallback",  # v1
         "model.escalation",  # v2
-        "permissions.tools",  # M3
         "memory",  # v1
         "subagents",  # v1
         "extensions",  # v1

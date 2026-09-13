@@ -33,6 +33,8 @@ class ToolResult:
 
     text: str
     error: ErrorKind | None = None  # set when the tool itself reports failure
+    exit_code: int | None = None  # for the ErrorRecord the harness computes [MEM-22]
+    program: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

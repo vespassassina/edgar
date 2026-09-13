@@ -6,7 +6,7 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from harness import Recorder, tool_use
+from harness import Recorder, guard, tool_use
 
 from edgar.core.events import EventBus, ToolFinished
 from edgar.core.message import ToolResultBlock, ToolUseBlock
@@ -26,7 +26,9 @@ def _ctx(root: Path, recorder: Recorder | None = None, **kw: Any) -> ToolContext
 def _run(
     call: ToolUseBlock, ctx: ToolContext, registry: ToolRegistry | None = None
 ) -> ToolResultBlock:
-    return asyncio.run(execute(call, registry=registry or core_registry(), ctx=ctx, mode="ask"))
+    registry = registry or core_registry()
+    gate = guard(ctx.cwd, "read-only")
+    return asyncio.run(execute(call, registry=registry, ctx=ctx, guard=gate, mode="read-only"))
 
 
 class _Stub:

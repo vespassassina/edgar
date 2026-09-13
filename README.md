@@ -9,10 +9,11 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** design complete (spec v0.4). Milestones M1, M2 and M4 are in: the
-> interactive REPL and one-shot runs against real models, with read-only tools so
-> far (`edgar --model ollama/qwen3:8b`, or `edgar models` to pick one). Writing,
-> the shell, the verify gate and CLI/HTTP tools arrive with M3.
+> **Status:** design complete (spec v0.4). Milestones M1 to M4 are in: the REPL
+> and one-shot runs against real models, with file, shell and web tools behind the
+> permission engine, the verify gate, and your own CLI and HTTP tools
+> (`edgar --model ollama/qwen3:8b`, or `edgar models` to pick one). Sessions and
+> compaction arrive with M5.
 > The documents in `docs/` are the spec being built against.
 
 ## Why edgar

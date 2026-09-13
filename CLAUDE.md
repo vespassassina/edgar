@@ -23,15 +23,17 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0 (skeleton), M1 (the loop), M2 (real providers) and M4 (the REPL) are done
-(https://github.com/vespassassina/edgar); M3 is next (ADR-0033). `edgar` opens an
+M0, M1, M2, M4 (the REPL) and M3 (tools, permissions, the verify gate) are done
+(https://github.com/vespassassina/edgar); M5 is next, once the maintainer decides
+what moves to v1 to fit the Core budget (ADR-0036). `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
 for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
 OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server.
 Built so far: the message types and pairing invariant (`core/units.py`), the event
 bus, the loop with cancellation (`core/cancel.py`) and pause, `/btw`
-(`core/aside.py`), `read` and `ls`, the tool pipeline with spill, a deny-by-default
-policy (reads inside the working directory only), the prompt file with profiles,
+(`core/aside.py`), eight built-in tools plus command and HTTP tools, the tool
+pipeline with spill, the permission engine (`permissions/`: pure `decide()`, the
+guard, grants, trust), the verify gate (`core/verify.py`), the prompt file with profiles,
 layered config with provenance, and the model picker. Provider decisions that
 differ from the Blueprint's first sketch are in ADR-0031; the REPL's in ADR-0035. Releases go out through trusted
 publishing when a `v*` GitHub release is published; bump the version in both

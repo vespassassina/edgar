@@ -1171,26 +1171,32 @@ A pure function at the centre, which is what makes it testable exhaustively.
 
 ```python
 # permissions/policy.py
-def decide(
-    tool: ToolSchema,
-    args: dict,
-    mode: PermissionMode,
-    rules: PolicyRules,              # config rules + grants, each with its origin
-    cwd: Path,
-    interactive: bool,
-    tainted: bool,                   # [PERM-11]
-    control_paths: frozenset[Path],  # resolved control files [PERM-12]
-) -> Decision:                       # Allow | Deny(reason) | Ask(subject)
+def decide(tool: ToolSchema, subject: Subject, p: Policy) -> Decision:  # Allow | Deny | Ask
+
+@dataclass(frozen=True)
+class Policy:
+    mode: str
+    cwd: Path
+    home: Path
+    interactive: bool                # False: every Ask becomes Deny(needed_prompt=True)
+    tainted: bool                    # [PERM-11]
+    rules: Mapping[str, str]         # [permissions.tools], tool → allow | ask | deny
+    grants: frozenset[tuple[str, str]]   # (tool, subject) a human allowed
+    write_paths, shell_allow, shell_deny
+    control: Callable[[Path], bool]  # is this a control file? [PERM-12]
 ```
 
-Everything that needs I/O (resolving paths, loading grants, hashing control files)
-happens in the caller. `decide()` stays pure.
+Everything that needs I/O (resolving paths, loading grants, asking) happens in the
+caller, `permissions/guard.py`, which also emits one `PermissionResolved` per
+decision. `decide()` stays pure. As built: [ADR-0036](adr/0036-safety-layer-as-built.md).
 
 Evaluation order, first match wins:
 
-1. **Hard layer** — never overridable by rules or grants: writes outside `cwd`
-   without an explicit grant, credential paths, `rm -rf /`, and **writes to control
-   files, which are Ask in every mode except `yolo`** (deny when non-interactive)
+1. **Hard layer** — never overridable by rules: anything outside `cwd` (Ask; only a
+   grant for that exact path lets it through), credential paths (deny), a few
+   catastrophic commands such as `rm -rf /` (deny, even in yolo), and **writes to
+   control files, which are Ask in every mode except `yolo`** (deny when
+   non-interactive)
 2. **Explicit per-tool rule** from config, then **grants**
 3. **Mode default**, tightened by **taint** in `auto`
 4. **Tool's own `dangerous` flag** → escalate to Ask

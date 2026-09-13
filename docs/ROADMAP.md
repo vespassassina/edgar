@@ -23,8 +23,8 @@ M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record i
 | M1 The loop | Done | unreleased (`2c25162`) |
 | M2 Real providers | Done | unreleased (`ff4db71`) |
 | M4 REPL, streams, model picker | Done | unreleased |
-| M3 Tools, permissions, verify, custom tools, trust | **Next** | |
-| M5 Context and sessions | Planned | |
+| M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
+| M5 Context and sessions | **Next**, after the budget decision (ADR-0036) | |
 | M6 Skills, login, Core release | Planned | 0.1 |
 | M7–M16 | Planned | 1.0, 2.0 |
 
@@ -128,7 +128,8 @@ and the agent gets CLIs and APIs without MCP or Python.
 - `permissions/matcher.py` — hostile paths, shell segments [PERM-5, PERM-14]
 - `permissions/control.py` — control-file set and hashes [PERM-12]
 - `permissions/grants.py` + `storage/db.py` (sessions index, grants, trust tables) [PERM-6]
-- `permissions/audit.py` [PERM-10]
+- The audit trail: `PermissionResolved` with tool, subject, source and reason for
+  every decision [PERM-10]; its file copy arrives with the M5 session record
 - Non-interactive requires explicit `--mode`, exit 3 [CLI-9, PERM-7]
 - `yolo` gated behind env var plus typed confirmation [PERM-9]
 - Remaining built-ins: `write`, `edit`, `glob`, `grep`, `shell` (per-platform
@@ -141,7 +142,8 @@ and the agent gets CLIs and APIs without MCP or Python.
   from M6: a few dozen tokens each, where an MCP server costs thousands
 - `cli/trust.py` — project trust, `edgar trust`, `--no-project-exec` [PERM-13,
   CLI-19], moved from M6 because project config can now declare a command tool
-- `/browser` with a browser CLI as a command tool [CLI-29]; the MCP form is M8
+- `/browser`: moved to M8 with its MCP form; a browser CLI can already be declared
+  as a command tool ([ADR-0036](adr/0036-safety-layer-as-built.md)) [CLI-29]
 - Property tests: hostile paths, control files never auto-allowed outside `yolo`,
   tainted `auto` never allows shell by mode default, deny-any-segment; 100% branch
   coverage on the package
@@ -212,6 +214,8 @@ units, and a `/btw` answer leaves the transcript unchanged.
 - Session commands as appended records: `/new /clear /reset /history /undo /retry
   /title /sessions /load /save`, `edgar --load` [CLI-25, CLI-26, CLI-28, ADR-0029]
 - `personality.md`, user and project scope, in `edgar prompt show` [CTX-19, ADR-0030]
+- The control-file hash stored at session end, and the warning when it changed
+  (moved from M3) [PERM-12]
 - Turn, session and daily cost caps [BUD-2, BUD-3], `/cost`, `edgar cost` [BUD-6]
 - Idempotency, overflow and spill tests [CTX-8]
 
@@ -283,7 +287,8 @@ mid-session does not change the prompt prefix until the next session.
 - Deferred tool schemas and `tool_search` [TOOL-15]
 - Project MCP servers require trust [PERM-13]
 - `edgar mcp list|test`
-- `/browser`: the `[browser]` MCP preset, spawned on demand [CLI-29, ADR-0029]
+- `/browser`: the `[browser]` preset, a command tool or an MCP server spawned on
+  demand [CLI-29, ADR-0029, ADR-0036]
 - OAuth for remote servers: OAuth 2.1 with PKCE, tokens in the keyring [TOOL-7,
   ADR-0032], moved from v2
 

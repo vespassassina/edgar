@@ -32,6 +32,23 @@ Core is being built, 0.1 at the Core release (M6).
   `/thinking`, `/title`, `/new`, `/clear`, `/help`. A status line under the prompt.
 - `edgar models` and `/model`: pick a provider and one of its models; the default
   goes into a new config file, never into an existing one.
+- Writing and running (M3): `write`, `edit`, `glob`, `grep`, `shell` (Git Bash,
+  PowerShell or your POSIX shell) and `fetch`.
+- Permissions: four modes, `[permissions]` rules per tool, `write_paths`,
+  `shell_allow` and `shell_deny`; in the REPL, answer once, for the session, or
+  always (stored as a grant; `edgar permissions list|revoke`). Anything outside
+  the working directory asks; credentials are off limits; writing edgar's own
+  config and instruction files always asks. After reading web content, `auto`
+  asks before the shell or the network. `-p` exits 5 when a call needed a prompt.
+  yolo needs `EDGAR_YOLO=1` or the word typed.
+- The verify gate: `--verify CMD` or `[verify] command` runs your check when the
+  model stops after changing something; failures go back to the model, and `-p`
+  exits 9 when the attempts run out.
+- Command tools and HTTP tools in `.edgar/tools/*.toml` and `~/.edgar/tools/`: a
+  CLI or an API for the agent, with arguments as whole argv elements, a fixed host
+  and secrets from the environment, scrubbed from output.
+- Project trust: a project's own tools and verify command run only after
+  `edgar trust`; `--no-project-exec` runs without them.
 - `-p` for programs: `--json` (one object), `--events` (JSON Lines), `--quiet`,
   `--show-thinking`, `--no-color` and `NO_COLOR`; piped stdin is attached as
   context; a status line on stderr when it is a terminal; Ctrl-C exits 7.
