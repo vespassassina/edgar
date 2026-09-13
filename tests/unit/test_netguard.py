@@ -26,9 +26,11 @@ def test_raw_connect_is_blocked() -> None:
 
 
 def test_loopback_socketpair_is_allowed() -> None:
-    # The implementation Windows uses, run here on every platform so a regression
-    # shows up without waiting for the Windows job.
-    a, b = socket._fallback_socketpair()  # type: ignore[attr-defined]  # private, stable since 3.12
+    # The loopback implementation Windows uses. Recent CPython defines it on every
+    # platform, so a regression shows up without waiting for the Windows job; older
+    # 3.12 patch releases define it on Windows only.
+    pair = getattr(socket, "_fallback_socketpair", socket.socketpair)
+    a, b = pair()
     with a, b:
         a.sendall(b"x")
         assert b.recv(1) == b"x"
