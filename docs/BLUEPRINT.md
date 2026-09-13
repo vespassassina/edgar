@@ -1258,6 +1258,9 @@ than one that is honest:
 - **The shell can do anything the user can.** Segment matching is a speed bump; the
   boundaries are the mode, the Ask prompt and taint
 - **`yolo` means yolo**
+- **On Windows, a cancelled command can leave a grandchild running.** The call
+  returns within two seconds, but `taskkill /T` does not always reach processes a
+  Git Bash pipeline started ([ADR-0036](adr/0036-safety-layer-as-built.md))
 - **The recommended setup for untrusted work is a sandbox backend (§7.5), a
   container or a VM.** `docs/COOKBOOK.md` has a devcontainer recipe
 - **Agents under restriction improvise.** Observed in the field: forged lockfile

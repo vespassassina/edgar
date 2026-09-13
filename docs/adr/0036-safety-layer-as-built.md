@@ -40,7 +40,10 @@ and M6.
   visible under `--events`. The file copy comes with the session JSONL in M5.
 - **Processes die as a group.** `shell`, command tools and the verify command
   start in their own process group (a new session on POSIX, a new process group
-  on Windows) and are killed as a group on cancel or timeout.
+  on Windows) and are killed as a group on cancel or timeout. On Windows,
+  `taskkill /T` can miss a grandchild that Git Bash started; the cancel still
+  returns within two seconds, but that grandchild may run on. A Job object would
+  close the gap; it is recorded as a residual risk (BLUEPRINT §7.4).
 - **The verify command is authorised before the turn** through the same guard,
   as a `shell` call; a `verify.command` from project config also needs trust.
 - **`grep` is Python's `re` over the files**, not ripgrep: no dependency and no

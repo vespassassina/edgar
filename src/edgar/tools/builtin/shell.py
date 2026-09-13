@@ -8,6 +8,7 @@ cancelled or times out, so `sleep 100 | cat` does not outlive a Ctrl-C.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import os
 import re
 import shutil
@@ -65,19 +66,19 @@ async def run_argv(argv: Sequence[str], cwd: Path) -> tuple[int, str]:
         out, _ = await proc.communicate()
     except BaseException:  # cancelled or timed out: take the whole tree down
         _kill(proc.pid)
-        await proc.wait()
+        # A grandchild that escaped the kill can hold the pipe open; never wait on it.
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(proc.wait(), 2)
         raise
     return proc.returncode or 0, out.decode("utf-8", errors="replace")
 
 
 def _kill(pid: int) -> None:
-    try:
+    with contextlib.suppress(OSError):
         if sys.platform == "win32":
             subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True)
         else:
             os.killpg(pid, signal.SIGKILL)
-    except (OSError, ProcessLookupError):
-        pass
 
 
 class Shell:
