@@ -9,8 +9,8 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** design complete (spec v0.4). Implementation has started with
-> milestone M0, the package skeleton; nothing runs yet beyond `edgar --version`.
+> **Status:** design complete (spec v0.4). Milestone M0, the package skeleton, is
+> on PyPI; nothing runs yet beyond `edgar --version`. M1, the turn loop, is next.
 > The documents in `docs/` are the spec being built against.
 
 ## Why edgar

@@ -23,11 +23,12 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0 (skeleton) is in place: `pyproject.toml`, `src/edgar/` with only `edgar --version`,
+M0 (skeleton) is done and released as `edgar-harness` 0.0.2 on PyPI
+(https://github.com/vespassassina/edgar): `src/edgar/` with only `edgar --version`,
 the four guard tests (startup imports, tier isolation, core imports no adapter, size
-budget), CI and release workflows. M0 is done once the GitHub repo exists and
-`uvx edgar-harness --version` works from PyPI. M1 (the loop with the fake provider) is
-next. The recipes for suites that do not exist yet (`test-unit`, `test-live`,
+budget), CI on three OSes, and releases through trusted publishing when a `v*` GitHub
+release is published. Bump the version in both `pyproject.toml` and
+`src/edgar/__init__.py`. M1 (the loop with the fake provider) is next. The recipes for suites that do not exist yet (`test-unit`, `test-live`,
 `record-cassettes`, `eval`) arrive with the milestone that creates them.
 
 Docs are still most of the product, so treat an edit to `docs/` with the same care as
