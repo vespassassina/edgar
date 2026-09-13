@@ -7,7 +7,9 @@ license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
 # Runtime dependencies arrive with the milestone that first imports them (ADR-0019).
-dependencies = []
+dependencies = [
+    "jsonschema>=4.23",
+]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Console",
@@ -27,10 +29,12 @@ edgar-harness = "edgar.cli.main:main"
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.130",
     "mypy>=1.17",
     "pytest>=8.4",
     "pytest-cov>=6.2",
     "ruff>=0.12",
+    "types-jsonschema>=4.23",
 ]
 
 [build-system]

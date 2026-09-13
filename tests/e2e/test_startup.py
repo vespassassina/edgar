@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 
@@ -26,8 +27,30 @@ def test_cli_import_pulls_no_heavy_modules(subprocess_env: dict[str, str]) -> No
 
 
 @pytest.mark.timing
-def test_version_starts_fast(edgar_argv: list[str], subprocess_env: dict[str, str]) -> None:
-    # Becomes `-p hi --model fake/test` once M1 lands. Generous on shared CI.
+def test_trivial_run_starts_fast(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    argv = [*edgar_argv, "-p", "hi", "--mode", "read-only", "--model", "fake/test"]
     start = time.perf_counter()
-    subprocess.run([*edgar_argv, "--version"], check=True, capture_output=True, env=subprocess_env)
-    assert time.perf_counter() - start < 0.5
+    subprocess.run(argv, check=True, capture_output=True, env=subprocess_env, cwd=tmp_project)
+    assert time.perf_counter() - start < 0.5  # generous on shared CI; the import test holds
+
+
+def test_cli_run_without_tools_stays_off_heavy_imports(
+    subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # A run whose model calls no tool never needs jsonschema (NFR-1).
+    code = (
+        "import sys; from edgar.cli.main import main;"
+        "main(['-p', 'hi', '--mode', 'read-only', '--model', 'fake/test']);"
+        f"print([m for m in sys.modules if m.split('.')[0] in {HEAVY!r}], file=sys.stderr)"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        env=subprocess_env,
+        cwd=tmp_project,
+    )
+    assert out.returncode == 0, out.stderr
+    assert out.stderr.strip() == "[]"

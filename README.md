@@ -9,8 +9,9 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** design complete (spec v0.4). Milestone M0, the package skeleton, is
-> on PyPI; nothing runs yet beyond `edgar --version`. M1, the turn loop, is next.
+> **Status:** design complete (spec v0.4). Milestone M1 is in: the turn loop runs
+> end to end against a built-in fake model (`edgar -p "read README.md" --model
+> fake/test --mode read-only`). Real models arrive with M2.
 > The documents in `docs/` are the spec being built against.
 
 ## Why edgar

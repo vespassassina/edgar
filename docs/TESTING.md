@@ -24,7 +24,8 @@ tests/
 ├── evals/                   outcome-scored tasks, on demand
 ├── support/                 on the test path, not a package:
 │                            netguard.py + sitecustomize.py (socket guard), importgraph.py
-│                            (static import graph), budget.py (size budgets, `just loc`)
+│                            (static import graph), budget.py (size budgets, `just loc`),
+│                            harness.py (Recorder, runtime(), scripted(), run_turn_sync())
 └── fixtures/
     ├── projects/            sample .edgar/ trees
     ├── skills/
@@ -54,6 +55,11 @@ green [NFR-12].
 
 The highest-leverage piece of infrastructure in the repo. Built in milestone 1,
 before any real provider exists.
+
+Given a script, it replays it. Without one, the `fake/test` model follows three
+fixed rules so the CLI can be driven end to end with no real model: `read PATH`
+and `ls [PATH]` become tool calls, tool results are answered with their text, and
+anything else is echoed as `fake/test heard: …`.
 
 ```python
 # providers/fake.py

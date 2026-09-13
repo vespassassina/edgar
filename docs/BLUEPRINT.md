@@ -310,13 +310,14 @@ class ErrorRecord:                   # computed by the harness, never parsed fro
     tool: str
     kind: ErrorKind                  # validation | permission_denied | timeout | not_found
                                      # | nonzero_exit | provider_http | cancelled
+                                     # | internal (the tool itself raised)
     exit_code: int | None = None
     program: str | None = None       # argv[0] basename, [A-Za-z0-9._-] only
 
 @dataclass(frozen=True, slots=True)
 class ToolResultBlock:
     tool_use_id: str                 # MUST match a ToolUseBlock.id in the preceding message
-    content: list[TextBlock]
+    content: tuple[TextBlock, ...]
     is_error: bool = False
     truncated: bool = False
     untrusted: bool = False          # network-sourced: sets session taint [TOOL-13]
@@ -328,7 +329,7 @@ ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock
 @dataclass(frozen=True, slots=True)
 class Message:
     role: Role
-    content: list[ContentBlock]
+    content: tuple[ContentBlock, ...]  # tuples, so frozen means immutable all the way down
     pinned: bool = False             # never compacted [CTX-5]
     meta: dict[str, Any] = field(default_factory=dict)
 ```
@@ -520,10 +521,10 @@ sequenceDiagram
 
 ```python
 # core/loop.py — shape, not final code
-async def run_turn(session: Session, prompt: UserInput, bus: EventBus) -> TurnResult:
+async def run_turn(session: Session, prompt: UserInput, rt: Runtime) -> TurnResult:
     bus.emit(TurnStarted(...))
     session.append(user_message(prompt))                # typed + attached blocks [CLI-3]
-    provider = providers.resolve(session.model)         # lazy import here [PRV-4]
+    provider = rt.provider                              # resolved lazily by the caller [PRV-4]
     attempts = 0
 
     while True:
@@ -889,14 +890,23 @@ class Tool(Protocol):
     schema: ToolSchema
     async def run(self, args: dict, ctx: ToolContext) -> ToolResult: ...
 
-@dataclass
+@dataclass(frozen=True)
+class ToolResult:                    # what a tool returns; the pipeline builds the block
+    text: str
+    error: ErrorKind | None = None   # set when the tool itself reports failure
+
+@dataclass(frozen=True)
 class ToolContext:
     cwd: Path
-    session: Session
     bus: EventBus
-    cancel: CancelScope
-    timeout_s: float
+    blob_dir: Path                   # where spilled output goes [CTX-13]
+    max_output_tokens: int
+    timeout_s: float = 120.0         # [TOOL-3]
+    # cancel: CancelScope joins in M4
 ```
+
+A tool never sees the session: what it needs is passed in the context, so a tool
+cannot reach the transcript, the policy or the provider.
 
 ### 6.2 Execution pipeline
 
@@ -1662,6 +1672,19 @@ enabled = true
 condense_over_words = 200
 max_kb = 512
 ```
+
+**Environment variables** are named `EDGAR_<SECTION>_<KEY>`, for example
+`EDGAR_TOOLS_MAX_OUTPUT_TOKENS=4000` or `EDGAR_INSTRUCTIONS_FILES=AGENTS.md,CLAUDE.md`,
+and parsed by the key's type. A variable whose section edgar does not have
+(`EDGAR_IDENTITY`, which `edgartools` reads) belongs to another program and is
+ignored; a known section with an unknown key is an error with a "did you mean".
+
+**The dataclasses are the schema** (`config/schema.py`): a field's type hint is the
+validation rule and its default is the default. Sections that later milestones
+validate (`providers`, `route`, `model.fallback`, `memory`, `hooks`, `mcp`, and the
+rest listed in `LATER`) are accepted and kept untouched until then, so a config
+written against this spec loads today; any other unknown section or key is an
+error.
 
 Secrets never live here [CFG-6]: env vars, or the OS keyring with the optional
 extra.

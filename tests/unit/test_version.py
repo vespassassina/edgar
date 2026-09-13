@@ -29,7 +29,7 @@ def test_nothing_to_run_is_a_usage_error(capsys: pytest.CaptureFixture[str]) -> 
     assert main([]) == 2
     out, err = capsys.readouterr()
     assert out == ""  # stdout is the result; there is none [CLI-5]
-    assert "only --version is implemented" in err
+    assert "REPL arrives in M4" in err
 
 
 def test_unknown_flag_is_a_usage_error() -> None:

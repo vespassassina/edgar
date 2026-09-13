@@ -6,6 +6,7 @@ from pathlib import Path
 
 import netguard
 import pytest
+from harness import Recorder
 
 SUPPORT = Path(__file__).parent / "support"
 
@@ -32,3 +33,27 @@ def subprocess_env(tmp_path: Path) -> dict[str, str]:
 def edgar_argv() -> list[str]:
     """How to start the installed CLI from a test, the same on every platform."""
     return [sys.executable, "-m", "edgar"]
+
+
+@pytest.fixture
+def tmp_project(tmp_path: Path) -> Path:
+    """A working directory with a small file to read. No .edgar/ yet: that is M5."""
+    root = tmp_path / "project"
+    root.mkdir()
+    (root / "a.txt").write_text("hello\nworld\n", encoding="utf-8")
+    (root / "src").mkdir()
+    return root
+
+
+@pytest.fixture
+def recorder() -> Recorder:
+    """Subscriber capturing the event stream for assertion."""
+    return Recorder()
+
+
+@pytest.fixture
+def home(tmp_path: Path) -> Path:
+    """An empty home directory, so a real ~/.edgar never leaks into a test."""
+    path = tmp_path / "home"
+    path.mkdir()
+    return path
