@@ -108,7 +108,14 @@ genuinely hard bits honestly, at a size a person can hold in their head.
 Result on stdout, status on stderr, real exit codes. Composes with the rest of
 your shell. Keep typing while it works: plain text queues the next instruction,
 `/steer` corrects the turn in flight, `/btw` asks a side question without
-touching the conversation.
+touching the conversation. `/pause`, `/undo`, `/retry`, `/save` and `/load` work
+the way you would expect, and every one of them appends to the session record
+instead of rewriting it.
+
+**Your tone, not ours.** The shipped system prompt has no style opinions. Put
+yours in `~/.edgar/personality.md` (or per project in `.edgar/personality.md`):
+terse or chatty, which language, how much to explain. It can shape how edgar
+talks, never what it is allowed to do.
 
 **Five providers, two adapters, any compatible server.** OpenAI, Azure, OpenRouter
 and Ollama share one OpenAI-compatible adapter driven by a quirks table; Anthropic

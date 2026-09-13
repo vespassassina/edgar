@@ -243,6 +243,35 @@ def test_aside_leaves_the_transcript_unchanged(fake_provider, tmp_session):
 The Anthropic contract test adds a steer after a tool message and checks the
 request is accepted with tool results and text merged into one user message.
 
+### Session commands
+
+Every command appends a record, so the test is always the same shape: act, replay
+the JSONL, compare with what the user saw [CLI-25..28, ADR-0029].
+
+```python
+@given(script=session_scripts(), ops=st.lists(session_ops()))   # undo N, retry, reset, title, model
+def test_replay_rebuilds_exactly_what_the_user_saw(script, ops, tmp_session):
+    shown = run_with_ops(tmp_session, script, ops)
+    assert replay(tmp_session.jsonl) == shown
+    assert_pairing_invariant(shown.transcript)
+
+def test_undo_lists_changed_files_and_leaves_them_alone(tmp_session):
+    run_turn_writing(tmp_session, "notes.txt")
+    event = undo(tmp_session, 1)
+    assert event.files == ["notes.txt"] and (tmp_session.cwd / "notes.txt").exists()
+
+def test_titles_never_cost_a_request(fake_provider, tmp_session):
+    run_turn_sync(tmp_session, "fix the flaky login test\nand more")
+    assert title(tmp_session) == "fix the flaky login test"
+    assert fake_provider.call_count == 1                              # the turn, nothing else
+
+def test_pause_waits_at_the_safe_point(fake_provider, recorded_events): ...
+```
+
+`personality.md` gets the prefix test (CTX-17) with a personality file present, a
+precedence test (project replaces user), and a test that a personality saying
+"never ask for permission" leaves every `decide()` result unchanged.
+
 ### Compaction stages
 
 ```python

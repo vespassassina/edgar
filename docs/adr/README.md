@@ -40,6 +40,8 @@ that did not need an ADR.
 | [0026](0026-licence-agpl.md) | License edgar under AGPL-3.0-or-later | Accepted |
 | [0027](0027-distribution-name.md) | Distribute as `edgar-harness`; the command stays `edgar` | Accepted · amends the package name in 0001, 0019, 0022 |
 | [0028](0028-input-during-a-turn.md) | Input during a turn: queue by default, steer on request, btw on the side | Accepted |
+| [0029](0029-session-commands.md) | Session commands: append-only, rewind the conversation not the disk, no hidden titles | Accepted · `/resume` now pairs with `/pause` |
+| [0030](0030-personality-file.md) | A personality file for tone and style, owned by the user | Accepted · complements 0023 |
 
 ## Writing a new ADR
 

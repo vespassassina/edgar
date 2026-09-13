@@ -157,11 +157,11 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–13, 15–21, 23, 24; CLI-14 subset `/help /model /mode /compact /cost /clear /plan /go /thinking /queue /steer /btw /quit` | 22; rest of 14 | — |
+| CLI | 1–13, 15–21, 23–28; CLI-14 subset `/help /status /model /mode /compact /cost /plan /go /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /save /quit` | 22, 29; rest of 14 (`/fork /remember /memory /skills /agents /tools /init /browser`) | — |
 | Providers | 1–13, 15–17 | 14 | — |
 | Tools | 1–6, 9 (without MCP), 10–14; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
-| Context | 1–9, 11–18 | 10 | — |
+| Context | 1–9, 11–19 | 10 | — |
 | Subagents | — | 1–11 | — |
 | Skills | 1–5, 7 (`list`, `validate`) | 17 | 6, 7 (rest), 8–16 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
@@ -389,7 +389,7 @@ Requirements are numbered for traceability. Each milestone in
 | CLI-11 | `--resume [id]` and `--continue` restore a prior session | Must |
 | CLI-12 | Ctrl-C once cancels the turn, twice exits; no corrupted state either way. Every tool call without a result gets `ToolResultBlock(is_error=True, "cancelled by user")` before the session is saved; a stream cut mid-generation keeps its partial text marked interrupted and discards any partial tool call | Must |
 | CLI-13 | Input during a turn ([ADR-0028](adr/0028-input-during-a-turn.md)): plain text and `/queue TEXT` are queued and run as separate turns, in order, after the current one; `/steer TEXT` is delivered into the current turn at the next safe point (never between a tool call and its result, CTX-4) and the turn continues; `/queue` lists the queue and `/queue clear` empties it. Ctrl-C returns queued and undelivered steered text to the input line, unsent | Must |
-| CLI-14 | Slash commands in REPL: `/help /model /mode /compact /plan /go /thinking /queue /steer /btw /fork /remember /memory /skills /agents /tools /cost /clear /resume /quit` | Must |
+| CLI-14 | Slash commands in REPL: `/help /status /model /mode /compact /plan /go /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /history /undo /retry /title /sessions /load /save /fork /remember /memory /skills /agents /tools /cost /init /browser /quit`. `/resume` continues a paused turn; reopening a session is `/load` ([ADR-0029](adr/0029-session-commands.md)) | Must |
 | CLI-15 | `NO_COLOR` and `--no-color` honoured | Must |
 | CLI-16 | `--cwd` overrides the working directory; default is the launch directory | Must |
 | CLI-17 | `--verify CMD` declares the verification command for this run, overriding every other source (§7.14) | Must |
@@ -400,6 +400,11 @@ Requirements are numbered for traceability. Each milestone in
 | CLI-22 | Session forks: `/fork` in the REPL and `edgar --fork ID[@TURN]` start a new session whose JSONL begins with a `fork` record naming the parent and turn; the parent's messages are replayed, not copied | Must |
 | CLI-23 | Terminal-native output: no alternate screen; output stays in the terminal's own scrollback and is selectable; the status line is the only redrawn element; `edgar -c -p "…"` continues the last session from the shell so prompts interleave with ordinary commands | Must |
 | CLI-24 | `/btw TEXT` asks a side question, at any time: a separate request with the session's model and system prompt, the transcript cut back to the last complete unit, and no tools. The answer prints as a labelled block between output blocks; neither question nor answer enters the transcript; the JSONL gets an `aside` record; the cost is charged to the session budget ([ADR-0028](adr/0028-input-during-a-turn.md)) | Must |
+| CLI-25 | Session lifecycle ([ADR-0029](adr/0029-session-commands.md)): `/new` starts a session and keeps the old one on disk; `/clear` clears the screen and starts a session; `/reset` empties the conversation of the current session and keeps its model, mode, title and working state; `/sessions` lists sessions with id, title, date, turns and cost; `/load ID\|PATH` opens a session or a `/save` file; `/save [PATH]` exports the session as one portable JSONL file with blobs inlined and secrets redacted (MEM-15); `/history` prints the session's full conversation from the record, compacted parts included. `/reset` and title changes are appended records; nothing is rewritten | Must |
+| CLI-26 | Rewind: `/undo [N]` removes the last N prompts (default 1) and everything after them from the conversation; `/retry` is `/undo 1` followed by the same prompt. Both append an `undo` record, act on whole turns (CTX-4), and list the files that `write` and `edit` changed in the undone turns without reverting them | Must |
+| CLI-27 | Turn control: `/stop` cancels the current turn exactly like one Ctrl-C (CLI-12); `/pause` holds the turn at the loop's next safe point without cancelling anything, and `/resume` continues it. While paused, `/status`, `/history`, `/steer`, `/queue` and `/btw` work | Must |
+| CLI-28 | `/status` shows session id and title, model, mode, context use against the window, cost, queued inputs, pending steers, paused state, taint, trust, the verify command and the personality file in use. `/title [TEXT]` shows or sets the title; the default is the first line of the first prompt, trimmed to 60 characters, and no model is ever asked for a title (PRV-15). `/model` lists configured models; `/model NAME` switches for the rest of the session, emits `ModelSelected` with rule `user`, and appends a `model` record | Must |
+| CLI-29 | `/browser` connects the browser MCP server configured under `[browser]` (for example Playwright MCP or Chrome DevTools MCP): spawned on demand, tools loaded with deferred schemas (TOOL-15), output untrusted (TOOL-13, PERM-11). Without a `[browser]` block it prints the configuration to add and starts nothing | Should |
 
 ### 7.2 Providers
 
@@ -458,7 +463,7 @@ Requirements are numbered for traceability. Each milestone in
 | PERM-9 | `yolo` requires an env var or an explicit flag with a typed confirmation; never reachable by config alone | Must |
 | PERM-10 | Every decision is logged with rule, subject and outcome | Must |
 | PERM-11 | **Taint.** `decide()` takes `tainted: bool`. The session is tainted, for the rest of the session, once an untrusted result (TOOL-13) enters the transcript; the status line shows it. In `auto` mode only, while tainted, the mode default for `shell`, command tools not marked `read_only` and network-egress tools becomes Ask (deny when non-interactive). Explicit rules and grants still apply | Must |
-| PERM-12 | **Control files** (configured instruction files, `config.toml` at both scopes, `schedules.toml`, `.edgar/{agents,tools,extensions}/**`, `.edgar/skills/**` except `learned/`, and user-scope equivalents): `write` and `edit` are Ask in every mode except `yolo`, deny when non-interactive, in the hard layer rules cannot override. A hash of control files is stored at session end; the next session warns if they changed while a session was running | Must |
+| PERM-12 | **Control files** (configured instruction files, `config.toml` at both scopes, `personality.md` and `.edgar/prompts/**`, `schedules.toml`, `.edgar/{agents,tools,extensions}/**`, `.edgar/skills/**` except `learned/`, and user-scope equivalents): `write` and `edit` are Ask in every mode except `yolo`, deny when non-interactive, in the hard layer rules cannot override. A hash of control files is stored at session end; the next session warns if they changed while a session was running | Must |
 | PERM-13 | **Project trust.** Executable project config (hooks, MCP servers, command and HTTP tools, extensions, `verify.command`) runs only in a trusted project. Interactive first use lists it and asks; trust is keyed by project path and a hash of that config and is asked again when the hash changes. Non-interactive and untrusted exits 3 naming `edgar trust` and `--no-project-exec`. User-scope config is trusted | Must |
 | PERM-14 | Shell commands are split on `;` `&&` `||` `\|` and newlines after whitespace normalisation; denied if any segment matches a deny pattern, auto-allowed only if every segment matches an allow pattern; command substitution is never auto-allowed. Documented as a speed bump, not a boundary | Must |
 | PERM-15 | Sandbox port: `shell.sandbox = "none" \| "bwrap" \| "seatbelt" \| "container"` runs `shell`, command tools and the verify command inside the chosen backend, with the project and blob directories writable and network per the permission decision. Default `none`; `doctor` recommends an available backend; an unavailable configured backend fails loudly ([ADR-0022](adr/0022-ports-and-adapters.md)) | Should |
@@ -469,7 +474,7 @@ Rationale for CTX-3 to CTX-14 in [ADR-0016](adr/0016-context-pipeline.md).
 
 | ID | Requirement | Priority |
 |---|---|---|
-| CTX-1 | Deterministic prompt assembly, most stable first: system prompt → tool schemas → instruction files → pinned facts → skill index → *(cache breakpoint)* → rolling summary → transcript → working state (CTX-18) → current turn. Everything above the breakpoint is fixed for the session | Must |
+| CTX-1 | Deterministic prompt assembly, most stable first: system prompt → personality (CTX-19) → tool schemas → instruction files → pinned facts → skill index → *(cache breakpoint)* → rolling summary → transcript → working state (CTX-18) → current turn. Everything above the breakpoint is fixed for the session | Must |
 | CTX-2 | `edgar context show` prints the assembled prompt with per-section token counts | Must |
 | CTX-3 | Autocompact, on by default (`context.autocompact`): runs before any request, including mid-turn between units, once the prompt crosses `context.compact_at` of the usable window (default 0.70), and compacts down to `context.compact_to` (default 0.50) | Must |
 | CTX-4 | **Invariant:** every assistant message containing tool calls is immediately followed by exactly one tool message whose result ids equal the call ids, one-to-one. Thinking blocks in the turn in progress are never altered. Checked before every request in debug builds | Must |
@@ -487,6 +492,7 @@ Rationale for CTX-3 to CTX-14 in [ADR-0016](adr/0016-context-pipeline.md).
 | CTX-16 | The base system prompt ships as `prompts/system.md` (and `prompts/compact.md`), shown by `edgar prompt show`, replaceable by `.edgar/prompts/system.md` (a control file). It carries no style opinions; changes to shipped prompts are listed in the changelog | Must |
 | CTX-17 | **Byte-stable prefix.** Nothing above the cache breakpoint changes within a session; the date, time and other volatile values go in the current turn. A test asserts the serialised prefix is byte-identical across requests until a compaction | Must |
 | CTX-18 | **Working state** — the plan (CLI-20) and the todo list (TOOL-14) — is rendered in one block just above the current turn: below the cache breakpoint, outside the compactable transcript, recorded in the JSONL and restored by `--resume` | Must |
+| CTX-19 | **Personality** ([ADR-0030](adr/0030-personality-file.md)): `.edgar/personality.md`, or else `~/.edgar/personality.md`, sets tone and style. It is placed right after the system prompt, above the cache breakpoint, read once at session start, shown by `edgar prompt show` with its source and token count, and warned about over 500 tokens. It is a control file; edgar ships none; it cannot affect permissions | Must |
 
 ### 7.6 Subagents
 
@@ -637,7 +643,7 @@ fallback responds to unavailability.
 | CFG-1 | Layered: defaults < `~/.edgar/config.toml` < `./.edgar/config.toml` < env < CLI flags | Must |
 | CFG-2 | `edgar config show --resolved` prints the effective config with the origin of every value | Must |
 | CFG-3 | Schema-validated with actionable error messages naming the file, key and expected type | Must |
-| CFG-4 | `edgar init` scaffolds project config, `AGENTS.md` stub and `.gitignore` fragment from templates, creating files and never overwriting existing ones | Must |
+| CFG-4 | `edgar init` (and `/init` in the REPL) scaffolds project config, `AGENTS.md` stub and `.gitignore` fragment from templates, creating files and never overwriting existing ones | Must |
 | CFG-5 | `edgar doctor` checks credentials, connectivity, MCP servers, extensions and their required commands, project trust, tick installation, DB integrity, and warns when `.edgar/` sits in a cloud-synced directory (iCloud Drive, OneDrive, Dropbox, Google Drive) | Must |
 | CFG-6 | Secrets read from env, or from the OS keyring with the optional `keyring` extra; never written to a config file. A config naming a keyring secret without the extra fails with a hint | Must |
 | CFG-7 | Config files are hand-authored; no automated component rewrites them. The controller may propose diffs | Must |
@@ -712,6 +718,7 @@ edgar -p PROMPT --verify CMD       done only when CMD exits 0
 edgar -p PROMPT --plan             plan only, read-only; the plan is pinned
 edgar -p PROMPT --show-thinking    render reasoning where the provider exposes it
 edgar --resume [ID] | --continue   restore a session
+edgar --load PATH                  open a session exported with /save
 edgar trust [--yes]                trust this project's executable config
 edgar prompt show                  print the effective system prompt and its token count
 edgar models list
@@ -891,6 +898,7 @@ the milestone that depends on it.
 | OQ-7 | Taint scope: sticky for the session, or cleared when the untrusted result is compacted away? | Sticky per session. A summary can carry injected text forward, and per-turn clearing is hard to explain ([ADR-0021](adr/0021-humans-widen-machines-tighten.md)) | M3 |
 | OQ-8 | When does the OpenAI Responses API adapter land? | When the eval set shows the reasoning gap matters on tool-heavy tasks; v2 at the latest ([ADR-0020](adr/0020-provider-portability.md)) | M15 |
 | OQ-9 | Does `ext add` from a git URL need an `ext update`? | No command in v1: re-run `ext add` over the folder, and the manifest records the new commit. Revisit if people ask | M10 |
+| OQ-10 | Should `/undo` and `/retry` also roll back files, through checkpoints taken before each turn? | No in Core: they rewind the conversation and list the files changed ([ADR-0029](adr/0029-session-commands.md)). Revisit with a snapshot design that handles untracked and user-edited files, possibly on top of worktree isolation (SUB-11) | v1 |
 
 **Resolved:**
 

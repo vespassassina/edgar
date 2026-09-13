@@ -136,13 +136,15 @@ in `auto` mode prompts.
 - `cli/repl.py` — input, history, streaming [CLI-1]
 - `cli/statusbar.py` — stderr, TTY-only, throttled, shows taint [CLI-5, CLI-6]
 - `cli/render.py` — markdown, `NO_COLOR`, stdout discipline [CLI-15]
-- `cli/slash.py` — `/help /model /mode /compact /cost /clear /quit` [CLI-14]
+- `cli/slash.py` — `/help /model /mode /compact /cost /quit` [CLI-14]
 - `cli/prompt_ui.py` — one prompt queue [TOOL-12]
 - Terminal-native output: no alternate screen, native scrollback [CLI-23]
 - `--show-thinking`, `/thinking` [CLI-21]
 - Ctrl-C once cancels, twice exits; cancelled calls get synthetic results [CLI-12]
 - Input during a turn: plain text queues, `/queue`, `/steer` at the loop's safe
   point, `/btw` side questions via `core/aside.py` [CLI-13, CLI-24, ADR-0028]
+- Turn control and status: `/stop`, `/pause`, `/resume`, `/status`, `/model` with
+  mid-session switching [CLI-27, CLI-28, ADR-0029]
 - `core/cancel.py` — cancellation scopes [TOOL-10]
 - Windows VT enablement with plain-line fallback
 - `--quiet`, `--json`, `--events` [CLI-7, CLI-8, CLI-18]
@@ -170,6 +172,9 @@ units, and a `/btw` answer leaves the transcript unchanged.
 - `/compact` with optional focus [CTX-7]
 - `storage/transcript.py` — JSONL with compaction records [CTX-14, ADR-0010]
 - `--resume`, `--continue`, `edgar sessions list|show|rm` [CLI-11]
+- Session commands as appended records: `/new /clear /reset /history /undo /retry
+  /title /sessions /load /save`, `edgar --load` [CLI-25, CLI-26, CLI-28, ADR-0029]
+- `personality.md`, user and project scope, in `edgar prompt show` [CTX-19, ADR-0030]
 - Turn, session and daily cost caps [BUD-2, BUD-3], `/cost`, `edgar cost` [BUD-6]
 - Idempotency, overflow and spill tests [CTX-8]
 
@@ -178,7 +183,9 @@ including inside a single long tool-calling turn, without ever producing a
 transcript that fails the invariant; most compactions use S1 only; `--resume`
 rebuilds the compacted view and the working state; the prefix stays byte-identical
 across every request between compactions; and pinned content that alone exceeds
-the window raises `ContextOverflow` with a hint.
+the window raises `ContextOverflow` with a hint; `/undo 2` followed by
+`--resume` shows exactly the conversation the user saw, and a `/save` file opens
+on another machine.
 
 ---
 
@@ -240,6 +247,7 @@ mid-session does not change the prompt prefix until the next session.
 - Deferred tool schemas and `tool_search` [TOOL-15]
 - Project MCP servers require trust [PERM-13]
 - `edgar mcp list|test`
+- `/browser`: the `[browser]` MCP preset, spawned on demand [CLI-29, ADR-0029]
 
 **Done when:** a stdio server and a Streamable HTTP server both work, startup time
 is unchanged with five servers configured, an MCP result taints the session, and
@@ -294,7 +302,7 @@ contract kit; a failing `pre_tool` hook denies; and startup time is unchanged.
 
 **Goal:** a good first ten minutes, and a teaching artifact that is actually one.
 
-- `edgar init` — templates, credential detection, no secrets on disk [CFG-4, CFG-6]
+- `edgar init` and `/init` — templates, credential detection, no secrets on disk [CFG-4, CFG-6]
 - `edgar doctor` — credentials, connectivity, MCP, extensions, trust, DB integrity,
   cloud-synced directory warning, sandbox recommendation; `--network` lists every
   reachable host [CFG-5, PRV-15]

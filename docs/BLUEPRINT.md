@@ -131,7 +131,7 @@ edgar/
 │   │   ├── main.py                 arg parsing, mode dispatch, exit codes, v2 gate loading
 │   │   ├── repl.py                 interactive loop, input, /queue /steer /btw
 │   │   ├── oneshot.py              -p mode, stdin attachment, --json, --events
-│   │   ├── slash.py                slash command dispatch
+│   │   ├── slash.py                slash command dispatch (§4.5)
 │   │   ├── render.py               markdown → terminal, stdout discipline
 │   │   ├── statusbar.py            stderr status line, multi-agent rows
 │   │   ├── prompt_ui.py            permission and fact prompts, one queue for all agents
@@ -403,6 +403,9 @@ SkillActivated(name, trigger)                     # (v1) [SKL-17]
 # input during a turn [CLI-13, CLI-24]
 InputQueued(text, position)
 SteerApplied(turn_id, text)
+Paused(turn_id)                                   # [CLI-27]
+Resumed(turn_id)
+TurnsUndone(count, files)                         # [CLI-26]
 AsideStarted(question)
 AsideFinished(answer, usage, cost)
 
@@ -628,6 +631,33 @@ labelled block at the next boundary between output blocks, charged to the budget
 and written to the JSONL as
 `{"type": "aside", "question": "…", "answer": "…", "usage": {…}}`, which replay
 skips.
+
+### 4.5 Session commands
+
+The REPL's session commands ([ADR-0029](adr/0029-session-commands.md), CLI-25..28)
+follow one rule: **append a record, never rewrite one.** The prompt shows what the
+records add up to; the JSONL keeps everything.
+
+| Command | Record appended | Replay effect |
+|---|---|---|
+| `/reset` | `{"type": "reset"}` | messages before it are dropped from the prompt; model, mode, title and working state stay |
+| `/undo N`, `/retry` | `{"type": "undo", "turns": N, "files": [...]}` | the last N turns are dropped; `files` lists what `write` and `edit` changed in them |
+| `/title TEXT` | `{"type": "title", "text": "…"}` | the latest title wins |
+| `/model NAME` | `{"type": "model", "model": "…"}` | the session continues on that model |
+
+`/new` and `/clear` start a new JSONL; `/load` replays one; `/save` writes the
+replayed session with blobs inlined to a single file that `/load` and
+`edgar --load` accept. A turn runs from one typed prompt to the next, so
+`/undo` always removes whole units and the pairing invariant holds without special
+cases. Undo rewinds the conversation, never the disk (OQ-10).
+
+**Pause** uses the steer safe point: `/pause` sets `session.paused`, and the loop,
+where it drains steers, waits on it before building the next request. The request
+or tool call in flight finishes first; nothing is cancelled. `/resume` clears the
+flag; `/stop` cancels the turn as Ctrl-C does (§4.3).
+
+**Titles** default to the first line of the first prompt, trimmed to 60 characters.
+Never a model call (PRV-15).
 
 ## 5. Providers
 
@@ -1229,6 +1259,7 @@ per-section token counts [CTX-1, CTX-2].
 
 ```
 ┌─ system prompt ─────────────────── pinned
+├─ personality ───────────────────── pinned, the user's tone and style, optional [CTX-19]
 ├─ tool schemas ──────────────────── pinned
 ├─ instruction files ─────────────── pinned, hand-authored (AGENTS.md, …) [CTX-15]
 ├─ pinned facts ──────────────────── bounded, frozen at session start, tagged as notes (v1)
@@ -1239,6 +1270,12 @@ per-section token counts [CTX-1, CTX-2].
 ├─ working state ─────────────────── plan + todo list, pinned, never compacted [CTX-18]
 └─ current turn ──────────────────── date and volatile values live here; the unit in progress is never touched
 ```
+
+**Personality** [CTX-19, [ADR-0030](adr/0030-personality-file.md)] comes from
+`.edgar/personality.md`, or else `~/.edgar/personality.md`; the project file
+replaces the user file rather than merging with it. edgar ships none. It follows
+the system prompt, introduced as the user's preferences for tone and style, and
+like everything above the breakpoint it is read once per session.
 
 **The prompt is a file** [CTX-16, NFR-13]. `context/prompts.py` loads
 `.edgar/prompts/system.md` if the project has one, otherwise the shipped
@@ -1310,7 +1347,8 @@ session JSONL:
 ```
 
 `--resume` replays messages and compaction records to rebuild the compacted view;
-`aside` records (§4.4) are kept for the reader and skipped by replay.
+`aside` records (§4.4) are kept for the reader and skipped by replay; `reset`,
+`undo`, `title` and `model` records (§4.5) are applied in order.
 A fork (v1, CLI-22) is a new JSONL whose first line is
 `{"type": "fork", "parent": "01J…", "at_turn": 12}`; replay reads the parent up to
 that turn, then the fork's own lines, so branching costs one line.
@@ -1614,6 +1652,10 @@ shell = "ask"
 [shell]
 program = "auto"                      # [TOOL-11]
 sandbox = "none"                      # none | bwrap | seatbelt | container (v1) [PERM-15]
+
+[browser]                             # what /browser connects (v1) [CLI-29]
+command = "npx"
+args = ["@playwright/mcp@X.Y.Z"]      # pin the version you reviewed; edgar never picks one
 
 [tools]
 max_output_tokens = 8000              # spill threshold [TOOL-4]

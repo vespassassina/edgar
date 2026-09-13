@@ -102,6 +102,7 @@ LATER = frozenset(
         "extensions",  # v1
         "hooks",  # v1
         "mcp",  # v1
+        "browser",  # v1, the /browser MCP preset
         "controller",  # v2
         "history",  # v2
     }
