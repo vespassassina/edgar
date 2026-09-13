@@ -39,6 +39,7 @@ that did not need an ADR.
 | [0025](0025-working-state.md) | Plans, todos and forks are session state, not prompts | Accepted |
 | [0026](0026-licence-agpl.md) | License edgar under AGPL-3.0-or-later | Accepted |
 | [0027](0027-distribution-name.md) | Distribute as `edgar-harness`; the command stays `edgar` | Accepted · amends the package name in 0001, 0019, 0022 |
+| [0028](0028-input-during-a-turn.md) | Input during a turn: queue by default, steer on request, btw on the side | Accepted |
 
 ## Writing a new ADR
 

@@ -129,7 +129,7 @@ edgar/
 │   │
 │   ├── cli/
 │   │   ├── main.py                 arg parsing, mode dispatch, exit codes, v2 gate loading
-│   │   ├── repl.py                 interactive loop, input handling, steering
+│   │   ├── repl.py                 interactive loop, input, /queue /steer /btw
 │   │   ├── oneshot.py              -p mode, stdin attachment, --json, --events
 │   │   ├── slash.py                slash command dispatch
 │   │   ├── render.py               markdown → terminal, stdout discipline
@@ -144,6 +144,7 @@ edgar/
 │   │   ├── session.py              session state, resume, persistence
 │   │   ├── events.py               event bus + event types
 │   │   ├── verify.py               ★ verification gate
+│   │   ├── aside.py                /btw: side request, no tools, outside the transcript
 │   │   ├── budget.py               token + cost accounting, caps
 │   │   ├── cancel.py               cancellation scopes
 │   │   └── errors.py               error taxonomy → exit codes
@@ -398,6 +399,12 @@ SessionTainted(by_tool)                           # [PERM-11]
 ToolsLoaded(names, via)                           # (v1) deferred schemas [TOOL-15]
 SkillActivated(name, trigger)                     # (v1) [SKL-17]
 
+# input during a turn [CLI-13, CLI-24]
+InputQueued(text, position)
+SteerApplied(turn_id, text)
+AsideStarted(question)
+AsideFinished(answer, usage, cost)
+
 # working state [CTX-18]
 TodoUpdated(items)
 PlanWritten(path)
@@ -450,6 +457,7 @@ class Session:
     tainted: bool = False            # sticky once set [PERM-11]
     depth: int = 0
     parent_id: str | None = None
+    pending_steers: list[str] = field(default_factory=list)  # drained at the safe point [CLI-13]
 ```
 
 Storage per [ADR-0010](adr/0010-session-storage.md): transcript as JSONL
@@ -520,6 +528,7 @@ async def run_turn(session: Session, prompt: UserInput, bus: EventBus) -> TurnRe
 
     while True:
         session.budget.assert_within()                  # raises → exit 6 [BUD-3]
+        session.drain_steers()                          # the one safe point for /steer [CLI-13]
         messages = context.build(session)               # compacts if needed [CTX-3]
         response = await provider.stream(messages, tools=registry.schemas(), bus=bus)
         session.append(response.message)
@@ -530,6 +539,8 @@ async def run_turn(session: Session, prompt: UserInput, bus: EventBus) -> TurnRe
             assert_pairing_invariant(session.transcript)                        # [CTX-4]
             continue
 
+        if session.steers_pending():                    # model stopped, but the user steered
+            continue
         check = await verify.gate(session, bus)         # None if no non-read tool ran [VER-2]
         if check is None or check.ok:
             break
@@ -575,6 +586,47 @@ every `ToolUseBlock` without a result gets
 A stream cut mid-generation keeps its partial text with `meta["interrupted"] = True`
 and discards any partial tool call. The transcript always satisfies the invariant,
 so `--resume` never meets a 400.
+
+Queued and undelivered steered text goes back to the input line, unsent
+[CLI-13].
+
+### 4.4 Input during a turn
+
+The REPL keeps reading input while a turn runs
+([ADR-0028](adr/0028-input-during-a-turn.md)):
+
+| Input | Where it goes |
+|---|---|
+| plain text, `/queue TEXT` | The REPL's FIFO queue. Each entry becomes its own turn when the current one finishes [CLI-13] |
+| `/steer TEXT` | `session.steer(text)`: pending until the loop's safe point, then appended as a user message in the current turn [CLI-13] |
+| `/btw TEXT` | `core/aside.py`: a side request, concurrent with the turn, outside the transcript [CLI-24] |
+
+**One safe point.** `session.drain_steers()` runs at the top of each loop
+iteration, before the next request is built. By then the previous iteration has
+appended either a tool message answering every call or an assistant message with
+no calls, so a steer always lands between complete units and the pairing
+invariant holds without any special case. A steer that is pending when the model
+stops keeps the turn going; the verify gate runs only once the model stops with
+nothing pending. A steer typed after the turn has ended starts the next turn
+instead.
+
+The queue is the REPL's business, not the loop's: it only decides what the next
+`run_turn` call receives. Steers live on the session because the loop consumes
+them, but they are delivered there by the REPL, so the loop stays free of I/O.
+
+**Provider translation.** A steer after a tool message gives two consecutive
+user-role messages in Anthropic's format, which the API rejects. The Anthropic
+adapter merges consecutive user-role content into one message, tool results first.
+The OpenAI-compatible format accepts a user message after tool messages as is.
+
+**Asides.** `aside.ask(session, question)` builds the same request `context.build`
+would, cut back to the last complete unit (an assistant message whose calls have no
+results yet is dropped from the snapshot), appends the question, and sends it with
+no tools. The request shares the cached prefix. The answer is rendered as a
+labelled block at the next boundary between output blocks, charged to the budget,
+and written to the JSONL as
+`{"type": "aside", "question": "…", "answer": "…", "usage": {…}}`, which replay
+skips.
 
 ## 5. Providers
 
@@ -1247,7 +1299,8 @@ session JSONL:
 {"type": "compaction", "stage": "S2", "replaces": ["u_0003", "u_0041"], "summary": "…", "at": "…"}
 ```
 
-`--resume` replays messages and compaction records to rebuild the compacted view.
+`--resume` replays messages and compaction records to rebuild the compacted view;
+`aside` records (§4.4) are kept for the reader and skipped by replay.
 A fork (v1, CLI-22) is a new JSONL whose first line is
 `{"type": "fork", "parent": "01J…", "at_turn": 12}`; replay reads the parent up to
 that turn, then the fork's own lines, so branching costs one line.

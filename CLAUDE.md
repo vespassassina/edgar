@@ -166,7 +166,9 @@ These cost the most when violated:
    followed by exactly one tool message whose result ids equal the call ids. Every
    provider returns 400 if you break it. Compaction only removes, stubs or summarises
    whole units (a call message plus its result message), so the invariant holds by
-   construction; never trim inside a unit (CTX-4, ADR-0016).
+   construction; never trim inside a unit (CTX-4, ADR-0016). The same rule places a
+   `/steer`: it lands only at the loop's one safe point, between units, and a `/btw`
+   snapshot is cut back to the last complete unit (ADR-0028).
 2. **Humans widen, machines tighten.** No automated component (model, tool, subagent,
    controller, learner, hook) may widen policy. Control files are Ask for `write` and
    `edit` in every mode but `yolo`; config is read once per session; grants live in the

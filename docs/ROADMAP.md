@@ -141,6 +141,8 @@ in `auto` mode prompts.
 - Terminal-native output: no alternate screen, native scrollback [CLI-23]
 - `--show-thinking`, `/thinking` [CLI-21]
 - Ctrl-C once cancels, twice exits; cancelled calls get synthetic results [CLI-12]
+- Input during a turn: plain text queues, `/queue`, `/steer` at the loop's safe
+  point, `/btw` side questions via `core/aside.py` [CLI-13, CLI-24, ADR-0028]
 - `core/cancel.py` — cancellation scopes [TOOL-10]
 - Windows VT enablement with plain-line fallback
 - `--quiet`, `--json`, `--events` [CLI-7, CLI-8, CLI-18]
@@ -148,7 +150,8 @@ in `auto` mode prompts.
 **Done when:** a real interactive session feels good on all three terminals;
 `edgar -p "hi" > out.txt 2>/dev/null` yields a file with no ANSI bytes; Ctrl-C
 during a tool call leaves a transcript that passes the invariant; `--events` output
-parses line by line as JSON.
+parses line by line as JSON; a `/steer` sent at any moment of a turn lands between
+units, and a `/btw` answer leaves the transcript unchanged.
 
 ---
 
@@ -277,7 +280,7 @@ across families and the next request is accepted.
 - Deterministic skill activation, description lint [SKL-17]
 - `edgar.testing.contract` — the contract kit for plugin authors
 - `edgar.run()` embedding API [EXT-9]
-- Mid-turn steering [CLI-13]; remaining slash commands [CLI-14]
+- Remaining slash commands [CLI-14]
 
 **Done when:** a user builds an extension with a command tool, a skill, an agent
 and a hook from the docs alone; a plugin provider in a separate package passes the

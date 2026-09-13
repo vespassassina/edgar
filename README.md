@@ -52,6 +52,63 @@ conflict, teaching wins. That trade is why some things are simpler than they cou
 be (SQLite FTS instead of embeddings) and some are stricter than they need to be
 (a 150 ms startup budget enforced in CI).
 
+### How it fits together
+
+```mermaid
+flowchart LR
+    you(["you · a script · a program"])
+
+    subgraph entry["Ways in"]
+        direction TB
+        repl["REPL<br/>/queue · /steer · /btw"]
+        oneshot["edgar -p<br/>--json · --events"]
+        api["edgar.run()"]
+    end
+
+    subgraph core["Core: one loop, under 200 lines"]
+        direction TB
+        loop["turn loop"]
+        ctx["context<br/>prompt file · staged compaction<br/>plan · todos"]
+        exec["tool pipeline<br/>validate → hooks → permissions → run"]
+        verify["verify gate<br/>done = your check passes"]
+    end
+
+    subgraph ports["Ports: swap any of these"]
+        direction TB
+        prov["providers<br/>OpenAI · Azure · Anthropic<br/>OpenRouter · Ollama · any compatible"]
+        tools["tools<br/>built-in · command · HTTP · MCP"]
+        skills["skills · agents · extensions"]
+        sandbox["sandbox<br/>none · bwrap · seatbelt · container"]
+    end
+
+    subgraph disk["On disk, readable"]
+        direction TB
+        jsonl[("session JSONL<br/>full record")]
+        db[("SQLite<br/>memory · grants · indices")]
+    end
+
+    bus{{"event bus"}}
+    out["stdout: the result<br/>stderr: status"]
+    v2["v2, removable<br/>learning · controller · scheduling"]
+
+    you --> entry --> loop
+    loop <--> ctx
+    loop <--> prov
+    loop --> exec --> tools
+    exec --> sandbox
+    skills --> ctx
+    loop --> verify
+    loop --> bus --> out
+    loop --> jsonl
+    ctx --> db
+    bus -.-> v2
+    v2 -. post-turn gate .-> loop
+```
+
+Everything outside the core plugs in through a port; the core imports none of the
+adapters, and a test enforces that. The [Blueprint](docs/BLUEPRINT.md#1-architecture-at-a-glance)
+has the module-level version.
+
 ## Why it exists
 
 Agent harnesses come in two sizes. Toys that teach you nothing beyond a `while`
@@ -63,7 +120,9 @@ genuinely hard bits honestly, at a size a person can hold in their head.
 
 **Terminal-native.** Interactive REPL for daily use, `-p` for one-shot and pipes.
 Result on stdout, status on stderr, real exit codes. Composes with the rest of
-your shell.
+your shell. Keep typing while it works: plain text queues the next instruction,
+`/steer` corrects the turn in flight, `/btw` asks a side question without
+touching the conversation.
 
 **Five providers, two adapters, any compatible server.** OpenAI, Azure, OpenRouter
 and Ollama share one OpenAI-compatible adapter driven by a quirks table; Anthropic

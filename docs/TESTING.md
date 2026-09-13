@@ -206,6 +206,37 @@ recover. It is worth generating thousands of cases. The same assertion runs on
 every transcript the fake-provider tests produce, and on the output of
 cancellation (CLI-12).
 
+### Input during a turn
+
+Steers arrive at arbitrary moments, so arrival timing is generated too
+[CLI-13, CLI-24, ADR-0028]:
+
+```python
+@given(script=turn_scripts(), arrivals=steer_arrivals())   # arrival = before/during any event
+def test_steer_lands_between_units_whenever_it_arrives(script, arrivals):
+    transcript = run_turn_with_steers(script, arrivals)
+    assert_pairing_invariant(transcript)
+    assert steer_texts(transcript) == [a.text for a in arrivals if a.before_turn_end]
+
+def test_steer_after_final_answer_continues_the_turn_before_verify(fake_provider):
+    events = run_with_steer_after_final_text(fake_provider)
+    assert event_names(events).index("SteerApplied") < event_names(events).index("VerifyStarted")
+
+@given(transcript=transcripts_ending_mid_unit())
+def test_aside_snapshot_never_ends_with_unanswered_calls(transcript):
+    request = aside.build_request(transcript, "what does this regex do?")
+    assert_pairing_invariant(request.messages)
+    assert request.tools == []
+
+def test_aside_leaves_the_transcript_unchanged(fake_provider, tmp_session):
+    before = list(tmp_session.transcript)
+    aside.ask(tmp_session, "quick question")
+    assert tmp_session.transcript == before and last_record(tmp_session)["type"] == "aside"
+```
+
+The Anthropic contract test adds a steer after a tool message and checks the
+request is accepted with tool results and text merged into one user message.
+
 ### Compaction stages
 
 ```python

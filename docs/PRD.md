@@ -157,7 +157,7 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–12, 15–21, 23; CLI-14 subset `/help /model /mode /compact /cost /clear /plan /go /thinking /quit` | 13, 22; rest of 14 | — |
+| CLI | 1–13, 15–21, 23, 24; CLI-14 subset `/help /model /mode /compact /cost /clear /plan /go /thinking /queue /steer /btw /quit` | 22; rest of 14 | — |
 | Providers | 1–13, 15–17 | 14 | — |
 | Tools | 1–6, 9 (without MCP), 10–14; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
@@ -388,8 +388,8 @@ Requirements are numbered for traceability. Each milestone in
 | CLI-10 | Defined exit codes (§9.3) | Must |
 | CLI-11 | `--resume [id]` and `--continue` restore a prior session | Must |
 | CLI-12 | Ctrl-C once cancels the turn, twice exits; no corrupted state either way. Every tool call without a result gets `ToolResultBlock(is_error=True, "cancelled by user")` before the session is saved; a stream cut mid-generation keeps its partial text marked interrupted and discards any partial tool call | Must |
-| CLI-13 | Mid-turn steering: typing while streaming queues input for the next turn | Should |
-| CLI-14 | Slash commands in REPL: `/help /model /mode /compact /plan /go /thinking /fork /remember /memory /skills /agents /tools /cost /clear /resume /quit` | Must |
+| CLI-13 | Input during a turn ([ADR-0028](adr/0028-input-during-a-turn.md)): plain text and `/queue TEXT` are queued and run as separate turns, in order, after the current one; `/steer TEXT` is delivered into the current turn at the next safe point (never between a tool call and its result, CTX-4) and the turn continues; `/queue` lists the queue and `/queue clear` empties it. Ctrl-C returns queued and undelivered steered text to the input line, unsent | Must |
+| CLI-14 | Slash commands in REPL: `/help /model /mode /compact /plan /go /thinking /queue /steer /btw /fork /remember /memory /skills /agents /tools /cost /clear /resume /quit` | Must |
 | CLI-15 | `NO_COLOR` and `--no-color` honoured | Must |
 | CLI-16 | `--cwd` overrides the working directory; default is the launch directory | Must |
 | CLI-17 | `--verify CMD` declares the verification command for this run, overriding every other source (§7.14) | Must |
@@ -399,6 +399,7 @@ Requirements are numbered for traceability. Each milestone in
 | CLI-21 | `--show-thinking` and `/thinking` render reasoning deltas where the provider exposes them, and say so where it does not; `--json` and `--events` include reasoning when requested | Must |
 | CLI-22 | Session forks: `/fork` in the REPL and `edgar --fork ID[@TURN]` start a new session whose JSONL begins with a `fork` record naming the parent and turn; the parent's messages are replayed, not copied | Must |
 | CLI-23 | Terminal-native output: no alternate screen; output stays in the terminal's own scrollback and is selectable; the status line is the only redrawn element; `edgar -c -p "…"` continues the last session from the shell so prompts interleave with ordinary commands | Must |
+| CLI-24 | `/btw TEXT` asks a side question, at any time: a separate request with the session's model and system prompt, the transcript cut back to the last complete unit, and no tools. The answer prints as a labelled block between output blocks; neither question nor answer enters the transcript; the JSONL gets an `aside` record; the cost is charged to the session budget ([ADR-0028](adr/0028-input-during-a-turn.md)) | Must |
 
 ### 7.2 Providers
 
