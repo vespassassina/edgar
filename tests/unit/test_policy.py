@@ -105,9 +105,9 @@ def test_credentials_are_denied_outside_yolo() -> None:
 
 
 def test_outside_the_root_asks_and_a_grant_lets_it_through() -> None:
-    outside = at("/etc/hosts")
+    outside = at(str(Path("/etc/hosts").resolve()))  # a drive letter on Windows
     assert isinstance(decide(READ, outside, policy("auto")), Ask)
-    granted = policy("auto", grants=frozenset({("read", "/etc/hosts")}))
+    granted = policy("auto", grants=frozenset({("read", outside.text)}))
     assert isinstance(decide(READ, outside, granted), Allow)
 
 
@@ -197,7 +197,8 @@ def test_segments() -> None:
 def test_within() -> None:
     assert within(ROOT / "a" / "b.py", ROOT, ["./**"])
     assert not within(Path("/elsewhere/b.py"), ROOT, ["./**"])
-    assert within(Path("/tmp/x"), ROOT, ["/tmp/*"])
+    tmp = Path("/tmp").resolve()
+    assert within(tmp / "x", ROOT, [(tmp / "*").as_posix()])
 
 
 _parts = st.lists(st.sampled_from(["..", ".", "src", "a", "..%2f", "/", "b.txt"]), max_size=6)
