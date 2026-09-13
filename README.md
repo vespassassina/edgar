@@ -55,18 +55,18 @@ be (SQLite FTS instead of embeddings) and some are stricter than they need to be
 ### How it fits together
 
 ```mermaid
-flowchart LR
+flowchart TB
     you(["you · a script · a program"])
 
     subgraph entry["Ways in"]
-        direction TB
+        direction LR
         repl["REPL<br/>/queue · /steer · /btw"]
         oneshot["edgar -p<br/>--json · --events"]
         api["edgar.run()"]
     end
 
     subgraph core["Core: one loop, under 200 lines"]
-        direction TB
+        direction LR
         loop["turn loop"]
         ctx["context<br/>prompt file · staged compaction<br/>plan · todos"]
         exec["tool pipeline<br/>validate → hooks → permissions → run"]
@@ -74,7 +74,7 @@ flowchart LR
     end
 
     subgraph ports["Ports: swap any of these"]
-        direction TB
+        direction LR
         prov["providers<br/>OpenAI · Azure · Anthropic<br/>OpenRouter · Ollama · any compatible"]
         tools["tools<br/>built-in · command · HTTP · MCP"]
         skills["skills · agents · extensions"]
@@ -82,7 +82,7 @@ flowchart LR
     end
 
     subgraph disk["On disk, readable"]
-        direction TB
+        direction LR
         jsonl[("session JSONL<br/>full record")]
         db[("SQLite<br/>memory · grants · indices")]
     end
