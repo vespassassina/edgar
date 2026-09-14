@@ -8,6 +8,15 @@ extension formats freeze.
 
 ## Unreleased
 
+### Changed
+- `edgar models` offers to sign in instead of sending you away. Picking a provider
+  that has no key but can issue one through the browser now asks "no key for
+  openrouter. Sign in now? [Y/n]" — Enter signs in and the picker carries straight
+  on to that provider's models, using the key it just got even if there is no
+  keyring to keep it in. Answer `n` and you get the old message naming the
+  environment variable. A provider with no browser sign-in (OpenAI, Anthropic) is
+  unchanged: its key is named, never asked for.
+
 ## 0.1.0 — 2026-09-14
 
 The first release that is a harness rather than a skeleton: Core (M0–M6) whole,

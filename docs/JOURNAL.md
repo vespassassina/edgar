@@ -9,6 +9,19 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 Carried forward until done. Newest first.
 
+- **There is no first-run wizard, and a fresh install has no config at all.**
+  `edgar init` and `edgar doctor` are M11 and unbuilt, so today the only thing that
+  ever writes config is the picker, which writes one key (`[model] default`) and
+  only when no file exists — an existing config is hand-authored and never edited
+  ([ADR-0034](adr/0034-model-picker.md), the same rule that protects `AGENTS.md`).
+  **Desired first run:** `edgar` with nothing configured offers to set itself up
+  rather than erroring; `edgar init` writes a working, commented `config.toml` with
+  the choices already made (never blanks), detects credentials that are already in
+  the environment or the keyring, offers sign-in for a provider that supports it,
+  and never puts a secret on disk [CFG-4, CFG-6]. The model picker stays a picker:
+  the wizard is the thing that writes config, and it still writes only a file that
+  does not yet exist.
+
 - **Review the capability broker design** (ADR-0039, M17) before M17 starts. The
   choices most open to argument: five caveats only; caveats only from what people
   type (no model-derived scope); no prompt on a refusal, `/scope` widens; the log
@@ -40,6 +53,37 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · The picker signs you in
+
+**Asked**
+- Whether `edgar models` lets you pick a model and sign in, whether it can
+  configure the harness, and whether there is an initial wizard. Then: take note of
+  the gaps and the desired results, and fix the small one — "that's basic usability".
+
+**Done**
+- Wrote both gaps down: this one, and the missing first-run wizard (still open,
+  M11). The desired first run is now spelled out in the roadmap's M11 section
+  instead of living only in a conversation.
+- Fixed the first: `_offer_sign_in()` in `cli/models.py`, 24 lines of code. When the
+  provider you picked has an `oauth` row in `quirks.py` and no key in the
+  environment or the keyring, the picker asks "no key for openrouter. Sign in now?
+  [Y/n]"; Enter runs `keys.login()` and the picker carries on to the model list with
+  the key it just issued, so the no-keyring case works for this run too. `n` gives
+  the old message naming the variable. Two tests in `tests/integration/test_login.py`
+  cover both answers, and the existing "a missing key is named, not asked for" test
+  still passes unchanged for OpenAI, which has no browser sign-in.
+
+**Decided**
+- Offering a browser here does not contradict ADR-0048's "a turn never opens a
+  browser": that rule keeps browsers out of an automated turn, where nobody is
+  watching. `edgar models` is a human sitting at a prompt. Noted in ADR-0048.
+- Enter is yes, per the sensible-defaults rule. The picker still never asks anyone
+  to type a key, which was the original reason it refused to help at all.
+
+**Pending**
+- The first-run wizard (`edgar init`, `edgar doctor`) is still M11 and unbuilt.
+- v1 is at 6,833 of 8,000 lines of code.
 
 ## 2026-09-14 · 0.1.0 on PyPI
 

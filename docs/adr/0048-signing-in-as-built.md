@@ -78,6 +78,10 @@ missing names the command to run.
 - `edgar login PROVIDER`, `edgar logout PROVIDER`, `edgar mcp login NAME` and
   `edgar mcp logout NAME` exist; `edgar models list` says which providers are
   signed in.
+- `edgar models` offers the same sign-in inline when the provider you picked has an
+  `oauth` row and no key, rather than failing with the command to run: decision 4
+  keeps browsers out of a *turn*, not out of a command the human is already sitting
+  in front of. Enter is yes, and the picker still never asks anyone to type a key.
 - `keyring` is an optional extra, absent from the startup import ban's reach
   because nothing on the fast path imports it (NFR-1).
 - GitHub Copilot [PRV-19, ADR-0043] remains gated on GitHub's terms and is not

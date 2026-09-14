@@ -139,6 +139,57 @@ def test_models_list_says_whether_a_provider_is_signed_in(
     assert "logged in" in capsys.readouterr().out
 
 
+def test_the_picker_offers_to_sign_in_instead_of_bouncing_you_out(
+    ring: Ring, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`edgar models` with no key used to fail at the provider and send you away to
+    run `edgar login` yourself; now Enter signs in and the picker carries on."""
+    from edgar.cli.models import pick
+    from edgar.config.schema import Config
+
+    async def post(url: str, body: dict[str, Any], headers: Any = None, send: str = "form") -> Any:
+        return {"key": "sk-or-fresh"}
+
+    monkeypatch.setattr(oauth, "post", post)
+    monkeypatch.setattr("webbrowser.open", browser({"code": "the-code"}))
+    listed: list[str] = []
+
+    async def models(self: Any) -> list[str]:
+        listed.append(self.api_key)
+        return ["z-ai/glm-5", "anthropic/claude-opus-5"]
+
+    monkeypatch.setattr("edgar.providers.openai_compat.OpenAICompatible.models", models)
+    answers, said = ["openrouter", "", "2"], list[str]()
+
+    async def ask(question: str) -> str:
+        said.append(question)
+        return answers.pop(0)
+
+    chosen = asyncio.run(pick(Config(), {}, ask, said.append))
+
+    asked = [line for line in said if "Sign in now? [Y/n]" in line]
+    assert len(asked) == 1 and said.index(asked[0]) < len(said) - 1  # asked, once, early
+    assert chosen == "openrouter/anthropic/claude-opus-5"  # the picker never stopped
+    assert listed == ["sk-or-fresh"]  # the key it just issued is the one it used
+    assert ring.held[("edgar", "provider:openrouter")] == "sk-or-fresh"
+
+
+def test_the_picker_still_takes_no_for_an_answer(
+    ring: Ring, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from edgar.cli.models import pick
+    from edgar.config.schema import Config
+
+    monkeypatch.setattr("webbrowser.open", lambda url: pytest.fail("no browser on 'n'"))
+    answers, said = ["openrouter", "n"], list[str]()
+
+    async def ask(question: str) -> str:
+        return answers.pop(0)
+
+    assert asyncio.run(pick(Config(), {}, ask, said.append)) is None
+    assert "OPENROUTER_API_KEY" in said[-1]  # the old message, still there
+
+
 # The remote MCP server's own sign-in [TOOL-7, ADR-0032]
 
 RESOURCE = {"authorization_servers": ["https://auth.example.test"], "scopes_supported": ["read"]}

@@ -8,7 +8,8 @@ interactively [CLI-30, ADR-0034].
 
 # `edgar models list`:  for each role, the model it resolves to; then each provider,
 #                       its endpoint, and whether its key variable is set
-# `edgar models`:       pick a provider; only then ask it for its models (or take a
+# `edgar models`:       pick a provider; offer to sign in if it has no key and can
+#                       hand one out; only then ask it for its models (or take a
 #                       typed name); pick one; then offer to save it: Enter saves it
 #                       for the user (every project), `p` for this project, `n` not
 
@@ -77,13 +78,15 @@ async def pick(
     say: Callable[[str], None],
 ) -> str | None:
     """Provider, then model. The provider's list is fetched only once it is picked,
-    and a model name can always be typed instead. Never asks for a key."""
+    and a model name can always be typed instead. Never asks you to type a key: for a
+    provider that hands one out, it offers the browser sign-in instead."""
     env = os.environ if env is None else env
     names = sorted({*BUILTIN, *config.providers} - {"fake"})
     say("\n".join(f"{i:>3}. {n:<11} {_describe(n, config, env)}" for i, n in enumerate(names, 1)))
     name = _choose(await ask("provider (number or name, empty to cancel): "), names)
     if name is None:
         return None
+    env = await _offer_sign_in(name, config, env, ask, say)
     try:
         provider, _ = resolve(f"{name}/-", config, env=env)
     except EdgarError as exc:
@@ -103,6 +106,35 @@ async def pick(
     answer = await ask("model (number or name, empty to cancel): ")
     model = _choose(answer, models) or answer.strip()
     return f"{name}/{model}" if model else None
+
+
+async def _offer_sign_in(
+    name: str,
+    config: Config,
+    env: Mapping[str, str],
+    ask: Callable[[str], Awaitable[str]],
+    say: Callable[[str], None],
+) -> Mapping[str, str]:
+    """Sign in here rather than failing and telling you to start over [ADR-0048]."""
+    # 1. Only for a provider that hands out a key through a browser, and only when
+    #    there is no key anywhere: the environment wins, then the keyring.
+    from edgar.auth.keys import login, stored  # the interactive path only (NFR-1)
+
+    try:
+        q = quirks_for(name, config.providers.get(name))
+    except ConfigError:
+        return env  # resolve() is about to say the same thing, better
+    if q.oauth is None or not q.api_key_env or env.get(q.api_key_env) or stored(name):
+        return env
+    # 2. Enter is yes, because it is the right answer almost every time.
+    if (await ask(f"no key for {name}. Sign in now? [Y/n]: ")).strip().lower()[:1] == "n":
+        return env
+    # 3. The key it issues is used for this run whether or not a keyring kept it.
+    try:
+        return {**env, q.api_key_env: await login(name, q.oauth, say)}
+    except EdgarError as exc:
+        say(f"{exc}" + (f"\nhint: {exc.hint}" if exc.hint else ""))
+        return env
 
 
 def _choose(answer: str, options: Sequence[str]) -> str | None:

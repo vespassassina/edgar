@@ -375,7 +375,15 @@ contract kit; a failing `pre_tool` hook denies; and startup time is unchanged.
 
 **Goal:** a good first ten minutes, and a teaching artifact that is actually one.
 
-- `edgar init` and `/init` — templates, credential detection, no secrets on disk [CFG-4, CFG-6]
+The first ten minutes today: `edgar models`, get bounced because no key is set,
+`edgar login PROVIDER`, `edgar models` again. It should be one path that never
+dead-ends, with Enter the right answer at every step.
+
+- `edgar init` and `/init` — templates, credential detection, no secrets on disk [CFG-4, CFG-6].
+  It writes a working, commented `config.toml` with the choices already made, never
+  blanks; it is the only thing that writes config, and it still refuses to edit a
+  file that already exists ([ADR-0034](adr/0034-model-picker.md))
+- `edgar` with nothing configured offers to run that setup instead of erroring
 - `edgar doctor` — credentials, connectivity, MCP, extensions, trust, DB integrity,
   cloud-synced directory warning, sandbox recommendation; `--network` lists every
   reachable host [CFG-5, PRV-15]
