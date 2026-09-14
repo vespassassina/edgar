@@ -23,7 +23,7 @@ from pathlib import Path
 from edgar import __version__
 from edgar.cli import trust
 from edgar.cli.render import Printer, Renderer
-from edgar.cli.setup import Setup, authorise_verify, begin, finish, prepare, runtime, setup
+from edgar.cli.setup import Setup, authorise_verify, begin, daily, finish, prepare, runtime, setup
 from edgar.cli.statusbar import Status
 from edgar.core import aside
 from edgar.core.errors import EdgarError
@@ -146,7 +146,7 @@ class Shell:
     async def _run(self, text: str) -> None:
         try:
             await authorise_verify(self.rt, self.session)
-            result = await run_turn(self.session, text, self.rt)
+            result = await run_turn(self.session, text, daily(self.setup, self.rt))
             if result.reason == "verification_failed":  # [VER-5]
                 self.say(
                     f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "

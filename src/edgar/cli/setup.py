@@ -10,14 +10,16 @@ a session."""
 #             facts, skill index) and startup warnings
 #   runtime   the provider for the chosen model, and the Runtime the loop runs on;
 #             built again by /model, which keeps everything setup made
-#   begin     a new session on disk, or one replayed from its JSONL (--resume)
+#   begin     a new session on disk, or one replayed from its JSONL (--resume);
+#             every turn's cost is added to today's spend from then on
+#   daily     before each turn: what is left of daily_cost_cap becomes its turn cap
 #   finish    note control files that changed while it ran, for the next session
 
 from __future__ import annotations
 
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from edgar.config.load import load, project_config
@@ -25,8 +27,8 @@ from edgar.config.schema import Config
 from edgar.context.builder import PERSONALITY_WARN, Section, notes, pinned, skill_index, system_text
 from edgar.context.prompts import choose_profile, load_prompt, profile_prompt
 from edgar.context.tokens import approx_tokens
-from edgar.core.errors import ConfigError, PermissionDenied, UsageError
-from edgar.core.events import EventBus, ModelSelected
+from edgar.core.errors import BudgetExceeded, ConfigError, PermissionDenied, UsageError
+from edgar.core.events import Event, EventBus, ModelSelected, TurnFinished
 from edgar.core.loop import Runtime
 from edgar.core.session import Session
 from edgar.core.verify import Check
@@ -221,6 +223,7 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
     """A new session, recorded to disk; or with `resume`, a session id or "" for the
     latest, one replayed from it [CLI-11]. It keeps its model unless --model names one."""
     mode = s.config.permissions.mode
+    bus.subscribe(lambda event: _spend(s.home, event))
     if resume is None:
         rt = runtime(s, bus)
         return start(Session(cwd=s.root, model=rt.name, mode=mode)), rt
@@ -231,6 +234,34 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
         session.record({"type": "model", "model": rt.name})
     session.mode, session.model = mode, rt.name
     return session, rt
+
+
+def spending(home: Path) -> Store:
+    # The user's spend, across projects, beside trust in ~/.edgar/edgar.db [BUD-2].
+    return Store(home / ".edgar" / "edgar.db")
+
+
+def _spend(home: Path, event: Event) -> None:
+    # A turn with a known cost adds to today's; unknown pricing cannot [BUD-5].
+    if isinstance(event, TurnFinished) and event.cost and not event.depth:
+        spending(home).spend(event.cost)
+
+
+def daily(s: Setup, rt: Runtime) -> Runtime:
+    """What is left of `daily_cost_cap` today becomes this turn's cap, so the loop
+    enforces it like the others; with nothing left the turn never starts [BUD-2, BUD-3]."""
+    cap = s.config.budget.daily_cost_cap
+    if cap is None:
+        return rt
+    left = cap - sum(cost for _, cost in spending(s.home).spent())
+    if left <= 0:
+        raise BudgetExceeded(
+            f"today's spend reached daily_cost_cap (${cap:.2f})",
+            hint="`edgar cost` shows it; the count starts again tomorrow",
+        )
+    turn = rt.budget.turn_cost_cap
+    capped = left if turn is None else min(turn, left)
+    return replace(rt, budget=replace(rt.budget, turn_cost_cap=capped))
 
 
 def finish(s: Setup, session: Session) -> None:

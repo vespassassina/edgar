@@ -25,10 +25,10 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built at
 5,000 lines of code, and the 0.1 release waits on the maintainer (cut it from
-`f89e35b`, the last Core-only commit, if Core ships alone). M7 is in progress: facts,
-`recall` and session search are built (`memory/`, ADR-0045); forks, `/save`,
-`--load`, `/history`, the daily cap and `edgar cost` are left. The budget test now
-measures v1, 5,626 of 8,000. ADR-0037 and ADR-0038 moved
+`f89e35b`, the last Core-only commit, if Core ships alone). M7 is done: facts,
+`recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
+`/history`, the daily cap and `edgar cost` (ADR-0046). M8 (MCP) is next. The budget
+test measures v1, 5,802 of 8,000. ADR-0037 and ADR-0038 moved
 plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
 `edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit

@@ -1,15 +1,18 @@
-"""SQLite for what edgar remembers between sessions: grants and trust [PERM-6, PERM-13].
+"""SQLite for what edgar remembers between sessions: grants, trust and spend
+[PERM-6, PERM-13, BUD-2].
 
-Grants live in the project's `.edgar/edgar.db`, trust in `~/.edgar/edgar.db`; never
-in a config file. WAL mode, short transactions and a busy timeout, because the
-database may sit in a folder a sync client is watching. The file is created only
-when there is something to store.
+Grants live in the project's `.edgar/edgar.db`; trust and each day's spend, which
+belong to the user across projects, in `~/.edgar/edgar.db`; never in a config file.
+WAL mode, short transactions and a busy timeout, because the database may sit in a
+folder a sync client is watching. The file is created only when there is something
+to store.
 """
 
 from __future__ import annotations
 
 import sqlite3
 import time
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +22,7 @@ CREATE TABLE IF NOT EXISTS grants (
     UNIQUE (tool, subject));
 CREATE TABLE IF NOT EXISTS trust (
     project TEXT PRIMARY KEY, digest TEXT NOT NULL, created REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS spend (day TEXT NOT NULL, cost REAL NOT NULL);
 """
 
 
@@ -73,3 +77,13 @@ class Store:
         self._write(
             "INSERT OR REPLACE INTO trust VALUES (?, ?, ?)", str(project), digest, time.time()
         )
+
+    def spend(self, cost: float) -> None:
+        # One row per turn with a known cost, under today's local date [BUD-2].
+        self._write("INSERT INTO spend VALUES (?, ?)", date.today().isoformat(), cost)
+
+    def spent(self, days: int = 1) -> list[tuple[str, float]]:
+        """Spend per day, newest first, over the last `days` days [BUD-6]."""
+        since = (date.today() - timedelta(days=days - 1)).isoformat()
+        sql = "SELECT day, SUM(cost) FROM spend WHERE day >= ? GROUP BY day ORDER BY day DESC"
+        return [(str(day), float(cost)) for day, cost in self._rows(sql, since)]

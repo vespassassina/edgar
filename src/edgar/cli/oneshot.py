@@ -18,7 +18,7 @@ from typing import Literal
 
 from edgar.cli import trust
 from edgar.cli.render import event_line
-from edgar.cli.setup import authorise_verify, begin, finish, prepare, setup
+from edgar.cli.setup import authorise_verify, begin, daily, finish, prepare, setup
 from edgar.cli.statusbar import Status, StderrLine, terminal_ready
 from edgar.core.errors import ConfigError
 from edgar.core.events import (
@@ -86,7 +86,9 @@ def run_prompt(
     if session.log is not None:
         bus.subscribe(session.log.event)  # the audit trail and the turn's cost [PERM-10]
     try:
-        result = asyncio.run(_run(session, prompt, rt, [attached] if attached else [], status))
+        result = asyncio.run(
+            _run(session, prompt, daily(s, rt), [attached] if attached else [], status)
+        )
     finally:
         finish(s, session)
     codes = {"verification_failed": 9, "budget_exceeded": 6}

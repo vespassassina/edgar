@@ -22,7 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog="Other commands: edgar models [list], edgar trust, "
         "edgar permissions list|revoke ID, edgar prompt show, "
         "edgar sessions list|show ID|rm ID, edgar tools list|describe NAME, "
-        "edgar skills list|validate, edgar memory list|add|edit|review|forget ID|undo",
+        "edgar skills list|validate, edgar memory list|add|edit|review|forget ID|undo, "
+        "edgar cost",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
@@ -41,6 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
         dest="resume",
         help="reopen the latest session",
     )
+    again.add_argument("--fork", metavar="ID[@TURN]", help="branch a session into a new one")
+    again.add_argument("--load", type=Path, metavar="PATH", help="open a file /save wrote")
     parser.add_argument("--quiet", action="store_true", help="no status line")
     parser.add_argument("--show-thinking", action="store_true", help="show reasoning")
     parser.add_argument("--no-color", action="store_true", help="no colour (also NO_COLOR)")
@@ -62,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
             from edgar.cli.memory import command as memory
 
             return memory(argv[1:], Path.cwd())
-        if argv[:1] in (["trust"], ["permissions"], ["sessions"], ["tools"], ["skills"]):
+        if argv[:1] in (["trust"], ["permissions"], ["sessions"], ["tools"], ["skills"], ["cost"]):
             from edgar.cli.admin import command
 
             return command(argv, Path.cwd())
@@ -80,6 +83,14 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
     args = parser.parse_args(argv)
+    if args.fork or args.load:
+        # A fork or a saved file becomes a new session here, then opens as --resume
+        # would open it [CLI-22, CLI-25].
+        from edgar.storage.transcript import adopt, fork
+
+        root = (args.cwd or Path.cwd()).resolve()
+        made = fork(root, args.fork) if args.fork else adopt(root, args.load.resolve())
+        args.resume = made.stem
     if args.prompt is None:
         if args.json or args.events:
             parser.error("--json and --events go with -p")

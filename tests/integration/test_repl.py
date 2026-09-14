@@ -243,7 +243,7 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
     [
         ("/help", "/steer"),
         ("/undo 2", "nothing to undo"),
-        ("/save", "/save arrives in v1"),
+        ("/save", "nothing to save yet"),
         ("/frobnicate", "unknown command /frobnicate"),
         ("/mode auto", "mode: auto"),
         ("/title my work", "title: my work"),
@@ -254,7 +254,9 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/new", "new session"),
         ("/undo 0", "usage: /undo [N]"),
         ("/reset", "conversation emptied"),
-        ("/history", "/history arrives in v1"),
+        ("/history", "nothing yet"),
+        ("/fork", "none found"),
+        ("/plan", "/plan arrives in v1"),
         ("/sessions", "no sessions yet"),
         ("/load NOPE", "none found"),
         ("/compact", "nothing to compact"),
@@ -311,7 +313,27 @@ def test_sessions_and_load(tmp_project: Path) -> None:
         assert r.shell.session.id == first and r.shell.session.transcript == []
 
     r = play(tmp_project, scenario, texts(1))
-    assert "loaded " in r.text
+    assert "now in " in r.text
+
+
+def test_fork_save_history_and_load_a_file(tmp_project: Path) -> None:
+    """[CLI-22, CLI-25]"""
+
+    async def scenario(r: Rig) -> None:
+        for n in range(2):
+            await r.type(f"prompt {n}")
+            await r.settle()
+        parent = r.shell.session.id
+        await r.type("/fork 1")
+        assert r.shell.session.id != parent
+        assert [m.text for m in r.shell.session.transcript] == ["prompt 0", "answer 0"]
+        await r.type("/history", "/save shared.jsonl", "/load shared.jsonl")
+
+    r = play(tmp_project, scenario, texts(2))
+    assert "user: prompt 0\n\nassistant: answer 0" in r.text
+    assert f"saved to {tmp_project / 'shared.jsonl'}" in r.text
+    assert r.text.count("now in ") == 2
+    assert [m.text for m in r.shell.session.transcript] == ["prompt 0", "answer 0"]
 
 
 def test_compact_summarises_the_old_turns(tmp_project: Path) -> None:

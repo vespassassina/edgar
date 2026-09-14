@@ -95,8 +95,17 @@ Core is being built, 0.1 at the Core release (M6).
 - `recall`: the model searches remembered facts and past sessions' conversation
   (never tool output), by word and by fragment of a path or identifier. `[memory]`
   in config sets how many facts are pinned (20) and the cap per scope (500).
+- Session forks (M7): `/fork` or `edgar --fork ID[@TURN]` branches a session into
+  a new one, from its latest turn or from turn N; the original is untouched.
+- `/save [PATH]` writes the session to one file with spilled tool output included
+  and secrets redacted; `/load PATH` or `edgar --load PATH` opens it as a new
+  session. `/history` shows the whole conversation, compacted turns included.
+- `[budget] daily_cost_cap`: the day's spend across every project; a turn gets
+  what is left of it as its cap, and once it is spent turns stop with exit 6.
+  `edgar cost` shows today and the last seven days; `/cost` adds today's total.
 
 ### Changed
+- `edgar sessions rm` refuses a session that has forks, since they read its file.
 - `edgar models`: pressing Enter at "make it the default?" now saves it to your
   user config; it used to mean no.
 

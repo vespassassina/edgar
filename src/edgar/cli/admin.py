@@ -1,36 +1,41 @@
 """The subcommands that look at a project rather than run a turn: `edgar trust`
 and `edgar permissions list|revoke`, what a human decided, shown and changed by a
-human [PERM-6, PERM-13, CLI-19]; `edgar sessions list|show|rm` [CLI-11]."""
+human [PERM-6, PERM-13, CLI-19]; `edgar sessions list|show|rm` [CLI-11]; `edgar
+cost`, the spend of the last seven days [BUD-6]."""
 
 # `edgar tools list|describe` and `edgar skills list|validate` show what a session
 # here would get [SKL-7].
 #
 # Each subcommand is one branch of command(): read what is on disk, print it, and
 # return the exit code. None of them contacts a model. Only `trust`, `revoke` and
-# `sessions rm` change anything, and each changes only what it names.
+# `sessions rm` change anything, and each changes only what it names; `rm` keeps a
+# session while a fork still reads its file.
 
 from __future__ import annotations
 
 import json
 import shutil
 import sys
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from edgar.cli import trust
-from edgar.cli.setup import toolset
+from edgar.cli.setup import spending, toolset
 from edgar.config.load import load
 from edgar.context.tokens import message_text
+from edgar.core.errors import UsageError
 from edgar.storage.db import Store
-from edgar.storage.transcript import conversation, find, listing
+from edgar.storage.transcript import conversation, find, forks, listing
 
 USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID
-       edgar tools list | describe NAME | edgar skills list | validate"""
+       edgar tools list | describe NAME | edgar skills list | validate | edgar cost"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
     home = home or Path.home()
+    if argv == ["cost"]:
+        return _cost(cwd, home)
     if argv[0] == "sessions" and len(argv) in (2, 3):
         return _sessions(argv[1:], cwd)
     if argv[0] in ("tools", "skills") and len(argv) in (2, 3):
@@ -70,12 +75,29 @@ def _sessions(argv: list[str], cwd: Path) -> int:
             print(f"{message.role}: {message_text(message)}\n")
     elif argv[0] == "rm" and len(argv) == 2:
         path = find(cwd, argv[1])
+        if children := forks(path):  # they read this file, so it stays while they do
+            raise UsageError(
+                f"{path.stem} has forks: {', '.join(children)}", hint="remove those first"
+            )
         shutil.rmtree(path.with_suffix(""), ignore_errors=True)  # its blobs
         path.unlink()
         print(f"removed {path.stem}")
     else:
         print(USAGE, file=sys.stderr)
         return 2
+    return 0
+
+
+def _cost(cwd: Path, home: Path) -> int:
+    # Every project's spend, by day; a turn whose price was unknown is not in it.
+    cap = load(cwd, home=home).budget.daily_cost_cap
+    days = dict(spending(home).spent(7))
+    today = days.get(date.today().isoformat(), 0.0)
+    limit = f" of daily_cost_cap ${cap:.2f}" if cap is not None else "; no daily_cost_cap set"
+    print(f"today ${today:.4f}{limit}")
+    for day, cost in days.items():
+        print(f"  {day}  ${cost:.4f}")
+    print("turns priced as unknown are not counted (see /cost in a session)")
     return 0
 
 

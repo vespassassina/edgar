@@ -1515,9 +1515,10 @@ changed while the session ran, for the next session to warn about [PERM-12].
 `--resume` replays messages and compaction records to rebuild the compacted view;
 aside events (§4.4) are kept for the reader and skipped by replay; `reset`,
 `undo`, `title` and `model` records (§4.5) are applied in order.
-A fork (v1, CLI-22) is a new JSONL whose first line is
-`{"type": "fork", "parent": "01J…", "at_turn": 12}`; replay reads the parent up to
-that turn, then the fork's own lines, so branching costs one line.
+A fork (v1, CLI-22) is a new JSONL whose second line, after its own session line,
+is `{"type": "fork", "parent": "01J…", "at_turn": 12}`; replay reads the parent up to
+the end of that turn (counted by `TurnFinished` events), then the fork's own lines,
+so branching costs one line (ADR-0046).
 The full history stays on disk, blobs included, and session search (v1) indexes
 the full user and assistant text, so elided material can be found again.
 

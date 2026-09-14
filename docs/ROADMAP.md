@@ -31,7 +31,7 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
 | M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
 | M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)); release pending | 0.1 |
-| M7 Memory and session search | In progress: facts, recall and session search done ([ADR-0045](adr/0045-memory-as-built.md)); forks, `/save`, `/history`, cost left | 1.0 |
+| M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 1.0 |
 | M8–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -281,7 +281,11 @@ M3, [ADR-0033](adr/0033-replan-after-m2.md); `edgar login` to M8,
 
 **Done when:** a fact saved in session 1 changes behaviour in session 4 and is
 editable and revertible; a declined proposal is never injected; a fact saved
-mid-session does not change the prompt prefix until the next session.
+mid-session does not change the prompt prefix until the next session. *Met on
+2026-09-14: `tests/integration/test_remembering.py` shows a fact reaching every
+later session's prompt and never its own, and a declined one reaching neither a
+prompt nor `recall`; edit and undo are in `tests/unit/test_memory.py`. v1 is at
+5,802 of 8,000 lines of code.*
 
 ---
 

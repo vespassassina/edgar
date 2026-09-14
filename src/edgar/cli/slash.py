@@ -1,24 +1,41 @@
-"""Slash commands [CLI-14, CLI-27, CLI-28].
+"""Slash commands [CLI-14, CLI-22, CLI-25, CLI-27, CLI-28].
 
 Each command is a small function over the `Shell`. Commands whose machinery lands
 in a later milestone say which one, rather than pretending to work.
 """
 
+# The session commands all end the same way: a JSONL file on disk is replayed and
+# the shell opens it (_switch). /load names one, /fork writes a one-line file that
+# points into this session, and /load PATH first adopts a /save file as a new one.
+
 from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import get_args
 
 from edgar.cli.memory import listing as fact_listing
 from edgar.cli.memory import said
 from edgar.cli.repl import Shell
+from edgar.cli.setup import spending
 from edgar.config.schema import Mode
 from edgar.context.compact import compact, rewind, turn_starts
+from edgar.context.tokens import message_text
 from edgar.core.errors import EdgarError
 from edgar.core.events import FactSaved, Paused, Resumed
 from edgar.core.session import Session
-from edgar.storage.transcript import find, listing, replay, start
+from edgar.storage.transcript import (
+    adopt,
+    conversation,
+    find,
+    fork,
+    listing,
+    replay,
+    save,
+    sessions_dir,
+    start,
+)
 
 Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
@@ -26,7 +43,7 @@ COMMANDS: dict[str, tuple[Command, str]] = {}
 LATER = {
     "M8": "/browser",
     "M6": "/skills /tools",
-    "v1": "/plan /go /save /history /fork /agents /init",
+    "v1": "/plan /go /agents /init",
 }
 
 
@@ -185,7 +202,10 @@ async def _resume(shell: Shell, arg: str) -> None:
 async def _cost(shell: Shell, arg: str) -> None:
     cost = shell.session.cost
     shown = "unknown (a model without a price was used)" if cost is None else f"${cost:.4f}"
-    shell.say(f"session cost: {shown}; context now {shell.status.context:,} tokens")
+    today = sum(c for _, c in spending(shell.setup.home).spent())  # every project [BUD-6]
+    shell.say(
+        f"session cost: {shown}; today ${today:.4f}; context now {shell.status.context:,} tokens"
+    )
 
 
 @command("/title", "show or set the session title")
@@ -260,20 +280,55 @@ async def _sessions(shell: Shell, arg: str) -> None:
     shell.say("\n".join(listing(shell.session.cwd)) or "no sessions yet")
 
 
-@command("/load", "open a session: /load ID (a unique start is enough)")
+@command("/load", "open a session: /load ID (a unique start is enough) or a /save file")
 async def _load(shell: Shell, arg: str) -> None:
     if not arg:
-        shell.say("usage: /load ID; /sessions lists them")
+        shell.say("usage: /load ID|PATH; /sessions lists them")
     elif _idle(shell):
-        try:
-            session, _ = replay(find(shell.session.cwd, arg))
-        except EdgarError as exc:
-            shell.say(f"edgar: {exc}")
-            return
-        session.mode = shell.session.mode
-        shell.open(session)
-        shell.renderer.show(session.transcript)
-        shell.say(f"loaded {session.id} · {session.title or '(untitled)'}")
+        root = shell.session.cwd
+        await _switch(
+            shell, lambda: adopt(root, root / arg) if (root / arg).is_file() else None, arg
+        )
+
+
+@command("/fork", "branch this session into a new one; /fork N starts from the end of turn N")
+async def _fork(shell: Shell, arg: str) -> None:
+    if _idle(shell):
+        which = f"{shell.session.id}@{arg}" if arg else shell.session.id
+        await _switch(shell, lambda: fork(shell.session.cwd, which), arg)
+
+
+async def _switch(shell: Shell, make: Callable[[], Path | None], arg: str) -> None:
+    # 1. The file to open: the one `make` writes, else the session `arg` names.
+    try:
+        path = make() or find(shell.session.cwd, arg)
+        session, _ = replay(path)
+    except EdgarError as exc:
+        shell.say(f"edgar: {exc}")
+        return
+    # 2. Open it in the current mode, show what it holds, and say which it is.
+    session.mode = shell.session.mode
+    shell.open(session)
+    shell.renderer.show(session.transcript)
+    shell.say(f"now in {session.id} · {session.title or '(untitled)'}")
+
+
+@command("/save", "write the session to one file to share or /load: /save [PATH]")
+async def _save(shell: Shell, arg: str) -> None:
+    own = sessions_dir(shell.session.cwd) / f"{shell.session.id}.jsonl"
+    out = shell.session.cwd / (arg or f"edgar-{shell.session.id}.jsonl")
+    if not own.is_file():
+        shell.say("nothing to save yet")
+        return
+    save(own, out)
+    shell.say(f"saved to {out}: spilled output included, secrets redacted (check before sharing)")
+
+
+@command("/history", "the whole conversation from the record, compacted parts included")
+async def _history(shell: Shell, arg: str) -> None:
+    own = sessions_dir(shell.session.cwd) / f"{shell.session.id}.jsonl"
+    lines = [f"{m.role}: {message_text(m)}" for m in conversation(own)] if own.is_file() else []
+    shell.say("\n\n".join(lines) or "nothing yet")
 
 
 @command("/new", "start a new session; the old one stays on disk")

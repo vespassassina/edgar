@@ -33,11 +33,10 @@ Carried forward until done. Newest first.
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** The budget test now measures v1: 5,626 of 8,000 lines of code,
-  2,374 left for the rest of M7 and M8 to M11. Core's own files stayed at 5,000.
-- **The rest of M7:** session forks (`/fork`, `--fork ID[@TURN]`), `/save` and
-  `--load`, `/history`, the daily cost cap and `edgar cost`. About 200 lines of
-  code is the aim.
+- **Size watch.** The budget test measures v1: 5,802 of 8,000 lines of code,
+  2,198 left for M8 to M11. Core's own files stayed at 5,000.
+- **`/skills` and `/tools` in the REPL** still say they arrive in M6, which is done;
+  `edgar skills list` and `edgar tools list` exist. Wire them or relabel them.
 - **A moved project loses its facts** (ADR-0045): the scope is a hash of the path.
   A re-scope command, or matching on the git remote, is open.
 - **The picker's provider question has no default.** In `edgar models`, Enter at
@@ -47,6 +46,43 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · M7 done: forks, saved sessions and the daily cap
+
+**Asked**
+- Keep building: the rest of M7.
+
+**Done**
+- Session forks [CLI-22]: `/fork [N]` and `edgar --fork ID[@TURN]`. A fork is a
+  new file whose second line names its parent and turn; `chain()` in
+  `storage/transcript.py` reads parents up and back down, so forks of forks work
+  and nothing is copied. `edgar sessions rm` refuses a session with forks.
+- `/save [PATH]` writes the chain as one file, spilled output inlined and every
+  string redacted; `/load PATH` and `edgar --load PATH` copy it into a new session
+  here and open it the way `--resume` does. `/history` shows the whole
+  conversation from the record [CLI-25].
+- The daily cap [BUD-2]: a `spend` table in `~/.edgar/edgar.db` records each
+  top-level turn with a known cost; before each turn, what is left of
+  `daily_cost_cap` becomes the turn's cap, and with nothing left the turn does not
+  start (exit 6). `core/loop.py` is unchanged. `edgar cost` shows today and the
+  last seven days; `/cost` adds today [BUD-6].
+- A bug found by the new tests and fixed before commit: redaction skipped tool
+  result text in `/save`, because `asdict` keeps tuples.
+- 11 tests in `tests/integration/test_forks.py` and one more REPL test; the REPL's
+  `/save`, `/history` and `/load` expectations updated. 176 lines of code. ADR-0046;
+  the tour's session stop and size table updated; M7 marked done in the roadmap.
+
+**Decided** (ADR-0046)
+- A fork points at its parent rather than copying it; turns are counted by
+  `TurnFinished`, undone ones included.
+- A saved file is the resolved chain, blobs inlined, redacted string by string;
+  loading one makes a new session of this project.
+- The day's spend is one table per user; the daily cap works through the turn cap,
+  so unknown pricing stops a capped turn after one request, as the other caps do.
+
+**Pending**
+- M8 (MCP) is next. 0.1 still waits on the maintainer; `f89e35b` stays the
+  Core-only commit to cut it from.
 
 ## 2026-09-14 · M7 begins: facts, recall and session search
 
