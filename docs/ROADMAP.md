@@ -340,6 +340,9 @@ across families and the next request is accepted.
 - Provider plugins through `edgar.providers` entry points [PRV-14]
 - `sandbox/` port: `none`, `bwrap`, `seatbelt`, `container` [PERM-15] *(Should)*
 - Deterministic skill activation, description lint [SKL-17]
+- `edgar skills audit`: conformance and dangers checked deterministically, an opt-in
+  model review that only advises, suggested fixes as a diff; `ext add` audits
+  before it copies [SKL-18, EXT-3, ADR-0042] *(Should)*
 - A skill's `verify` command as a verification source, authorised like activation [SKL-1, VER-1, ADR-0041]
 - `edgar.testing.contract` — the contract kit for plugin authors
 - `edgar.run()` embedding API [EXT-9]

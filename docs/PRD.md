@@ -176,7 +176,7 @@ first lands.
 | Permissions | 1–14 | 15 | — |
 | Context | 1, 3–9, 11–17, 19 | 2, 10, 18 | — |
 | Subagents | — | 1–11 | — |
-| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16 |
+| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17, 18; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
 | Controller | — | — | 1–13 |
 | Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
@@ -556,6 +556,7 @@ is why synthesis gets stricter rules than fact autolearn.
 | SKL-15 | Optional curator, off by default (`skills.curator.enabled`): `skills curate` merges near-duplicate learned skills, archives ones unused for `skills.curator.stale_after_days` (default 60), and proposes consolidation of hand-authored ones. Runs on demand or as a schedule entry through `tick`, never as a background process. Obeys SKL-10/11; never deletes, only archives | Should |
 | SKL-16 | Synthesised skills use a fixed body shape: *When to use*, *Procedure*, *Pitfalls*, *Verification*; `skills validate` checks it for learned skills | Must |
 | SKL-17 | Deterministic activation: optional edgar-only frontmatter `when: { paths: [globs], keywords: [words] }`. When a tool call touches a matching path or the typed prompt contains a keyword, the harness loads the skill body once per session without waiting for the model to decide. `skills validate` warns when a description says what the skill is but not when to use it | Must |
+| SKL-18 | `edgar skills audit PATH\|GIT_URL [--strict] [--review] [--diff]` judges a skill before it is copied in: conformance to a written standard (rule IDs `SA-n`; `--strict` adds SKL-16's body shape) and dangers (bundled scripts and what they call, risky shell shapes, instructions to widen policy or skip checks, hidden text, named hosts, credential paths), all deterministic. `--review` adds the configured model's advisory comments, with no tools, never changing the verdict. `--diff` prints suggested fixes to stdout, never applied. Exit 1 on any error finding ([ADR-0042](adr/0042-skill-audit.md)) | Should |
 
 ### 7.8 Memory, autolearn, history
 
@@ -692,7 +693,7 @@ event; an **extension** is a folder bundling any of them.
 |---|---|---|
 | EXT-1 | An extension is a folder with `extension.toml` (`name`, `version`, `description`, optional `requires = { edgar, commands }`) and any of `tools/`, `skills/`, `agents/`, `hooks.toml`, `mcp.toml` | Must |
 | EXT-2 | Discovered at `./.edgar/extensions/` and `~/.edgar/extensions/`; enabled by presence, disabled by `extensions.disabled`; project extensions are executable project config (PERM-13) | Must |
-| EXT-3 | `edgar ext list`, `ext validate` (manifest schema, required commands on PATH) and `ext add PATH\|GIT_URL`, which copies the folder in and records source and commit in the manifest. No index, search or update service | Must |
+| EXT-3 | `edgar ext list`, `ext validate` (manifest schema, required commands on PATH) and `ext add PATH\|GIT_URL`, which audits every skill it would copy (SKL-18), shows the report, then copies the folder in and records source and commit in the manifest. No index, search or update service | Must |
 | EXT-4 | Hooks declared as `[[hooks]]` with `event`, optional `match`, `command` (argv list) and `timeout_s`, in config or an extension's `hooks.toml` | Must |
 | EXT-5 | Hook events: `session_start`, `pre_tool`, `post_tool`, `turn_end`, `verify_finished`, `session_end`. The hook receives the event as JSON on stdin | Must |
 | EXT-6 | A `pre_tool` hook may only veto: exit 2 denies with stderr as the reason returned to the model; any other failure or timeout also denies (fail closed). Hooks cannot modify arguments or allow what policy denies | Must |

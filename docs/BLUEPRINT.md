@@ -217,8 +217,10 @@ edgar/
 │   │   └── container.py            Docker or Podman, any OS
 │   │
 │   ├── skills/
-│   │   └── discovery.py            frontmatter-only scan (yaml.safe_load); the
-│   │                               `skill` tool loads a body (ADR-0041)
+│   │   ├── discovery.py            frontmatter-only scan (yaml.safe_load); the
+│   │   │                           `skill` tool loads a body (ADR-0041)
+│   │   └── audit.py                (v1) conformance and danger rules, the report
+│   │                               and the diff (ADR-0042)
 │   │
 │   ├── agents/                     (v1)
 │   │   ├── definition.py           markdown + frontmatter parsing
@@ -1122,6 +1124,13 @@ the body is loaded once for the session and `SkillActivated` is emitted. Other
 harnesses ignore the block. `skills validate` warns when a description says what
 the skill is but not when to use it, since the description is the model's only way
 in.
+
+**Audit before copying** (v1, SKL-18, [ADR-0042](adr/0042-skill-audit.md)).
+`skills/audit.py` checks a skill folder against a written standard and a table of
+danger rules, with no model call; those findings alone set the exit code and the
+default answer when `ext add` asks. `--review` adds the configured model's comments
+as advice: the skill goes in as untrusted data, the model gets no tools, and its
+opinion never clears a finding. `--diff` prints suggested fixes and writes nothing.
 
 ### 6.7 Hooks (v1)
 

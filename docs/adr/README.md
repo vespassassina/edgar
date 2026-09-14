@@ -53,6 +53,7 @@ that did not need an ADR.
 | [0039](0039-capability-broker.md) | A capability broker in v2: every tool call checked against a ticket bound to what the human typed, with a signed receipt | Accepted · new milestone M17 |
 | [0040](0040-written-to-be-read.md) | Written to be read: pseudocode comments, shallow functions, every limit in lines of code, A Tour of the Harness | Accepted · the loop's limit is now lines of code |
 | [0041](0041-skills-as-built.md) | Skills as built: the tool is the loader, a human's skill beats a learned one, a skill's `verify` moves to v1 | Accepted · amends PRD §5.1 |
+| [0042](0042-skill-audit.md) | Audit a skill before it is copied in: deterministic checks decide, a model only advises | Accepted · adds SKL-18 (v1) |
 
 ## Writing a new ADR
 

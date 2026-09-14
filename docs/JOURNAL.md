@@ -38,6 +38,34 @@ Carried forward until done. Newest first.
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
 
+## 2026-09-14 · A skill audit, planned for v1
+
+**Asked**
+- A feature for later: edgar should judge a skill before it is installed (its
+  quality, its dangers, how it is written) and suggest changes that bring it up
+  to a strict standard.
+
+**Done**
+- Specified it, nothing built: SKL-18 in the PRD (v1, *Should*), EXT-3 now audits
+  before copying, a bullet under M10 in the roadmap, `skills/audit.py` in the
+  Blueprint's module map and §6.6, a sentence in the tour's stop 23, and
+  ADR-0042.
+
+**Decided** (ADR-0042)
+- `edgar skills audit PATH|GIT_URL`: conformance to a written standard (rule IDs
+  `SA-n`, `--strict` for SKL-16's body shape) and dangers, all deterministic.
+  These alone set the exit code and the default answer in `ext add`.
+- `--review` is opt-in: the configured model reads the skill as untrusted data,
+  with no tools, and only advises. A hostile skill can aim an injection at its
+  reviewer, so the model's opinion never clears a finding.
+- `--diff` prints suggested fixes to stdout and writes nothing.
+- It lands in M10, with `ext add` (the moment a skill is copied in) and SKL-17's
+  description lint. About 200 lines of code against v1's budget.
+
+**Pending**
+- Write the standard's rule list (`SA-1`…) when M10 starts; the ADR names its
+  contents but not each rule.
+
 ## 2026-09-14 · M6: skills
 
 **Asked**
