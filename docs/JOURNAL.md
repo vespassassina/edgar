@@ -23,10 +23,6 @@ Carried forward until done. Newest first.
   0.0.3; the roadmap keeps 0.1 for the Core release (M6). Waiting on the maintainer.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
-- **Apply the `AGENTS.md` patch.** It is hand-authored, so the maintainer applies it:
-  `git apply docs/proposals/AGENTS.md.patch` (ADR-0007), then delete the file. It
-  still lists `pydantic` in the startup import ban and allows comments only where
-  the code cannot explain itself, which ADR-0040 reverses.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
 - **Size watch.** Core is at 4,825 of 5,000 lines of code after the loop's
@@ -59,6 +55,9 @@ Carried forward until done. Newest first.
   under the headline, plus the Documentation table), BLUEPRINT, ROADMAP, TESTING and
   CLAUDE.md. The repository description ends with "Take the tour" and the address.
 - ADR-0040 amended.
+- The maintainer applied `docs/proposals/AGENTS.md.patch` by hand during this
+  session; it went out in this commit, and the patch file and `docs/proposals/` are
+  removed. CLAUDE.md and ADR-0040 no longer call it pending.
 
 **Decided**
 - The kit's stylesheets are linked, not inlined: it is a hosted page, and the
@@ -121,7 +120,7 @@ Carried forward until done. Newest first.
 
 **Pending**
 - The shallow-helper split cost 19 lines of Core; M6 has about 175.
-- Apply `docs/proposals/AGENTS.md.patch`.
+- ~~Apply `docs/proposals/AGENTS.md.patch`.~~ Applied by the maintainer the same day.
 
 ## 2026-09-14 · Capability broker added to v2 (spec only)
 

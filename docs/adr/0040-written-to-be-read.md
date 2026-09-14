@@ -84,9 +84,9 @@ the repository's About box.
   200 lines of code and 284 physical lines.
 - **Load-bearing:** the loop's 200-line limit is now lines of code. A loop with
   more than 200 lines of code still fails the build, however it is commented.
-- `AGENTS.md` still states the old comment rule and "≤ 200 lines" for the loop. It
-  is hand-authored (ADR-0007), so the maintainer applies the change. Until then,
-  follow this ADR.
+- `AGENTS.md` is hand-authored (ADR-0007), so the matching change to its comment
+  rule and the loop's limit went to the maintainer as a patch, which they applied
+  on 2026-09-14.
 - Comments can go stale in a way code cannot. Numbered steps are checked against
   the tour's turn diagram; everything else relies on review, and on the rule that
   comments change in the same commit as the code.

@@ -87,8 +87,8 @@ suite-wide, so any accidental socket call fails loudly rather than passing slowl
 
 ## Writing code here
 
-The maintainer's standing rules, recorded in ADR-0040 and PRD §4. `AGENTS.md` still
-has the old comment rule until the maintainer applies the patch; follow these.
+The maintainer's standing rules, recorded in ADR-0040 and PRD §4; `AGENTS.md` carries
+the same rules.
 
 - **Lines means lines of code.** Every size limit counts non-blank lines that are
   not only a comment. Docstrings count; comments are free. Say "lines of code" in
