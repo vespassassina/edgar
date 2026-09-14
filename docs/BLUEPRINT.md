@@ -787,6 +787,15 @@ first request, and a server that refuses them becomes an error whose hint names
 server and it truncates silently past it, so its `max_context` should say what the
 server has.
 
+**Signing in without a key** (Core, PRV-20, [ADR-0044](adr/0044-keyless-cloud-sign-in.md)).
+Azure (Entra ID), Google Vertex AI and Amazon Bedrock hand out short-lived tokens
+through their own CLIs. `api_key_command` in a user-config block names that
+command as an argv. `connect` runs it when the provider resolves, when no key is
+set, and switches the row to bearer auth. The adapter holds a `Minted` token and
+re-runs the command for any request once the token is ten minutes old. It runs
+directly (never a shell) and never from project config, which fails to load if it
+names one. No cloud SDK, no SigV4 and no OAuth client of edgar's own.
+
 **GitHub Copilot** (v1, M8, PRV-19, [ADR-0043](adr/0043-github-copilot-provider.md))
 is one more row, not a new adapter: a base URL, the headers Copilot requires, and a
 token source of "keyring, from `edgar login github-copilot`" instead of an

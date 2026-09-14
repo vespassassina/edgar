@@ -24,12 +24,13 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 ## Current state
 
 M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built, at
-4,966 of 5,000 lines of code, and the 0.1 release waits on the maintainer. ADR-0037 and ADR-0038 moved
+5,000 of 5,000 lines of code (none left), and the 0.1 release waits on the maintainer. ADR-0037 and ADR-0038 moved
 plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
 `edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
 for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
-OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server.
+OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server, with a key
+from the environment or a token from `api_key_command` (keyless cloud sign-in, ADR-0044).
 Built so far: the message types and pairing invariant (`core/units.py`), the event
 bus, the loop with cancellation (`core/cancel.py`) and pause, `/btw`
 (`core/aside.py`), sessions recorded as JSONL and replayed on `--resume`

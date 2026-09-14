@@ -67,6 +67,10 @@ def load(
     for path in (user_config(home or Path.home()), project_config(cwd)):
         if path.is_file():
             for key, value in _read_file(path, later).items():
+                # A credential is personal: a cloned repository never names the command
+                # that mints yours, so api_key_command is read from user config only.
+                if key.endswith(".api_key_command") and path == project_config(cwd):
+                    raise ConfigError(f"{path}: api_key_command is read from user config only")
                 origins[key] = str(path)
                 section, _, rest = key.partition(".")
                 if section in TABLES:  # blocks merge key by key across files, like the rest

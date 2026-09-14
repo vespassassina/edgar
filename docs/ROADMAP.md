@@ -241,6 +241,7 @@ Core budget with room for M6 (about 250 lines).
 M3, [ADR-0033](adr/0033-replan-after-m2.md); `edgar login` to M8,
 [ADR-0037](adr/0037-core-fits-in-5000.md).)
 
+- Added after M6 was met: keyless sign-in through the cloud's own CLI, `api_key_command` [PRV-20, [ADR-0044](adr/0044-keyless-cloud-sign-in.md)]
 - `skills/discovery.py` (PyYAML, lazily) and the `skill` tool, which loads the body [SKL-1..5]; a skill's `verify` moves to v1 ([ADR-0041](adr/0041-skills-as-built.md))
 - `edgar tools list|describe`, `edgar skills list|validate` [SKL-7]
 - Collision order with startup warning (without MCP and extensions yet) [TOOL-9]

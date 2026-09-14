@@ -29,6 +29,7 @@ from edgar.core.message import Message, ToolUseBlock
 from edgar.providers import repair
 from edgar.providers.base import Usage
 from edgar.providers.pricing import cost_of
+from edgar.providers.quirks import Key, Minted
 
 RETRYABLE = frozenset({408, 409, 429, 500, 502, 503, 504, 529})  # 529: Anthropic overloaded
 TIMEOUT = httpx.Timeout(connect=15.0, read=300.0, write=60.0, pool=15.0)
@@ -60,19 +61,25 @@ class HttpAdapter:
         self,
         name: str,
         *,
-        api_key: str | None,
+        api_key: Key,
         prices: Mapping[str, PriceSection],
         transport: httpx.AsyncBaseTransport | None = None,
         retry: Retry | None = None,
     ) -> None:
         self.name = name
-        self.api_key = api_key
+        self._key = api_key
         self.prices = prices
         self.retry = retry or Retry()
         self._transport = transport
         self._client: httpx.AsyncClient | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._ratio = 1.0
+
+    @property
+    def api_key(self) -> str | None:
+        # A key from the environment as it is, or a token minted by the user's
+        # command, fresh enough for this request (providers/quirks.py) [PRV-20].
+        return self._key.token() if isinstance(self._key, Minted) else self._key
 
     def client(self) -> httpx.AsyncClient:
         loop = asyncio.get_running_loop()

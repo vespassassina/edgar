@@ -84,6 +84,7 @@ class ProviderSection:
     kind: Literal["openai-compatible", "anthropic"] | None = None
     base_url: str | None = None
     api_key_env: str | None = None  # the variable holding the key, never the key [CFG-6]
+    api_key_command: list[str] | None = None  # argv printing a token; user config only [PRV-20]
     auth_style: Literal["bearer", "api-key", "none"] | None = None
     api_version: str | None = None  # Azure
     native_tools: bool | None = None  # false: tool calls travel as text [PRV-16]

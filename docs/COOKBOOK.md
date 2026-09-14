@@ -15,6 +15,45 @@ Nothing leaves your machine. Small models that write their tool calls as fenced
 or plain JSON are repaired deterministically. To make it the default, run
 `edgar models`, choose `ollama` and the model, and press Enter to save it.
 
+## Sign in with your cloud identity, no keys
+
+Azure, Google Cloud and AWS can hand out short-lived tokens instead of keys, and
+Azure is switching keys off. Sign in with the cloud's own CLI, then name the
+command that prints a token in `~/.edgar/config.toml`:
+
+```toml
+# ~/.edgar/config.toml  (your user config: a project's config may not name a command)
+
+[providers.azure]                      # Azure OpenAI with Entra ID: az login
+base_url = "https://YOUR-RESOURCE.openai.azure.com"
+api_key_command = ["az", "account", "get-access-token", "--resource",
+                   "https://cognitiveservices.azure.com", "--query", "accessToken", "-o", "tsv"]
+
+[providers.vertex]                     # Google Vertex AI: gcloud auth login
+kind = "openai-compatible"
+base_url = "https://us-central1-aiplatform.googleapis.com/v1beta1/projects/YOUR-PROJECT/locations/us-central1/endpoints/openapi"
+api_key_command = ["gcloud", "auth", "print-access-token"]
+
+[providers.bedrock]                    # Amazon Bedrock: aws sso login, and AWS_REGION set
+kind = "openai-compatible"
+base_url = "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1"
+api_key_command = ["uv", "run", "--no-project", "--with", "aws-bedrock-token-generator", "python", "-c",
+                   "from aws_bedrock_token_generator import provide_token; print(provide_token())"]
+```
+
+```bash
+edgar --model azure/YOUR-DEPLOYMENT
+edgar --model vertex/google/gemini-2.5-flash
+edgar --model bedrock/openai.gpt-oss-120b
+```
+
+edgar runs the command directly, never through a shell, and sends what it prints
+as a bearer token. It runs again once the token is ten minutes old, so a long
+session outlives the cloud's one-hour tokens. A key in the environment still
+wins: Azure uses `AZURE_OPENAI_API_KEY` if it is set. If your sign-in has lapsed,
+edgar stops before sending anything and shows the cloud's own error. Azure's role
+for this is "Cognitive Services OpenAI User".
+
 ## Use it in a pipe
 
 ```bash

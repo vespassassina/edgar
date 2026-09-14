@@ -55,6 +55,7 @@ that did not need an ADR.
 | [0041](0041-skills-as-built.md) | Skills as built: the tool is the loader, a human's skill beats a learned one, a skill's `verify` moves to v1 | Accepted · amends PRD §5.1 |
 | [0042](0042-skill-audit.md) | Audit a skill before it is copied in: deterministic checks decide, a model only advises | Accepted · adds SKL-18 (v1) |
 | [0043](0043-github-copilot-provider.md) | GitHub Copilot as a provider, signed in with edgar's own OAuth app | Accepted, gated on GitHub's terms · amends ADR-0032, adds PRV-19 (v1) |
+| [0044](0044-keyless-cloud-sign-in.md) | Sign in to Azure, Google Cloud and AWS through the cloud's own CLI | Accepted · adds PRV-20 (Core), amends CFG-6 |
 
 ## Writing a new ADR
 

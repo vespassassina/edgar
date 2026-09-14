@@ -80,6 +80,11 @@ Core is being built, 0.1 at the Core release (M6).
 - `examples/`: a command tool, an HTTP tool and a skill to copy, and
   [`docs/COOKBOOK.md`](docs/COOKBOOK.md), short recipes for the first week.
 - A quick start in the README.
+- Sign in without a key: `api_key_command` in a `[providers.NAME]` block of
+  `~/.edgar/config.toml` runs your cloud's CLI (`az account get-access-token`,
+  `gcloud auth print-access-token`, or AWS's Bedrock token generator) and sends
+  its token, refreshed every ten minutes. Works for Azure with keys switched off,
+  Google Vertex AI and Amazon Bedrock; recipes in the Cookbook.
 
 ### Changed
 - `edgar models`: pressing Enter at "make it the default?" now saves it to your

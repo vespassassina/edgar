@@ -171,7 +171,7 @@ first lands.
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
 | CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | `/scope` and `--scope` (CAP-4) |
-| Providers | 1–13, 15–17 | 14, 18, 19 | — |
+| Providers | 1–13, 15–17, 20 | 14, 18, 19 | — |
 | Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
 | Context | 1, 3–9, 11–17, 19 | 2, 10, 18 | — |
@@ -445,6 +445,7 @@ Requirements are numbered for traceability. Each milestone in
 | PRV-18 | `edgar login PROVIDER` and `edgar logout PROVIDER`: OAuth 2.0 with PKCE (or device code) for providers that issue an API key through OAuth, starting with OpenRouter. The host is printed before the browser opens; the key goes to the OS keyring (CFG-6) and is redacted like any secret; without the `keyring` extra the key is printed once and not stored. Never used to sign in with a subscription, except PRV-19 ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)) | Should |
 | PRV-17 | Prompt profiles: `full` or `compact`. `compact` uses `prompts/compact.md`, exposes Core built-ins only unless configured, and lowers `compact_at` and `compact_to` by 0.1. Chosen automatically for models with `max_context` under 32k, overridable per model | Must |
 | PRV-19 | GitHub Copilot provider: `edgar login github-copilot` signs in with GitHub's OAuth device flow under edgar's own registered OAuth app (never a borrowed client id), printing the host and code first; the token goes to the keyring and is redacted. `github-copilot/<model>` resolves through a `quirks.py` row on the OpenAI-compatible adapter; Business and Enterprise base URLs by config override; `edgar models` lists the subscription's models on request. Dollar cost is unknown (premium requests), so cost caps stop at once unless `[pricing]` sets a price. Ships only after GitHub's terms are confirmed to allow it ([ADR-0043](adr/0043-github-copilot-provider.md)) | Should |
+| PRV-20 | Keyless sign-in: `api_key_command` in a `[providers.NAME]` block of user config is an argv (run directly, never through a shell) whose output is a short-lived token, sent as `Authorization: Bearer` when `api_key_env` is not set. It runs when the provider resolves, so a lapsed sign-in fails before any request, and again for a request once the token is ten minutes old. A failure is a `ConfigError` quoting its stderr, with a hint to sign in with the cloud's CLI. A project config naming it fails to load. Covers Azure (Entra ID), Google Vertex AI and Amazon Bedrock through their own CLIs ([ADR-0044](adr/0044-keyless-cloud-sign-in.md)) | Must |
 
 ### 7.3 Tools
 
@@ -664,7 +665,7 @@ fallback responds to unavailability.
 | CFG-3 | Schema-validated with actionable error messages naming the file, key and expected type | Must |
 | CFG-4 | `edgar init` (and `/init` in the REPL) scaffolds project config, `AGENTS.md` stub and `.gitignore` fragment from templates, creating files and never overwriting existing ones | Must |
 | CFG-5 | `edgar doctor` checks credentials, connectivity, MCP servers, extensions and their required commands, project trust, tick installation, DB integrity, and warns when `.edgar/` sits in a cloud-synced directory (iCloud Drive, OneDrive, Dropbox, Google Drive) | Must |
-| CFG-6 | Secrets read from env, or from the OS keyring with the optional `keyring` extra; never written to a config file. A config naming a keyring secret without the extra fails with a hint | Must |
+| CFG-6 | Secrets read from env, from the OS keyring with the optional `keyring` extra, or from a command the user names in user config (`api_key_command`, PRV-20); never written to a config file. A config naming a keyring secret without the extra fails with a hint | Must |
 | CFG-7 | Config files are hand-authored; no automated component rewrites them. The controller may propose diffs | Must |
 | CFG-8 | Config and instruction files are read once at session start. Changes take effect in the next session, and the REPL says so when a control file is edited mid-session | Must |
 

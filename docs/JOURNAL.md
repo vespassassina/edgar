@@ -21,6 +21,8 @@ Carried forward until done. Newest first.
   not take them (no lines to spare); pick a milestone.
 - **GitHub Copilot's gate** (ADR-0043): register edgar's OAuth app and confirm
   GitHub allows direct use of the Copilot endpoint, before M8 ships the provider.
+- **Try keyless sign-in on a real cloud.** Run the Cookbook's Azure, Vertex or
+  Bedrock block against a real account; the tests use a stand-in CLI only.
 - **Cut 0.1?** Core is built (M0 to M6) and nothing since 0.0.2 is on PyPI. The
   release is bumping the version in `pyproject.toml` and `src/edgar/__init__.py`,
   moving "Unreleased" under "0.1.0", and publishing a `v0.1.0` GitHub release,
@@ -29,9 +31,10 @@ Carried forward until done. Newest first.
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 4,966 of 5,000 lines of code after M6, 34 left. v1
-  starts its own budget; anything more for Core means moving something first
-  (`/sessions`, then the personality warning, ADR-0038).
+- **Size watch.** Core is at 5,000 of 5,000 lines of code after keyless sign-in
+  (ADR-0044), none left. v1 starts its own budget; anything more for Core means
+  simplifying or moving something first (`/sessions`, then the personality
+  warning, ADR-0038).
 - **The picker's provider question has no default.** In `edgar models`, Enter at
   "provider?" cancels. A sensible default would be the first provider whose key
   is set, or Ollama if it answers; it needs a few lines of code Core does not have.
@@ -39,6 +42,48 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · Keyless sign-in for Azure, Google and AWS
+
+**Asked**
+- Sign in to the models on Azure, AWS and Google Cloud with OAuth where they
+  support it, not only keys, because Azure is phasing keys out.
+
+**Done**
+- Checked the three clouds. Azure OpenAI takes an Entra ID token as bearer, and
+  organisations can switch keys off. Vertex AI's OpenAI-compatible endpoint takes
+  a Google access token. Bedrock's OpenAI-compatible endpoint takes a short-term
+  API key minted from the AWS identity by AWS's token generator. All three end in
+  a bearer token that the cloud's own CLI can print.
+- Built `api_key_command` [PRV-20] in Core: an argv in a `[providers.NAME]` block
+  of user config. It runs when the provider resolves if no key is set, and its
+  output goes as `Authorization: Bearer`, so Azure switches from its `api-key`
+  header. It runs again for any request once the token is ten minutes old. It
+  runs without a shell (`shutil.which` finds `az.cmd` on Windows). A failure
+  quotes the command's stderr with a hint to sign in. A project config that
+  names it fails to load.
+- Eight tests in `tests/unit/test_provider_sign_in.py`, with a stand-in CLI run
+  by `sys.executable`. The token is kept out of `repr`, and a test checks that
+  no event carries it.
+- ADR-0044, PRV-20, CFG-6 amended, the Blueprint's §5.2, a Cookbook recipe with
+  blocks for Azure, Vertex AI and Bedrock, the README's "Any model" line, the
+  CHANGELOG, and the tour's providers stop.
+
+**Decided** (ADR-0044)
+- A command the user names, not OAuth written into edgar and not the clouds'
+  SDKs. The CLIs already handle sign-in, MFA, SSO and refresh. Writing it
+  ourselves would need a client id per cloud, or borrowing theirs; the SDKs
+  break the import and dependency budgets.
+- User config only, because provider resolution comes before `edgar trust`.
+- Bedrock via its bearer API key; SigV4 is left to a plugin if ever needed.
+  Claude on Bedrock's or Vertex's own Anthropic routes is out of scope.
+- Core had 34 lines of code to spare and this took 35. The endpoint hint in
+  `connect` went to one line, so Core is at exactly 5,000.
+
+**Pending**
+- Try it against a real Azure, Vertex or Bedrock account.
+- The 0.1 release still waits on the maintainer's yes, and it would now
+  include this.
 
 ## 2026-09-14 · GitHub Copilot as a provider, planned for v1
 

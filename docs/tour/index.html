@@ -432,10 +432,16 @@ between "the model asked" and "the thing happened"?</p>
 <article class="stop" id="s12" data-files="src/edgar/providers/openai_compat.py src/edgar/providers/quirks.py">
   <h4><span class="n">12</span>Four vendors, one adapter</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/openai_compat.py"><code>providers/openai_compat.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/quirks.py"><code>providers/quirks.py</code></a></p>
-  <p class="look">Look for: <code>OpenAICompatible</code> <code>Quirks</code> <code>QUIRKS</code></p>
+  <p class="look">Look for: <code>OpenAICompatible</code> <code>Quirks</code> <code>QUIRKS</code> <code>connect</code> <code>Minted</code></p>
   <p>OpenAI, Azure, OpenRouter, Ollama and any compatible server share one adapter.
   How they differ is a table of data, not branches in code. Check whether the table
   earns the claim.</p>
+  <p><code>connect</code> finds the credential before any request: a key from the
+  environment, or else a token printed by a command the user named, such as
+  <code>gcloud auth print-access-token</code>. That is how Azure without keys,
+  Vertex AI and Bedrock sign in, with no cloud SDK. <code>Minted</code> runs the
+  command again when its token is ten minutes old. Notice that the loader refuses the
+  command in a project's config, and ask why.</p>
 </article>
 
 <article class="stop" id="s13" data-files="src/edgar/providers/anthropic.py">

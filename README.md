@@ -26,7 +26,9 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
   are free. Fork it and change it without first learning 40,000 lines.
   [Take the tour](https://vespassassina.github.io/edgar/).
 - **Any model.** OpenAI, Azure, Anthropic, OpenRouter, Ollama, or any
-  OpenAI-compatible server as a config block. API keys, not a vendor's subscription.
+  OpenAI-compatible server as a config block, Google Vertex AI and Amazon Bedrock
+  included. API keys, or your cloud sign-in with no key at all, never a vendor's
+  subscription.
   Works with small local models too.
 - **No hidden calls.** edgar never contacts a host you did not configure, has no
   telemetry, and its system prompt is a short file you can read and replace.
