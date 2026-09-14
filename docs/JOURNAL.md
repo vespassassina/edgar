@@ -64,9 +64,16 @@ Carried forward until done. Newest first.
 - Marked a full release, not a pre-release: 0.0.1 and 0.0.2 were skeletons, this is
   a harness, and it should be what `uvx edgar-harness` gives people.
 
+**Verified**
+- `release.yml` went green and PyPI now lists 0.1.0 as latest. Both
+  `uvx --from edgar-harness==0.1.0 edgar --version` and the same with
+  `edgar-harness[keyring]` install from PyPI and print `edgar 0.1.0` (macOS; the
+  extra pulls 5 more packages). The wheel was also smoke-tested in an empty venv
+  before the tag.
+
 **Pending**
-- Watch the first real install: `uvx edgar-harness@0.1.0 --version` on a machine
-  that has never seen it, and the `[keyring]` extra on at least one platform.
+- Try the published release on Windows and Linux, and sign in for real once
+  (`edgar login openrouter`) now that the keyring extra installs from PyPI.
 
 ## 2026-09-14 · M8 done: signing in
 
