@@ -22,7 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
         epilog="Other commands: edgar models [list], edgar trust, "
         "edgar permissions list|revoke ID, edgar prompt show, "
         "edgar sessions list|show ID|rm ID, edgar tools list|describe NAME, "
-        "edgar skills list|validate",
+        "edgar skills list|validate, edgar memory list|add|edit|review|forget ID|undo",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
@@ -58,6 +58,10 @@ def main(argv: list[str] | None = None) -> int:
             return _prompt_command(argv[1:])
         if argv[:1] == ["models"]:
             return _models_command(argv[1:])
+        if argv[:1] == ["memory"]:
+            from edgar.cli.memory import command as memory
+
+            return memory(argv[1:], Path.cwd())
         if argv[:1] in (["trust"], ["permissions"], ["sessions"], ["tools"], ["skills"]):
             from edgar.cli.admin import command
 

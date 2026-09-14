@@ -77,6 +77,14 @@ class ShellSection:
 
 
 @dataclass(frozen=True, slots=True)
+class MemorySection:
+    pinned_max: int = 20  # facts in the prompt, chosen at session start [MEM-6]
+    scope_cap: int = 500  # active facts per scope; beyond it the least useful go [MEM-11]
+    retriever: str = "fts5"  # or a plugin's name under edgar.retrievers [MEM-24]
+    autolearn: bool = True  # read from v2 on [MEM-8]
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderSection:
     """One `[providers.NAME]` block [PRV-12]. A key left unset keeps the provider's
     own value from `providers/quirks.py`; a new NAME needs `kind` and `base_url`."""
@@ -118,6 +126,7 @@ SECTIONS: dict[str, type] = {
     "context": ContextSection,
     "instructions": InstructionsSection,
     "shell": ShellSection,
+    "memory": MemorySection,
 }
 
 # Sections made of named blocks, `[providers.NAME]` and `[pricing."a/b"]`, each block
@@ -132,7 +141,6 @@ LATER = frozenset(
         "route",  # v1
         "model.fallback",  # v1
         "model.escalation",  # v2
-        "memory",  # v1
         "subagents",  # v1
         "extensions",  # v1
         "hooks",  # v1
@@ -155,6 +163,7 @@ class Config:
     context: ContextSection = field(default_factory=ContextSection)
     instructions: InstructionsSection = field(default_factory=InstructionsSection)
     shell: ShellSection = field(default_factory=ShellSection)
+    memory: MemorySection = field(default_factory=MemorySection)
     providers: dict[str, ProviderSection] = field(default_factory=dict)
     pricing: dict[str, PriceSection] = field(default_factory=dict)
     # Where each value came from: "default", a file path, "env EDGAR_…" or "flag --…"

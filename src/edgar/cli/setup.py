@@ -6,8 +6,8 @@ a session."""
 #
 #   prepare   the working directory and layered config; yolo only with a human's say-so
 #   setup     once per session: the permission guard, skills and tools, the verify
-#             check, the prompt's prefix (personality, instruction files, skill
-#             index) and startup warnings
+#             check, the prompt's prefix (personality, instruction files, pinned
+#             facts, skill index) and startup warnings
 #   runtime   the provider for the chosen model, and the Runtime the loop runs on;
 #             built again by /model, which keeps everything setup made
 #   begin     a new session on disk, or one replayed from its JSONL (--resume)
@@ -22,7 +22,7 @@ from pathlib import Path
 
 from edgar.config.load import load, project_config
 from edgar.config.schema import Config
-from edgar.context.builder import PERSONALITY_WARN, Section, pinned, skill_index, system_text
+from edgar.context.builder import PERSONALITY_WARN, Section, notes, pinned, skill_index, system_text
 from edgar.context.prompts import choose_profile, load_prompt, profile_prompt
 from edgar.context.tokens import approx_tokens
 from edgar.core.errors import ConfigError, PermissionDenied, UsageError
@@ -30,6 +30,8 @@ from edgar.core.events import EventBus, ModelSelected
 from edgar.core.loop import Runtime
 from edgar.core.session import Session
 from edgar.core.verify import Check
+from edgar.memory.retriever import retriever
+from edgar.memory.store import Memory, project_scope
 from edgar.permissions.control import control_files, snapshot
 from edgar.permissions.guard import Asker, Guard
 from edgar.permissions.policy import Deny, Policy
@@ -38,6 +40,8 @@ from edgar.providers.routing import RoutingContext, Selection, select_model
 from edgar.skills.discovery import Found, discover
 from edgar.storage.db import Store
 from edgar.storage.transcript import control_changes, find, replay, start
+from edgar.tools.base import Tool
+from edgar.tools.builtin.memory_tools import Recall, Remember
 from edgar.tools.builtin.shell import Shell
 from edgar.tools.builtin.skill import SkillTool
 from edgar.tools.registry import ToolRegistry, registry_for
@@ -93,6 +97,8 @@ class Setup:
     pinned: list[Section]  # personality and instruction files, read once [CFG-8]
     control: dict[str, str]  # control-file digests when the session began [PERM-12]
     warnings: list[str]
+    memory: Memory
+    scope: str  # the project's memory scope
 
 
 def setup(
@@ -124,7 +130,12 @@ def setup(
     command = verify or (config.verify.command if project_exec or not from_project else None)
     check = Check(command, config.verify.max_attempts, config.shell.program) if command else None
     files = config.instructions.files
-    sections = pinned(root, home, files) + skill_index(skills, root)
+    # The pinned facts are chosen now and frozen: a fact saved mid-session is found by
+    # `recall`, and pinned from the next session on [MEM-6].
+    memory, scope = open_memory(home, config), project_scope(root)
+    facts = [f.text for f in memory.pinned(scope, config.memory.pinned_max)]
+    kept = notes(facts, config.memory.pinned_max, memory.path)
+    sections = pinned(root, home, files) + kept + skill_index(skills, root)
     warnings = [*tools.warnings, *found.warnings, *found.problems]
     for sec in sections:
         if sec.name == "personality" and approx_tokens(sec.text) > PERSONALITY_WARN:
@@ -134,7 +145,13 @@ def setup(
         listed = ", ".join(changed)
         warnings.append(f"control files changed during session {last}: {listed}; review them")
     control = snapshot(root, home, files)
-    return Setup(root, config, home, env, tools, guard, check, sections, control, warnings)
+    return Setup(
+        root, config, home, env, tools, guard, check, sections, control, warnings, memory, scope
+    )
+
+
+def open_memory(home: Path, config: Config) -> Memory:
+    return Memory(home / ".edgar" / "memory.db", cap=config.memory.scope_cap)
 
 
 def toolset(
@@ -142,8 +159,12 @@ def toolset(
 ) -> tuple[ToolRegistry, Found]:
     # The session's tools, and the skills found. Skills are instructions, not code,
     # so they need no trust; the `skill` tool exists only when there is one to load.
+    # Memory's two tools read and propose in this project's scope and the global one.
     found = discover(root, home)
-    extra = [SkillTool(found.skills)] if found.skills else []
+    memory, scope = open_memory(home, config), project_scope(root)
+    search = retriever(config.memory.retriever, memory, root)
+    extra: list[Tool] = [Remember(memory, scope), Recall(search, [scope, "global"])]
+    extra += [SkillTool(found.skills)] if found.skills else []
     shell = config.shell.program
     return registry_for(root, home, shell=shell, project_exec=project_exec, extra=extra), found
 

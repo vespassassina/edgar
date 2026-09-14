@@ -56,6 +56,7 @@ that did not need an ADR.
 | [0042](0042-skill-audit.md) | Audit a skill before it is copied in: deterministic checks decide, a model only advises | Accepted · adds SKL-18 (v1) |
 | [0043](0043-github-copilot-provider.md) | GitHub Copilot as a provider, signed in with edgar's own OAuth app | Accepted, gated on GitHub's terms · amends ADR-0032, adds PRV-19 (v1) |
 | [0044](0044-keyless-cloud-sign-in.md) | Sign in to Azure, Google Cloud and AWS through the cloud's own CLI | Accepted · adds PRV-20 (Core), amends CFG-6 |
+| [0045](0045-memory-as-built.md) | Memory as built: one database, facts that never change, a gate at the end of the turn | Accepted · extends MEM-15 to facts |
 
 ## Writing a new ADR
 

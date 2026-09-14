@@ -10,11 +10,13 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from typing import get_args
 
+from edgar.cli.memory import listing as fact_listing
+from edgar.cli.memory import said
 from edgar.cli.repl import Shell
 from edgar.config.schema import Mode
 from edgar.context.compact import compact, rewind, turn_starts
 from edgar.core.errors import EdgarError
-from edgar.core.events import Paused, Resumed
+from edgar.core.events import FactSaved, Paused, Resumed
 from edgar.core.session import Session
 from edgar.storage.transcript import find, listing, replay, start
 
@@ -24,7 +26,7 @@ COMMANDS: dict[str, tuple[Command, str]] = {}
 LATER = {
     "M8": "/browser",
     "M6": "/skills /tools",
-    "v1": "/plan /go /save /history /fork /remember /memory /agents /init",
+    "v1": "/plan /go /save /history /fork /agents /init",
 }
 
 
@@ -287,6 +289,28 @@ async def _clear(shell: Shell, arg: str) -> None:
     if not shell.busy:
         shell.printer.clear()
     await _new(shell, arg)
+
+
+@command("/remember", "remember TEXT for this project's future sessions [MEM-23]")
+async def _remember(shell: Shell, arg: str) -> None:
+    # Typed by a human, so it is active at once; the prompt changes from the next
+    # session, so this one's cached prefix holds [MEM-6].
+    if not arg:
+        shell.say("usage: /remember TEXT")
+        return
+    fact = shell.setup.memory.add(arg, shell.setup.scope)
+    if fact.status == "active":
+        shell.rt.bus.emit(FactSaved(fact_id=fact.id, provenance=fact.provenance))
+    shell.say(said(fact))
+
+
+@command("/memory", "what is remembered; `edgar memory` edits, reviews and undoes")
+async def _memory(shell: Shell, arg: str) -> None:
+    s = shell.setup
+    # One "- fact" line per pinned fact; a fact is always one line.
+    kept = next((p.text.count("\n- ") for p in s.pinned if p.name == "memory"), 0)
+    head = f"pinned in this session's prompt: {kept} of {shell.config.memory.pinned_max}"
+    shell.say(head + "\n" + fact_listing(s.memory, s.scope, s.root))
 
 
 @command("/quit /exit", "leave")

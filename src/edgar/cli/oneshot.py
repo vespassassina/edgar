@@ -21,7 +21,15 @@ from edgar.cli.render import event_line
 from edgar.cli.setup import authorise_verify, begin, finish, prepare, setup
 from edgar.cli.statusbar import Status, StderrLine, terminal_ready
 from edgar.core.errors import ConfigError
-from edgar.core.events import Event, EventBus, Subscriber, ThinkingDelta, ToolStarted, TurnFinished
+from edgar.core.events import (
+    Event,
+    EventBus,
+    FactProposed,
+    Subscriber,
+    ThinkingDelta,
+    ToolStarted,
+    TurnFinished,
+)
 from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.session import Session
 
@@ -63,7 +71,9 @@ def run_prompt(
         bus.subscribe(subscriber)
     tools: list[str] = []
     finished: list[TurnFinished] = []
+    proposed: list[Event] = []  # facts the model proposed; nobody is here to confirm them
     bus.subscribe(lambda e: _track(e, tools, finished))
+    bus.subscribe(lambda e: proposed.append(e) if isinstance(e, FactProposed) else None)
     if output == "events":
         bus.subscribe(lambda e: _emit(e, show_thinking))
     elif show_thinking:
@@ -96,6 +106,13 @@ def run_prompt(
         sys.stdout.write(json.dumps(payload, ensure_ascii=False) + "\n")
     elif output == "text":
         sys.stdout.write(result.text if result.text.endswith("\n") else result.text + "\n")
+    if proposed:  # left pending: never in a prompt until a human says yes [MEM-21]
+        waiting = (
+            "1 proposed fact waits"
+            if len(proposed) == 1
+            else f"{len(proposed)} proposed facts wait"
+        )
+        print(f"edgar: {waiting} for `edgar memory review`", file=sys.stderr)
     if code == 5:  # an Ask with nobody to answer is a denial, and the run says so [PERM-7]
         print("edgar: a tool call needed permission; see --mode or [permissions]", file=sys.stderr)
     elif code == 9:

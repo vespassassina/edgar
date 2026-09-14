@@ -276,3 +276,21 @@ class AsideFinished(Event):
     answer: str
     usage: Usage
     cost: float | None
+
+
+# memory (v1) [MEM-21]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FactProposed(Event):
+    # tools/builtin/memory_tools.py, when the model calls `remember`: a pending fact,
+    # never injected until a human confirms it.
+    fact_id: int
+    text: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class FactSaved(Event):
+    # cli/repl.py and cli/slash.py, when a fact goes active.
+    fact_id: int
+    provenance: str

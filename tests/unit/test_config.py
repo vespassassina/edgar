@@ -85,11 +85,11 @@ def test_integers_are_accepted_where_numbers_are_expected(tmp_project: Path, hom
 def test_sections_for_later_milestones_are_kept_not_rejected(tmp_project: Path, home: Path) -> None:
     _write(
         tmp_project / ".edgar" / "config.toml",
-        '[[route]]\nname = "x"\n[model.fallback]\n"a/b" = ["c/d"]\n[memory]\npinned_max = 20\n'
+        '[[route]]\nname = "x"\n[model.fallback]\n"a/b" = ["c/d"]\n[subagents]\nmax_depth = 2\n'
         '[browser]\ncommand = "npx"\n',
     )
     config = load(tmp_project, home=home, env={})
-    assert set(config.later) == {"route", "model.fallback", "memory", "browser"}
+    assert set(config.later) == {"route", "model.fallback", "subagents", "browser"}
 
 
 @pytest.mark.parametrize(

@@ -200,14 +200,15 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
   <thead><tr><th>Package</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
   <tbody>
     <tr data-package="core"><td><code>core/</code></td><td class="loc">~700</td><td>The turn loop and the types everything else speaks in</td></tr>
-    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~700</td><td>What the model can do, and the pipeline every call goes through</td></tr>
+    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~770</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,100</td><td>Five vendors, two adapters, a table of differences</td></tr>
     <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~60</td><td>Finding skills, and reading only their frontmatter</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~200</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,400</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,550</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
+    <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
   </tbody>
 </table>
 </div>
@@ -542,7 +543,7 @@ issue</a>.</p>
 
 <!-- ─────────────────────────────── Part II ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">Planned, M7 to M11</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">M7 building, M8 to M11 planned</span></div>
 <p class="part-intro">Extensible, and it remembers: memory, MCP, subagents,
 extensions and hooks. At most 8,000 lines of code for Core plus v1. Nothing in v1
 changes the shape of the turn: each piece plugs into a seam you have already
@@ -564,14 +565,21 @@ flowchart LR
     fb["providers/fallback.py<br/>sideways on an outage"] --> prov
 </pre></div>
 
-<article class="stop planned" id="s20" data-files="src/edgar/memory/store.py src/edgar/memory/facts.py src/edgar/memory/recall.py">
+<article class="stop" id="s20" data-files="src/edgar/memory/store.py src/edgar/memory/recall.py src/edgar/tools/builtin/memory_tools.py">
   <h4><span class="n">20</span>Memory and session search</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M7 · planned</span> <code>memory/store.py</code> <code>memory/facts.py</code> <code>memory/recall.py</code></p>
-  <p>Look for the security boundary: an active fact comes only from text a human
-  typed or from an <code>ErrorRecord</code> the harness computed. Everything else,
-  including the model's own <code>remember</code> calls, stays pending until you
-  confirm it. The pinned set is frozen at session start so the prompt prefix stays
-  stable. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m7--memory-and-session-search">Roadmap: M7</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/store.py"><code>memory/store.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/recall.py"><code>memory/recall.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/memory_tools.py"><code>tools/builtin/memory_tools.py</code></a></p>
+  <p class="look">Look for: <code>add</code> <code>confirm</code> <code>_Op</code> <code>pinned</code> <code>Fts5Retriever</code> <code>Remember</code></p>
+  <p>Look for the security boundary in <code>add</code>: only text a human typed
+  goes straight to active. The model's own <code>remember</code> call makes a pending
+  fact, and the REPL asks at the end of the turn whether to save it; Enter forgets
+  it. A pending fact is never in the prompt and never in the search index, so it can
+  never be recalled. A fact's text never changes: every edit, confirm or forget is a
+  status change logged under one operation number, which is why
+  <code>edgar memory undo</code> can always put it back. The pinned set is chosen once
+  in <code>setup()</code> and sits above the cache breakpoint, so a fact added now
+  shows from the next session. <code>Fts5Retriever</code> searches facts and past
+  sessions' turns twice, by word (porter) and by fragment (trigram), which is what
+  finds <code>config/lo</code> inside a path.</p>
 </article>
 
 <article class="stop planned" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py">

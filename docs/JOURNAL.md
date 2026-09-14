@@ -23,18 +23,23 @@ Carried forward until done. Newest first.
   GitHub allows direct use of the Copilot endpoint, before M8 ships the provider.
 - **Try keyless sign-in on a real cloud.** Run the Cookbook's Azure, Vertex or
   Bedrock block against a real account; the tests use a stand-in CLI only.
-- **Cut 0.1?** Core is built (M0 to M6) and nothing since 0.0.2 is on PyPI. The
-  release is bumping the version in `pyproject.toml` and `src/edgar/__init__.py`,
+- **Cut 0.1?** Core is built (M0 to M6) and nothing since 0.0.2 is on PyPI. M7 has
+  started on `main`, so 0.1 is best cut from `f89e35b`, the last Core-only commit
+  (a `release/0.1` branch from it), unless the maintainer would rather ship memory
+  in 0.1 too. The release is bumping the version in `pyproject.toml` and `src/edgar/__init__.py`,
   moving "Unreleased" under "0.1.0", and publishing a `v0.1.0` GitHub release,
   which triggers trusted publishing. Waiting on the maintainer's yes.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 5,000 of 5,000 lines of code after keyless sign-in
-  (ADR-0044), none left. v1 starts its own budget; anything more for Core means
-  simplifying or moving something first (`/sessions`, then the personality
-  warning, ADR-0038).
+- **Size watch.** The budget test now measures v1: 5,626 of 8,000 lines of code,
+  2,374 left for the rest of M7 and M8 to M11. Core's own files stayed at 5,000.
+- **The rest of M7:** session forks (`/fork`, `--fork ID[@TURN]`), `/save` and
+  `--load`, `/history`, the daily cost cap and `edgar cost`. About 200 lines of
+  code is the aim.
+- **A moved project loses its facts** (ADR-0045): the scope is a hash of the path.
+  A re-scope command, or matching on the git remote, is open.
 - **The picker's provider question has no default.** In `edgar models`, Enter at
   "provider?" cancels. A sensible default would be the first provider whose key
   is set, or Ollama if it answers; it needs a few lines of code Core does not have.
@@ -42,6 +47,55 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · M7 begins: facts, recall and session search
+
+**Asked**
+- Keep building: M7, memory and session search.
+
+**Done**
+- `memory/store.py`: facts in `~/.edgar/memory.db` with scope, provenance,
+  confidence and status (pending, active, superseded, forgotten), an undo log by
+  operation, contradiction detection by word overlap [MEM-10] and a per-scope cap
+  with eviction [MEM-11]. `memory/redact.py` redacts every fact and indexed turn.
+- `memory/recall.py` and `memory/retriever.py`: the `Retriever` port and its
+  `fts5` adapter, porter and trigram indexes over active facts and past sessions'
+  user and assistant text, indexed lazily at recall time [MEM-20, MEM-24].
+- The pinned set: chosen once in `setup()`, project facts first, at most
+  `[memory] pinned_max`, placed between the instruction files and the skill index
+  as notes with a capacity header [MEM-6, MEM-7].
+- The `remember` tool proposes (pending); the REPL asks `save? [y/N]` at the end
+  of the turn, and Enter forgets; `-p` leaves proposals for `edgar memory review`
+  [MEM-21]. The `recall` tool searches facts, sessions or both.
+- `/remember TEXT` and `/memory` in the REPL; `edgar memory
+  list|add|edit|review|forget|undo`, with `edit` as a markdown round trip in
+  `$VISUAL` or `$EDITOR` [MEM-4, MEM-5, MEM-23].
+- `[memory]` in config (`pinned_max`, `scope_cap`, `retriever`, `autolearn`); the
+  `FactProposed` and `FactSaved` events.
+- 13 unit tests (`tests/unit/test_memory.py`) and 4 integration tests
+  (`tests/integration/test_remembering.py`): a fact typed in one session is in the
+  next session's prompt and not in its own, a yes saves a proposal, a no keeps it
+  out of every prompt and every recall, and `-p` plus `edgar memory review`.
+- The budget test moved to the v1 tier. ADR-0045; the tour's stop 20 is now a
+  built stop and the size table has a `memory/` row.
+
+**Decided** (ADR-0045)
+- One database for the user, not one per project, so global facts follow the
+  user and one index covers both scopes.
+- A fact's text never changes; every change is a status change under an
+  operation number, so undo always works, and the index holds exactly the active
+  facts.
+- Contradiction is word overlap of at least half, not a model call: no hidden
+  model, at the price of missing opposites written in different words.
+- `remember` needs no permission prompt outside read-only mode; the question at
+  the end of the turn is the gate. A no forgets rather than deletes.
+- `recall` output is framed as notes, not instructions, and does not taint the
+  session.
+
+**Pending**
+- The rest of M7 (forks, `/save`, `--load`, `/history`, the daily cap, `edgar
+  cost`).
+- 0.1 is still waiting; cut it from `f89e35b` if Core alone should ship.
 
 ## 2026-09-14 · Keyless sign-in for Azure, Google and AWS
 

@@ -27,7 +27,7 @@ from edgar.cli.setup import Setup, authorise_verify, begin, finish, prepare, run
 from edgar.cli.statusbar import Status
 from edgar.core import aside
 from edgar.core.errors import EdgarError
-from edgar.core.events import Event, EventBus, InputQueued
+from edgar.core.events import Event, EventBus, FactProposed, FactSaved, InputQueued
 from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Answer
@@ -56,11 +56,15 @@ class Shell:
         self.asides: set[asyncio.Task[None]] = set()
         self.pending_input = ""  # put back on the input line after a cancel
         self.question: asyncio.Future[str] | None = None  # the next line answers it
+        self.asking = ""  # the prompt shown while a question waits
+        self.proposed: list[FactProposed] = []  # the model's facts, asked about at turn end
         self.done = False
         status.cost = session.cost
         rt.bus.subscribe(self._record)
 
     def _record(self, event: Event) -> None:
+        if isinstance(event, FactProposed):
+            self.proposed.append(event)
         if self.session.log is not None:
             self.session.log.event(event)  # the audit trail and turn costs [PERM-10]
 
@@ -72,18 +76,42 @@ class Shell:
             self.switch(session.model)
 
     def prompt_text(self) -> str:
-        return "allow? [y]es once, [s]ession, [a]lways, [n]o > " if self.question else "> "
+        return self.asking if self.question else "> "
 
-    async def permission(self, tool: str, subject: str, reason: str) -> Answer:
-        """Asked from inside a turn; answered by the next line typed. One question at a
-        time, through the one prompt [PERM-6, TOOL-12]."""
-        self.say(f"{tool} wants {subject}\n  ({reason})")
-        self.question = asyncio.get_running_loop().create_future()
+    async def _question(self, prompt: str) -> str:
+        # Asked from inside a turn; answered by the next line typed. One question at a
+        # time, through the one prompt [PERM-6, TOOL-12].
+        self.asking, self.question = prompt, asyncio.get_running_loop().create_future()
         try:
-            answer = (await self.question).strip().lower()[:1]
+            return (await self.question).strip().lower()[:1]
         finally:
             self.question = None
+
+    async def permission(self, tool: str, subject: str, reason: str) -> Answer:
+        self.say(f"{tool} wants {subject}\n  ({reason})")
+        answer = await self._question("allow? [y]es once, [s]ession, [a]lways, [n]o > ")
         return {"y": "once", "s": "session", "a": "always"}.get(answer, "deny")  # type: ignore[return-value]  # the Answer literals
+
+    async def confirm_facts(self) -> None:
+        """What the model proposed with `remember` is saved only on a typed yes; no, or
+        just Enter, forgets it, and it is never in a prompt [MEM-21]."""
+        proposed, self.proposed = self.proposed, []
+        if not proposed:
+            return
+        noun = "fact" if len(proposed) == 1 else "facts"
+        self.say(
+            f"{len(proposed)} {noun} proposed:\n" + "\n".join(f'  "{p.text}"' for p in proposed)
+        )
+        ids = [p.fact_id for p in proposed]
+        if await self._question("save? [y/N] > ") != "y":
+            for fact in ids:
+                self.setup.memory.forget(fact)
+            self.say("not saved")
+            return
+        self.setup.memory.confirm(ids)
+        for fact in ids:
+            self.rt.bus.emit(FactSaved(fact_id=fact, provenance="model-proposed"))
+        self.say("saved; in the prompt from the next session")
 
     @property
     def busy(self) -> bool:
@@ -126,6 +154,7 @@ class Shell:
                 )
             elif result.reason == "budget_exceeded":  # [BUD-3]
                 self.say("⚠ a cost cap was reached; the turn stopped. See [budget] and /cost")
+            await self.confirm_facts()
         except asyncio.CancelledError:
             return  # the loop sealed the transcript; nothing queued runs after a cancel
         except EdgarError as exc:

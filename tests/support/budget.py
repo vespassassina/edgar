@@ -23,7 +23,7 @@ SRC = Path(__file__).resolve().parents[2] / "src" / "edgar"
 
 # The tier being built. Moves to "v1" when M7 starts and "v2" when M12 starts; the
 # numbers themselves never move (ADR-0015).
-TARGET_TIER = "core"
+TARGET_TIER = "v1"
 TIER_BUDGETS = {"core": 5_000, "v1": 8_000, "v2": 11_000}
 
 # Where v2 lives. Nothing outside these may import them (NFR-12).

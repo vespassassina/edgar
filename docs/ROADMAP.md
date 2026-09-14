@@ -31,7 +31,8 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
 | M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
 | M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)); release pending | 0.1 |
-| M7–M17 | Planned | 1.0, 2.0 |
+| M7 Memory and session search | In progress: facts, recall and session search done ([ADR-0045](adr/0045-memory-as-built.md)); forks, `/save`, `/history`, cost left | 1.0 |
+| M8–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -262,7 +263,7 @@ M3, [ADR-0033](adr/0033-replan-after-m2.md); `edgar login` to M8,
 
 **Goal:** the harness remembers what you tell it, and finds what it saw.
 
-- `memory/store.py`, `facts.py` with pending and active states, FTS5 [MEM-3, MEM-6]
+- `memory/store.py` with pending and active states, FTS5 [MEM-3, MEM-6] (`Fact` lives in the store, ADR-0045)
 - Pinned set frozen at session start; capacity in the envelope header [MEM-6, MEM-7]
 - `/remember TEXT`, `edgar memory add` [MEM-23]
 - `remember` tool → pending, confirmed at turn end [MEM-21]; `recall` tool

@@ -233,8 +233,7 @@ edgar/
 │   │   └── hooks.py                hook matching, stdin JSON, veto semantics
 │   │
 │   ├── memory/                     (v1)
-│   │   ├── store.py                SQLite facts CRUD, pending and active
-│   │   ├── facts.py                Fact model, provenance, confidence
+│   │   ├── store.py                the Fact model; SQLite facts, undo log, index (ADR-0045)
 │   │   ├── retriever.py            the Retriever port [MEM-24]
 │   │   ├── recall.py               built-in fts5 retriever over facts and sessions
 │   │   ├── markdown.py             facts ↔ markdown round trip

@@ -23,14 +23,17 @@ CREATE TABLE IF NOT EXISTS trust (
 
 
 class Store:
+    schema = SCHEMA  # memory/store.py reuses the class with its own tables
+
     def __init__(self, path: Path) -> None:
         self.path = path
 
     def _db(self) -> sqlite3.Connection:
+        # Open, creating the file and its tables on first use.
         self.path.parent.mkdir(parents=True, exist_ok=True)
         db = sqlite3.connect(self.path, timeout=5.0)
         db.execute("PRAGMA journal_mode=WAL")
-        db.executescript(SCHEMA)
+        db.executescript(self.schema)
         return db
 
     def _rows(self, sql: str, *args: object) -> list[Any]:

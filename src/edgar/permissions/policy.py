@@ -7,7 +7,8 @@ exhaustively. First match wins:
 1. the hard layer, which no rule or grant overrides: catastrophic commands,
    credentials, control files, and anything outside the working directory
 2. an explicit per-tool rule from config, then a grant a human gave
-3. the mode's default, tightened by taint in `auto`
+3. the mode's default, tightened by taint in `auto`; `remember` only proposes a
+   fact a human confirms later, so it needs no prompt outside read-only [MEM-21]
 4. the tool's own `dangerous` flag, which turns an allow into an ask
 """
 
@@ -106,6 +107,9 @@ def _decide(tool: ToolSchema, s: Subject, p: Policy) -> Decision:
 
 def _mode(kind: str, s: Subject, commands: list[str], p: Policy) -> Decision:
     if kind == "read":
+        return Allow()
+    # `remember` only writes a pending fact; the human gate is at the turn's end [MEM-21].
+    if kind == "memory" and p.mode != "read-only":
         return Allow()
     listed = bool(commands) and all(matcher.matches(c, p.shell_allow) for c in commands)
     allowed = listed and not matcher.substitutes(s.command or "")  # never auto-allow $(…)

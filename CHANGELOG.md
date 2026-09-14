@@ -85,6 +85,16 @@ Core is being built, 0.1 at the Core release (M6).
   `gcloud auth print-access-token`, or AWS's Bedrock token generator) and sends
   its token, refreshed every ten minutes. Works for Azure with keys switched off,
   Google Vertex AI and Amazon Bedrock; recipes in the Cookbook.
+- Memory (v1, M7): `/remember TEXT` or `edgar memory add TEXT` saves a fact, and
+  from the next session it is in the prompt as a note, not an instruction.
+  `edgar memory list|edit|review|forget ID|undo` shows and changes what edgar
+  remembers; `edit` opens the facts as markdown in your editor, and `undo` takes
+  back the last change whole. When the model proposes a fact with `remember`,
+  edgar asks `save? [y/N]` at the end of the turn; Enter forgets it. Secrets are
+  redacted before anything is stored.
+- `recall`: the model searches remembered facts and past sessions' conversation
+  (never tool output), by word and by fragment of a path or identifier. `[memory]`
+  in config sets how many facts are pinned (20) and the cap per scope (500).
 
 ### Changed
 - `edgar models`: pressing Enter at "make it the default?" now saves it to your
