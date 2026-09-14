@@ -12,12 +12,13 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** Core is built (M0 to M6): the REPL and one-shot runs against real
-> models, with file, shell and web tools behind the permission engine, the verify
-> gate, your own CLI and HTTP tools, skills, sessions you can resume
-> (`edgar --continue`), compaction and cost caps. The 0.1 release to PyPI is next;
-> until then, install from this repository. The documents in `docs/` are the spec
-> being built against.
+> **Status:** 0.1 is on PyPI. Core is built (M0 to M6): the REPL and one-shot runs
+> against real models, with file, shell and web tools behind the permission engine,
+> the verify gate, your own CLI and HTTP tools, skills, sessions you can resume
+> (`edgar --continue`), compaction and cost caps. From v1: memory, session forks,
+> MCP servers and signing in (M7, M8). Subagents, routing, extensions and hooks
+> (M9 to M11) come at 1.0. The documents in `docs/` are the spec being built
+> against.
 
 ## Why edgar
 
@@ -38,7 +39,7 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ## Quick start
 
 ```bash
-uv tool install git+https://github.com/vespassassina/edgar   # PyPI from 0.1
+uv tool install edgar-harness   # or: uvx edgar-harness, to run it without installing
 export OPENAI_API_KEY=sk-...    # or ANTHROPIC_API_KEY, OPENROUTER_API_KEY
 edgar login openrouter          # or sign in instead; the key is yours, kept in your keyring
 edgar models                    # pick a model; Enter saves it as your default

@@ -3,9 +3,16 @@
 What changed for people using edgar, newest first. The reasons live in
 [`docs/adr/`](docs/adr/), the day-by-day record in [`docs/JOURNAL.md`](docs/JOURNAL.md).
 Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
-Core is being built, 0.1 at the Core release (M6).
+Core was being built, 0.1 the first release you can work in, 1.0 when v1's
+extension formats freeze.
 
 ## Unreleased
+
+## 0.1.0 — 2026-09-14
+
+The first release that is a harness rather than a skeleton: Core (M0–M6) whole,
+plus memory, session forks, MCP and signing in from v1 (M7, M8). 6,809 lines of
+code of the 8,000 v1 is allowed.
 
 ### Added
 - [A Tour of the Harness](https://vespassassina.github.io/edgar/): a guided read

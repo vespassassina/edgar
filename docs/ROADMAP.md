@@ -25,14 +25,14 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | Milestone | Status | Shipped in |
 |---|---|---|
 | M0 Skeleton | Done | 0.0.1, 0.0.2 |
-| M1 The loop | Done | unreleased (`2c25162`) |
-| M2 Real providers | Done | unreleased (`ff4db71`) |
-| M4 REPL, streams, model picker | Done | unreleased |
-| M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
-| M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
-| M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)); release pending | 0.1 |
-| M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 1.0 |
-| M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 1.0 |
+| M1 The loop | Done | 0.1.0 |
+| M2 Real providers | Done | 0.1.0 |
+| M4 REPL, streams, model picker | Done | 0.1.0 |
+| M3 Tools, permissions, verify, custom tools, trust | Done | 0.1.0 |
+| M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | 0.1.0 |
+| M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)) | 0.1.0 |
+| M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 0.1.0 |
+| M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
 | M9–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A

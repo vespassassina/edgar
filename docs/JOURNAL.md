@@ -23,12 +23,6 @@ Carried forward until done. Newest first.
   GitHub allows direct use of the Copilot endpoint, before M8 ships the provider.
 - **Try keyless sign-in on a real cloud.** Run the Cookbook's Azure, Vertex or
   Bedrock block against a real account; the tests use a stand-in CLI only.
-- **Cut 0.1?** Core is built (M0 to M6) and nothing since 0.0.2 is on PyPI. M7 has
-  started on `main`, so 0.1 is best cut from `f89e35b`, the last Core-only commit
-  (a `release/0.1` branch from it), unless the maintainer would rather ship memory
-  in 0.1 too. The release is bumping the version in `pyproject.toml` and `src/edgar/__init__.py`,
-  moving "Unreleased" under "0.1.0", and publishing a `v0.1.0` GitHub release,
-  which triggers trusted publishing. Waiting on the maintainer's yes.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
@@ -46,6 +40,33 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · 0.1.0 on PyPI
+
+**Asked**
+- "lets do pypi and gh": cut the 0.1 release.
+
+**Done**
+- Version 0.1.0 in `pyproject.toml` and `src/edgar/__init__.py`; "Unreleased"
+  moved under `## 0.1.0 — 2026-09-14` in the changelog; the roadmap's "Shipped in"
+  column now says 0.1.0 for M1 to M8; README says 0.1 is on PyPI and installs with
+  `uv tool install edgar-harness` instead of from the repository.
+- Tagged `v0.1.0` and published the GitHub release, which triggers
+  `.github/workflows/release.yml`: the offline suite, `uv build`, then trusted
+  publishing to PyPI with build attestations and no API token anywhere [NFR-14].
+
+**Decided**
+- 0.1 is cut from `main` (M0 to M8), not from `f89e35b` (Core alone). The maintainer
+  chose the release people can actually use over the one that matches the tier
+  story: 6,809 lines of code, with memory, forks, MCP and signing in included. The
+  roadmap's tiers are unchanged — 1.0 is still where v1's extension formats freeze —
+  so `f89e35b` no longer matters and the `release/0.1` branch idea is dropped.
+- Marked a full release, not a pre-release: 0.0.1 and 0.0.2 were skeletons, this is
+  a harness, and it should be what `uvx edgar-harness` gives people.
+
+**Pending**
+- Watch the first real install: `uvx edgar-harness@0.1.0 --version` on a machine
+  that has never seen it, and the `[keyring]` extra on at least one platform.
 
 ## 2026-09-14 · M8 done: signing in
 

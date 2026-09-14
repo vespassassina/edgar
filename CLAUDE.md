@@ -24,8 +24,9 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 ## Current state
 
 M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built at
-5,000 lines of code, and the 0.1 release waits on the maintainer (cut it from
-`f89e35b`, the last Core-only commit, if Core ships alone). M7 is done: facts,
+5,000 lines of code. **0.1.0 is released**: cut from `main` on 2026-09-14 with M0
+to M8 in it, published to PyPI by the `v0.1.0` GitHub release, so
+`uvx edgar-harness` now runs it. 1.0 is still where v1 ends (M11). M7 is done: facts,
 `recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
 `/history`, the daily cap and `edgar cost` (ADR-0046). M8 is done: MCP servers over stdio and
 Streamable HTTP, started only when a tool is called, deferred schemas through
