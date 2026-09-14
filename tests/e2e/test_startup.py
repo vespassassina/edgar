@@ -42,9 +42,10 @@ def test_five_mcp_servers_cost_a_run_nothing(
     # Five servers configured, none started: a session that calls no MCP tool pays
     # the same as one with no servers at all [TOOL-8].
     fake = Path(__file__).parents[1] / "support" / "mcp_server.py"
+    python = Path(sys.executable).as_posix()  # a TOML string, so no backslashes (NFR-6)
     marks = tmp_path / "marks"
     blocks = [
-        f'[mcp.s{n}]\ncommand = "{sys.executable}"\nargs = ["{fake.as_posix()}"]\n'
+        f'[mcp.s{n}]\ncommand = "{python}"\nargs = ["{fake.as_posix()}"]\n'
         f'env = {{ EDGAR_TEST_MARK = "{(marks / f"s{n}.txt").as_posix()}" }}\n'
         for n in range(5)
     ]

@@ -35,6 +35,7 @@ from edgar.tools.mcp.schema import hints, to_result, tool_name
 from edgar.tools.registry import ToolRegistry, cost
 
 SERVER = Path(__file__).parents[1] / "support" / "mcp_server.py"
+PYTHON = Path(sys.executable).as_posix()  # a TOML string, so no Windows backslashes
 
 
 def block(**extra: Any) -> McpSection:
@@ -219,7 +220,7 @@ def test_a_session_starts_no_server_and_a_project_server_needs_trust(
     mark = tmp_project / "started.txt"
     _write(
         home / ".edgar" / "config.toml",
-        f'[mcp.one]\ncommand = "{sys.executable}"\nargs = ["{SERVER.as_posix()}"]\n'
+        f'[mcp.one]\ncommand = "{PYTHON}"\nargs = ["{SERVER.as_posix()}"]\n'
         f'env = {{ EDGAR_TEST_MARK = "{mark.as_posix()}" }}\n',
     )
     _write(tmp_project / ".edgar" / "config.toml", '[mcp.two]\nurl = "https://example.test/mcp"\n')
@@ -240,7 +241,7 @@ def test_edgar_mcp_list_starts_each_server_and_prints_what_it_offers(
     assert "no MCP servers" in capsys.readouterr().out
     _write(
         home / ".edgar" / "config.toml",
-        f'[mcp.fake]\ncommand = "{sys.executable}"\nargs = ["{SERVER.as_posix()}"]\n'
+        f'[mcp.fake]\ncommand = "{PYTHON}"\nargs = ["{SERVER.as_posix()}"]\n'
         '[mcp.broken]\ncommand = "no-such-program-here"\n',
     )
     assert command(["mcp", "list"], tmp_project, home) == 1  # one server failed
