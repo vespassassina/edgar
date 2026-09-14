@@ -152,6 +152,8 @@ passes its suite with the v2 packages deleted [NFR-12].
 - Skill synthesis from verified work, distill, optional curator
 - Escalation, `route suggest`, budget-aware downgrade
 - Scheduling via `tick`, host installers, `schedule_self`
+- A capability broker: each tool call checked against a ticket bound to what
+  the human typed, with a signed receipt of every allow and refusal
 
 **Requirement map.** IDs keep their numbers; this table says which tier delivers
 them. A constraint (for example MEM-9) applies from the tier in which its mechanism
@@ -159,7 +161,7 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | — |
+| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | `/scope` and `--scope` (CAP-4) |
 | Providers | 1–13, 15–17 | 14, 18 | — |
 | Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
@@ -170,6 +172,7 @@ first lands.
 | Controller | — | — | 1–13 |
 | Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
 | Scheduling | — | — | 1–12 |
+| Broker | — | — | 1–10 |
 | Budget | 1, 2 (turn and session), 3, 5, 6 (`/cost`) | 2 (daily), 4, 6 (`edgar cost`) | — |
 | Config | 1–3, 6–8 | 4, 5 | — |
 | Verification | 1–7 (sources arrive with their features) | — | — |
@@ -690,6 +693,27 @@ event; an **extension** is a folder bundling any of them.
 | EXT-10 | The formats in EXT-1 to EXT-9, TOOL-6, SKL-1, SUB-1, the `--json` and `--events` output and the `Provider`, `Sandbox` and `Retriever` protocols are frozen at 1.0 and change only additively within a major version | Must |
 | EXT-11 | **Ports.** Core modules (`core/`, `context/`, `permissions/`, `tools/execute.py`) import no adapter, and adapters import only core types. Third-party implementations of the Provider, Sandbox and Retriever ports register through entry points, read lazily. One distribution ships the core and all built-in adapters ([ADR-0022](adr/0022-ports-and-adapters.md)) | Must |
 
+### 7.16 Capability broker (v2)
+
+The permission engine decides what a session may do; the broker decides what one
+request may do. Each typed request gets a ticket: authority bound to that intent,
+narrowed by caveats that only accumulate. Effective authority is the intersection
+of the engine's decision and the ticket. Rationale in
+[ADR-0039](adr/0039-capability-broker.md).
+
+| ID | Requirement | Priority |
+|---|---|---|
+| CAP-1 | **An intent comes only from text a human typed:** a REPL line (typed or queued), the `-p` argument, or a hand-authored `schedules.toml` entry (actor `schedule:NAME`). Never from tool output, fetched content, piped stdin, `@file` attachments or model text. A subagent task, a `/steer` and a `schedule_self` entry refine an existing intent and never start a new one. Enforced by what the function accepts, as MEM-8 is | Must |
+| CAP-2 | Every intent has one ticket carrying its `intent_id`, its subject (`main`, `task:NAME#n`) and caveats from a closed set of five: `tools`, `paths` (resolved-path globs), `hosts`, `calls` (maximum tool calls) and `until` (expiry). With no caveats a ticket refuses nothing the engine allows | Must |
+| CAP-3 | A ticket with a `paths` or `hosts` caveat refuses `shell`, and command tools not marked `read_only`, unless its `tools` caveat names them | Must |
+| CAP-4 | Caveats come from `--scope KEY=VALUE` (repeatable), `/scope` in the REPL (`/scope KEY=VALUE`, `/scope` to show, `/scope clear`), a schedule entry's `scope` table and its SCH-8 allowlist, and delegation. Nothing a model writes can add authority | Must |
+| CAP-5 | **Caveats only accumulate.** `task` attenuates the parent's ticket with the agent definition's `tools` and an optional `scope` argument; `schedule_self` stores the creating session's ticket, attenuated; the controller's `tighten_policy` adds caveats (CTRL-8). A child that lacks any caveat of its parent, names a different intent, or was not issued by its parent's subject fails verification | Must |
+| CAP-6 | The broker is a veto in the `pre_tool` stage (EXT-6), run on arguments resolved as the permission engine resolves them, for every tool source. A refusal is `ToolResultBlock(is_error=True)` with `ErrorRecord` kind `out_of_scope` naming the caveat; it emits `ScopeRefused(tool, caveat, intent_id)`. It never prompts; the human widens with `/scope`. A refusal does not change a non-interactive run's exit code | Must |
+| CAP-7 | Every intent, ticket, delegation, allow and refusal, plus the engine's decision for the same call, is appended to `receipt.jsonl` beside the transcript. Each line holds the SHA-256 of the previous line and an HMAC-SHA256 under `~/.edgar/receipt.key` (32 random bytes, user-only, a credential path in the hard layer). Use counts are rebuilt from the receipt on `--resume` | Must |
+| CAP-8 | `edgar receipt [ID] [--refused] [--verify]` prints the record grouped by intent, each group headed by the typed text. `--verify` exits 1 at the first broken link or signature | Must |
+| CAP-9 | `authorize(chain, request, uses, now)` is a pure function returning allow or the refusing caveat, property-tested: no attenuation chain verifies with a dropped caveat, and adding a caveat never turns a refusal into an allow | Must |
+| CAP-10 | `[broker] enabled`, on by default in v2. `edgar doctor` reports it, the key's presence and mode. The broker makes no model call, opens no socket and starts no process | Must |
+
 ## 8. Non-functional requirements
 
 | ID | Requirement | Measure |
@@ -705,7 +729,7 @@ event; an **extension** is a folder bundling any of them.
 | NFR-9 | **Type coverage** | `mypy --strict` clean on `src/` |
 | NFR-10 | **Docs currency.** Every public command and config key documented | Enforced by a docs-coverage test |
 | NFR-11 | **Cold install** from zero to first successful run | ≤ 2 minutes including reading the README |
-| NFR-12 | **Tier isolation.** Core and v1 modules never import `edgar.controller`, `edgar.learning`, `edgar.schedule` or `edgar.providers.escalation` | An import-graph test, plus a CI job that deletes the v2 packages and runs the v1 suite green |
+| NFR-12 | **Tier isolation.** Core and v1 modules never import `edgar.controller`, `edgar.learning`, `edgar.schedule`, `edgar.broker` or `edgar.providers.escalation` | An import-graph test, plus a CI job that deletes the v2 packages and runs the v1 suite green |
 | NFR-13 | **Prompt budget.** Base system prompt, and the schemas of all Core built-in tools together | ≤ 1,500 and ≤ 2,500 tokens, measured in CI with the approximate counter |
 | NFR-14 | **Supply chain.** How releases and dependencies are protected | Releases through trusted publishing with attestations; lockfile pinned with hashes; no install-time hooks; `SECURITY.md` and `/.well-known/security.txt` with a monitored contact from M0 |
 
@@ -755,6 +779,7 @@ edgar schedule list | add | remove | run NAME
 edgar tick
 edgar install-tick | uninstall-tick
 edgar controller log | revert ID | apply ID
+edgar receipt [ID] [--refused] [--verify]   the signed record of authority (CAP-8)
 ```
 
 ### 9.2 Stream discipline
@@ -811,6 +836,7 @@ executable config in a non-interactive run exits 3 (PERM-13).
   AGENTS.md                   hand-authored, optional user-scope instructions
   agents/  skills/  tools/  extensions/
   edgar.db                    machine-owned: project trust, user-scope facts
+  receipt.key                 machine-owned, user-only: signs receipts (CAP-7, v2)
   logs/
 
 ./.edgar/                     project scope (created by `edgar init` or by hand)
@@ -821,6 +847,7 @@ executable config in a non-interactive run exits 3 (PERM-13).
   schedules.toml              hand-authored; `schedule add` appends (v2)
   sessions/<id>.jsonl         machine-owned: append-only transcripts
   sessions/<id>/blobs/        machine-owned: spilled tool output (CTX-13)
+  sessions/<id>/receipt.jsonl machine-owned: signed record of authority (CAP-7, v2)
   runs/                       machine-owned: scheduled run transcripts (v2)
   edgar.db                    machine-owned: sessions index, grants, facts,
                               self-schedules, telemetry, control-file hashes
@@ -831,7 +858,8 @@ executable config in a non-interactive run exits 3 (PERM-13).
 
 **Ownership.** Automated writers (the loop, learner, controller, synthesiser,
 tools acting on the model's behalf) may write only to `edgar.db`, `history.md` and
-per-skill `HISTORY.md`, `sessions/`, `runs/`, `proposals/` and `skills/learned/`.
+per-skill `HISTORY.md`, `sessions/`, `runs/`, `proposals/`, `skills/learned/` and
+`~/.edgar/receipt.key` (created once, never rewritten).
 Everything else under `.edgar/` and `~/.edgar/`, plus the instruction files, is
 hand-authored (MEM-2). Human-invoked commands (`init`, `schedule add`, `ext add`)
 may create files or append from templates, and never rewrite existing content. The

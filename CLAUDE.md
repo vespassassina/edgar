@@ -92,10 +92,11 @@ holding in your head:
 
 **Three tiers with a hard seam.** Core (M0–M6, ≤ 5,000 LOC) is the smallest honest
 harness; v1 (M7–M11, ≤ 8,000) adds memory, MCP, subagents, extensions and freezes the
-extension formats; v2 (M12–M16, ≤ 11,000) adds learning, the controller and scheduling.
-v2 lives in `edgar.learning`, `edgar.controller`, `edgar.schedule` and
-`providers/escalation.py`, and nothing in Core or v1 may import it: v2 attaches through
-the loop's post-turn gate (loaded by name with `importlib`) and the event bus
+extension formats; v2 (M12–M17, ≤ 11,000) adds learning, the controller, the
+capability broker and scheduling. v2 lives in `edgar.learning`, `edgar.controller`,
+`edgar.schedule`, `edgar.broker` and `providers/escalation.py`, and nothing in Core or
+v1 may import it: v2 attaches through the loop's post-turn gate and the tool
+pipeline's `pre_tool` vetoes (both filled by name with `importlib`) and the event bus
 (ADR-0015, NFR-12). PRD §5.1 maps every requirement ID to its tier.
 
 **One loop.** `core/loop.py` is under 200 lines and pushes every concern into a
@@ -228,7 +229,7 @@ and the Core release. **v1** M7 memory
 and session search, M8 MCP, M9 subagents, routing rules and fallback, M10 extensions,
 hooks, plugins and `edgar.run()`, M11 init, doctor and docs (1.0). **v2** M12 learning
 foundations, M13 controller, M14 skill synthesis, M15 escalation and route suggest,
-M16 scheduling (2.0). Each ships something tested and documented; docs are updated in
+M17 capability broker (ADR-0039, built before M16), M16 scheduling (2.0). Each ships something tested and documented; docs are updated in
 the same commit, never later. If a milestone pushes its tier over the LOC budget,
 something moves to a later tier; the budget does not move.
 

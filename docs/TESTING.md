@@ -49,7 +49,7 @@ tests/
 PR total target ≤ 60 s [NFR-2]. If it creeps past 90 s, that is a bug in the tests.
 
 From M12 on, a second PR job deletes the v2 packages (`learning/`, `controller/`,
-`schedule/`, `providers/escalation.py`) and runs the v1 suite, which must stay
+`schedule/`, `broker/`, `providers/escalation.py`) and runs the v1 suite, which must stay
 green [NFR-12].
 
 ---
@@ -458,10 +458,36 @@ def test_synthesiser_sees_no_tool_output_or_error_text(trajectory):
     assert not any(s in outline.render() for s in trajectory.error_text_strings)   # [SKL-9]
 ```
 
+### The capability broker (v2)
+
+These keep ADR-0039's claims true. The chain generator builds delegation chains of
+random depth up to SUB-6's ceiling, then damages some: a dropped caveat, a swapped
+intent, a wrong issuer.
+
+```python
+@given(chain=chains(), damage=st.sampled_from(CHAIN_DAMAGE))
+def test_no_damaged_chain_verifies(chain, damage):
+    assert not verify(CHAIN_DAMAGE[damage](chain))                       # [CAP-5]
+
+@given(chain=chains(), extra=caveats(), request=requests(), uses=st.integers(0, 50))
+def test_adding_a_caveat_never_turns_a_refusal_into_an_allow(chain, extra, request, uses):
+    if isinstance(authorize(chain, request, uses, NOW), Refuse):
+        assert isinstance(authorize(attenuate(chain, extra), request, uses, NOW), Refuse)  # [CAP-9]
+
+@given(trajectory=trajectories())
+def test_intents_come_only_from_typed_text(trajectory):
+    for intent in run_broker(trajectory).intents():
+        assert intent.text in trajectory.typed_strings                   # [CAP-1]
+
+@given(receipt=receipts(), at=st.data())
+def test_any_one_byte_edit_breaks_verification(receipt, at):
+    assert not verify_receipt(flip_one_byte(receipt, at))                # [CAP-7]
+```
+
 ### Tier isolation
 
 ```python
-V2 = ("edgar.controller", "edgar.learning", "edgar.schedule", "edgar.providers.escalation")
+V2 = ("edgar.controller", "edgar.learning", "edgar.schedule", "edgar.broker", "edgar.providers.escalation")
 
 def test_core_and_v1_never_import_v2():
     for module in static_import_graph("src/edgar"):

@@ -64,6 +64,7 @@ flowchart TB
         CTRL["controller/"]
         LEARN["learning/"]
         SCHED["schedule/"]
+        BROKER["broker/"]
     end
 
     subgraph out["Output"]
@@ -87,6 +88,7 @@ flowchart TB
     BI -. task .-> LOOP
     LOOP -. post-turn gate .-> CTRL & LEARN
     SCHED -. runs .-> LOOP
+    REG_T -. pre_tool veto .-> BROKER
 ```
 
 The `task` tool re-entering `loop.py` is the subagent mechanism. There is no
@@ -94,10 +96,11 @@ separate subagent engine; a subagent is the same loop with a different config, a
 fresh transcript and a narrowed policy. That is deliberate: one loop to understand,
 one loop to test.
 
-**The tier seam.** v2 packages (`controller/`, `learning/`, `schedule/`,
+**The tier seam.** v2 packages (`controller/`, `learning/`, `schedule/`, `broker/`,
 `providers/escalation.py`) are never imported by Core or v1 code [NFR-12]. The loop
-exposes a post-turn gate, a list of async callables, and `cli/main.py` fills it by
-importing v2 packages by name with `importlib`, only when config enables them.
+exposes a post-turn gate, a list of async callables, and the tool pipeline a list
+of `pre_tool` veto callables; `cli/main.py` fills both by importing v2 packages by
+name with `importlib`, only when config enables them.
 Telemetry and history are event-bus subscribers. Deleting the v2 packages leaves a
 working v1, and a CI job proves it.
 
@@ -253,6 +256,12 @@ edgar/
 │   │   ├── due.py                  ★ pure due calculation
 │   │   ├── tick.py                 run what is due
 │   │   └── install.py              cron · launchd · Task Scheduler
+│   │
+│   ├── broker/                     (v2)
+│   │   ├── caveats.py              the five caveats and their checks
+│   │   ├── ticket.py               intents, tickets, attenuation, chain check
+│   │   ├── authorize.py            ★ pure authorize(chain, request, uses, now)
+│   │   └── receipt.py              hash-chained, HMAC-signed JSONL; replay
 │   │
 │   ├── config/
 │   │   ├── schema.py               typed config model, hand-written validation
@@ -442,6 +451,7 @@ Error(kind, message, recoverable)
 ControllerTriggered(check, value, threshold)
 ControllerProposal(action, reason, dry_run)
 ControllerApplied(action, mutation_id)
+ScopeRefused(tool, caveat, intent_id)             # the broker refused a call [CAP-6]
 ```
 
 The bus is synchronous and in-process, roughly 40 lines. No queues, no threads.
@@ -978,12 +988,16 @@ cannot reach the transcript, the policy or the provider.
 Every call, every source, same path. [TOOL-2, TOOL-3, TOOL-4, TOOL-10]
 
 ```
-validate args ─→ pre_tool hooks ─→ permission check ─→ run with timeout+cancel ─→ spill ─→ result
+validate args ─→ pre_tool vetoes ─→ permission check ─→ run with timeout+cancel ─→ spill ─→ result
       │                │                  │                      │
       └─ error         └─ veto            └─ denial              └─ timeout / exception
          all four return a ToolResultBlock(is_error=True, error=ErrorRecord(...))
          to the model, never an exception to the loop
 ```
+
+The `pre_tool` stage runs hook commands (v1, §6.7) and in-process veto callables
+registered at startup; the v2 broker is the only one that ships (§7.6). A veto
+callable returns a refusal or `None`, never an allow.
 
 Errors going back to the model rather than up the stack is deliberate: the model
 frequently recovers from a bad argument or a denied path by trying something else,
@@ -1123,7 +1137,8 @@ timeout_s = 5
 | `session_end` | no | deliver a scheduled run's result |
 
 The event is passed as JSON on stdin. Hooks cannot change arguments or allow what
-policy denies, so they obey "machines tighten". Their output never reaches the
+policy denies, so they obey "machines tighten". In-process veto callables (the v2
+broker, §7.6) share the stage and the same rule. Their output never reaches the
 model or memory, except a `pre_tool` deny reason. Project-scope hooks need project
 trust.
 
@@ -1293,6 +1308,64 @@ sandbox reinforce each other. A configured backend that is unavailable fails the
 session start loudly; `doctor` recommends the best available one. Core tests use a
 fake sandbox and run everywhere; backend tests run where the backend exists.
 
+### 7.6 Capability broker (v2)
+
+`broker/`, [CAP-1..10], [ADR-0039](adr/0039-capability-broker.md). The engine in
+§7.1 knows the session: mode, rules, grants, taint. It cannot know the request. If
+you ask for a summary of `reports/q3.md` and the report tells the agent to read
+`reports/2024-salaries.md` and post it somewhere, `decide()` sees a read inside the
+working directory and a fetch, and allows both in `auto`. The broker adds the
+missing layer: a **ticket** per typed request, whose caveats can only narrow.
+
+```
+typed text ──→ intent ──→ ticket (caveats) ──→ attenuated for task:NAME#n ──→ …
+                                    │
+     each call ──→ authorize(chain, request, uses, now) ──→ allow │ refuse(caveat)
+                                    │
+                               receipt.jsonl   (signed, hash-chained, refusals too)
+```
+
+```python
+# broker/authorize.py — pure: no clock, no disk; the receipt passes uses in
+def authorize(
+    chain: tuple[Ticket, ...],       # root first; every link verified
+    request: Request,                # subject, tool, resolved paths, hosts
+    uses: int,                       # calls already made under this intent
+    now: datetime,
+) -> Allow | Refuse: ...             # Refuse names the caveat and why
+```
+
+**Five caveats**, a closed set: `tools`, `paths` (resolved-path globs), `hosts`,
+`calls`, `until`. Paths and hosts are resolved by the same code the engine uses, so
+the two layers can never disagree about which file a call touches. A ticket with
+`paths` or `hosts` refuses `shell` and non-`read_only` command tools unless `tools`
+names them [CAP-3]: what a shell touches cannot be checked against a path.
+
+**Where caveats come from.** People: `--scope` and `/scope`, a schedule entry's
+`scope`. Narrowing machinery: `task` (the agent definition's `tools`, plus an
+optional `scope` argument that can only add caveats), `schedule_self` (the creating
+session's ticket), the controller's `tighten_policy`. A ticket with no caveats
+refuses nothing and still writes the receipt.
+
+**Chain verification** is structural. For each link: same `intent_id` as the root;
+issuer equals the parent's subject; caveats a superset of the parent's, compared by
+fingerprint. The chain is at most SUB-6's ceiling deep, so presenting it whole is
+cheap.
+
+**The receipt** is one JSON object per line: `kind`, `intent_id`, the typed text on
+`intent` entries, the call and caveat on `allow` and `refuse`, the engine's decision
+on `permission` (taken from `PermissionResolved`), then `prev` (SHA-256 of the line
+before) and `sig` (HMAC-SHA256 under `~/.edgar/receipt.key`). The key is a
+credential path in the hard layer, so no tool call can read it. HMAC is symmetric:
+the receipt is tamper-evident against the agent and against accidents, not against
+the user or another process running as them.
+
+**Order in the pipeline.** Hooks, then the broker, then `decide()`. A call the
+broker refuses never reaches a prompt, so a scoped session asks fewer questions,
+not more. A refusal is `ErrorRecord(kind="out_of_scope")` naming the caveat; the
+REPL adds a one-line notice that `/scope` widens it. There is no Ask: widening is
+something the human types.
+
 ## 8. Context and compression
 
 [CTX-1..15], [ADR-0016](adr/0016-context-pipeline.md)
@@ -1456,7 +1529,8 @@ persisted for inspection [SUB-4], policy narrowing only [PERM-8], taint inherite
 from the parent and propagated back to it, budget from parent remainder with
 partial results on exhaustion [SUB-7], failures as tool errors [SUB-8], depth
 ceiling and cycle detection [SUB-6, SUB-10]. Permission prompts share the parent's
-queue (§4.1).
+queue (§4.1). In v2 the child's ticket is the parent's, attenuated, with the child
+as its subject [CAP-5].
 
 A write-capable subagent with `isolation: worktree` (SUB-11, Should) runs in its own
 `git worktree` under `.edgar/worktrees/<id>` and returns a branch name and a diff
@@ -1635,7 +1709,9 @@ clock, no subprocess and no network.
 
 `schedule_self` [SCH-11] writes to the `self_schedules` table, never to
 `schedules.toml`. It is rate-limited, capped on pending count, and depth-guarded so
-a self-rescheduling loop cannot run away. On Windows, Task Scheduler runs
+a self-rescheduling loop cannot run away. In v2 each row stores the creating
+session's ticket, attenuated, so a run the agent scheduled for itself never holds
+more authority than the run that scheduled it [CAP-5]. On Windows, Task Scheduler runs
 `pythonw`-based entry points so a console window does not flash every minute.
 
 ## 13. Status bar

@@ -44,7 +44,7 @@ It ships in three tiers, each with a size budget:
 |---|---|---|
 | **Core** (0.x) | The loop, five providers, built-in and custom tools, skills, permissions, verify gate, staged compaction, sessions, REPL and pipes | ≤ 5,000 lines |
 | **v1.0** | Memory, MCP, subagents, routing and fallback, extensions and hooks, an embedding API. Extension formats frozen | ≤ 8,000 lines |
-| **v2.0** | Learning from what you type and what breaks, skill synthesis, a controller, scheduling | ≤ 11,000 lines |
+| **v2.0** | Learning from what you type and what breaks, skill synthesis, a controller, a capability broker, scheduling | ≤ 11,000 lines |
 
 None of that is unusual. What is unusual is that the whole thing is small enough
 to read in an afternoon, and the parts usually hidden behind an SDK are written
@@ -178,6 +178,13 @@ a cheap model runs only when one trips. It returns typed proposals from a fixed
 whitelist, dry-run by default, fully logged, and it can only ever tighten policy.
 It cannot write your instruction files — it proposes a diff and you apply it.
 
+**Every call answers to what you asked** (v2). Scope a request (`--scope
+paths=reports/q3.md`) and a line hidden in that report cannot send the agent to
+another file or host: calls outside the scope are refused, and subagents inherit
+the scope narrowed, never widened. Every allow and refusal goes into a signed
+receipt tied to the words you typed; `edgar receipt --refused` shows what the agent
+tried and was refused.
+
 **Scheduling without a daemon** (v2). One `tick` command plus one host cron entry.
 Agents can schedule themselves, with guardrails.
 
@@ -200,7 +207,7 @@ something to argue with.
 | [ADRs](docs/adr/) | Decisions, with the alternatives that were rejected |
 | [Decisions](docs/DECISIONS.md) | The v0.3 and v0.4 revisions in one page: tiers, context, memory, extensions, security, ports |
 | [Field review](docs/research/hn-2026-09.md) | What 11,647 Hacker News comments say about agent harnesses |
-| [Roadmap](docs/ROADMAP.md) | Seventeen milestones in three tiers, each one shippable |
+| [Roadmap](docs/ROADMAP.md) | Eighteen milestones in three tiers, each one shippable |
 | [Testing](docs/TESTING.md) | How you test something nondeterministic |
 | [Brainstorm](docs/BRAINSTORM.md) | The original design conversation |
 | [AGENTS.md](AGENTS.md) | Instructions for AI agents working on the code |

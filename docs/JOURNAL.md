@@ -9,6 +9,11 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 Carried forward until done. Newest first.
 
+- **Review the capability broker design** (ADR-0039, M17) before M17 starts. The
+  choices most open to argument: five caveats only; caveats only from what people
+  type (no model-derived scope); no prompt on a refusal, `/scope` widens; the log
+  named "receipt"; HMAC and its limit; on by default in v2; M17 before M16; about
+  400 lines against v2's budget.
 - **Try the REPL on a real model.** Start Ollama (`OLLAMA_CONTEXT_LENGTH=16384
   ollama serve`), then `uv run edgar --model ollama/qwen3:8b` from the repo. M4 was
   tested with the fake model and through a pseudo-terminal, not live.
@@ -27,6 +32,45 @@ Carried forward until done. Newest first.
   candidates to move if needed: `/sessions`, then the personality warning
   (ADR-0038).
 - Update the GitHub repository description to the headline (optional).
+
+## 2026-09-14 · Capability broker added to v2 (spec only)
+
+**Asked:** add to the features the capability broker we had been discussing, for
+v2. The notes were the maintainer's prototype in
+`OneDrive/ClaudeCode/capability-broker/` (0.0.1, 2026-09-02: intent, capability
+and provenance, the ceiling and the ticket, eleven invariants, five open
+questions).
+
+**Done**
+- [ADR-0039](adr/0039-capability-broker.md): the prototype mapped onto edgar.
+- PRD: a v2 scope bullet, a `Broker` row in the requirement map, §7.16 with
+  CAP-1..10, `/scope` and `--scope` in the CLI row, `edgar receipt` in §9.1,
+  `receipt.jsonl` and `~/.edgar/receipt.key` in §9.5, `edgar.broker` in NFR-12.
+- Blueprint: `broker/` in §1 and §2, `ScopeRefused` in §3.2, the `pre_tool` stage
+  as hooks plus in-process vetoes in §6.2 and §6.7, a new §7.6, notes in §9 and
+  §12.
+- Roadmap: eighteen milestones, v2 is M12–M17, a new M17 built after M15 and before
+  M16; M16 gains scheduled-run tickets.
+- TESTING.md: broker property tests; `edgar.broker` in the tier-isolation list, and
+  in `tests/unit/test_architecture.py` so the rule already holds. README and
+  CLAUDE.md follow.
+
+**Decided** (all in ADR-0039)
+- Enforce in the tool pipeline, not with bound handles: tool schemas sit above the
+  cache breakpoint and cannot change per task (CTX-17).
+- Intents only from typed text, the MEM-8 source; subagent tasks, `/steer` and
+  `schedule_self` refine an intent and never start one. That answers the
+  prototype's "injected intent" question.
+- Five caveats (`tools`, `paths`, `hosts`, `calls`, `until`); `shell` refused under
+  a `paths` or `hosts` scope unless named.
+- A veto only, never a prompt; the human widens with `/scope`.
+- The signed log is called the receipt, since "provenance" already names config
+  and fact origins. HMAC-SHA256 with a user-only key: tamper-evident against the
+  agent, not against the user.
+- No daemon, service, policy language or Ed25519: the Never list and NFR-5.
+
+**Pending:** the maintainer's review of the design (open items). No code for the
+broker until M17.
 
 ## 2026-09-13 · M5 done: context and sessions
 

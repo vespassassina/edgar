@@ -9,7 +9,13 @@ from importgraph import Module, static_import_graph
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "edgar"
 
-V2 = ("edgar.controller", "edgar.learning", "edgar.schedule", "edgar.providers.escalation")
+V2 = (
+    "edgar.controller",
+    "edgar.learning",
+    "edgar.schedule",
+    "edgar.broker",
+    "edgar.providers.escalation",
+)
 
 CORE = ("edgar.core", "edgar.context", "edgar.permissions", "edgar.tools.execute")
 ADAPTERS = (

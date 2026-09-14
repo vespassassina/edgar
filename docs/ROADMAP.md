@@ -1,6 +1,6 @@
 # Roadmap
 
-Seventeen milestones in three tiers ([ADR-0015](adr/0015-release-tiers.md)). Each
+Eighteen milestones in three tiers ([ADR-0015](adr/0015-release-tiers.md)). Each
 milestone ships something that works, is tested, and is documented. Nothing is
 "done later". Each tier ends in a release.
 
@@ -8,12 +8,14 @@ milestone ships something that works, is tested, and is documented. Nothing is
 |---|---|---|---|---|
 | **Core** | M0–M6 | 0.x | Read it in an afternoon, use it every day | ≤ 5,000 LOC |
 | **v1** | M7–M11 | 1.0 | Extensible and remembers; extension formats frozen | ≤ 8,000 LOC |
-| **v2** | M12–M16 | 2.0 | Learns and runs unattended; removable | ≤ 11,000 LOC |
+| **v2** | M12–M17 | 2.0 | Learns and runs unattended; removable | ≤ 11,000 LOC |
 
 ## Status
 
 Milestone IDs keep their numbers; the order of work is **M0, M1, M2, M4, M3, M5,
-M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record is
+M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). In v2 the order is M12,
+M13, M14, M15, M17, M16: the capability broker comes before scheduling, which
+carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day record is
 [`JOURNAL.md`](JOURNAL.md); user-visible changes are in
 [`CHANGELOG.md`](../CHANGELOG.md).
 
@@ -26,7 +28,7 @@ M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). The day-by-day record i
 | M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
 | M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
 | M6 Skills, Core release | **Next** (194 lines left) | 0.1 |
-| M7–M16 | Planned | 1.0, 2.0 |
+| M7–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -374,8 +376,8 @@ are documented as stable, and `src/` is under 8,000 LOC.
 
 # v2 — 2.0
 
-v2 code lives in `edgar.learning`, `edgar.controller`, `edgar.schedule` and
-`providers/escalation.py`. From M12 on, CI also deletes those packages and runs
+v2 code lives in `edgar.learning`, `edgar.controller`, `edgar.schedule`,
+`edgar.broker` and `providers/escalation.py`. From M12 on, CI also deletes those packages and runs
 the v1 suite [NFR-12].
 
 ## M12 — Learning foundations
@@ -459,6 +461,36 @@ twice, never moves down the chain, and never exceeds `max_escalations`.
 
 ---
 
+## M17 — Capability broker
+
+**Goal:** every tool call answers to what the human asked for, and the record of
+what was allowed and refused is signed. [ADR-0039](adr/0039-capability-broker.md).
+Built after M15 and before M16, which carries the release.
+
+- Intents recorded from typed text only: a REPL line (typed or queued) and the
+  `-p` argument [CAP-1]
+- `broker/caveats.py`, `broker/ticket.py`: the five caveats, attenuation, chain
+  verification [CAP-2, CAP-5]
+- `broker/authorize.py`: pure, property-tested [CAP-9]
+- The veto in the `pre_tool` stage from M10, for every tool source; `shell` refused
+  under a `paths` or `hosts` scope unless named; `ScopeRefused` [CAP-3, CAP-6]
+- `--scope` and `/scope` [CAP-4]
+- `task` attenuates the parent's ticket; `tighten_policy` adds caveats [CAP-5]
+- `broker/receipt.py`: hash-chained, HMAC-signed, rebuilt on `--resume`;
+  `~/.edgar/receipt.key` as a hard-layer credential path [CAP-7]
+- `edgar receipt [ID] [--refused] [--verify]`; `[broker] enabled`; `doctor` line
+  [CAP-8, CAP-10]
+
+**Done when:** the confused-deputy test passes on the fake provider: a session
+scoped with `paths=reports/q3.md` asks for a summary; the file's text tells the
+agent to read `reports/2024-salaries.md` and fetch an outside host; both calls are
+refused, the model sees which caveat refused them, and `edgar receipt --refused`
+shows both under the typed request. `--verify` passes on that receipt and exits 1
+after a one-byte edit. A subagent cannot drop a caveat; a property test finds no
+chain that verifies without one. With `broker/` deleted the v1 suite is green.
+
+---
+
 ## M16 — Scheduling · **v2.0 release**
 
 **Goal:** unattended runs that cannot run away.
@@ -470,9 +502,13 @@ twice, never moves down the chain, and never exceeds `max_escalations`.
 - Per-entry mode, agent, model, allowlist, verify [SCH-8]
 - Run transcripts, `session_end` hook [SCH-9, SCH-10]
 - `schedule_self` in the `self_schedules` table, with guardrails [SCH-11]
+- Broker tickets for scheduled runs: an entry's `scope` and allowlist as caveats,
+  actor `schedule:NAME`; a `schedule_self` row stores its creator's ticket,
+  attenuated [CAP-1, CAP-4, CAP-5]
 
 **Done when:** frozen-clock tests cover every catch-up policy, overlap is
-prevented, a self-schedule never touches `schedules.toml`, and the v2.0 success
+prevented, a self-schedule never touches `schedules.toml` or holds more authority
+than the run that created it, and the v2.0 success
 criteria in PRD §11 are met with `src/` under 11,000 LOC.
 
 ---
