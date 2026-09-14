@@ -89,7 +89,19 @@ def test_sections_for_later_milestones_are_kept_not_rejected(tmp_project: Path, 
         '[browser]\ncommand = "npx"\n',
     )
     config = load(tmp_project, home=home, env={})
-    assert set(config.later) == {"route", "model.fallback", "subagents", "browser"}
+    assert set(config.later) == {"route", "model.fallback", "subagents"}
+    assert config.browser.command == "npx"  # read since M8
+
+
+def test_mcp_blocks_merge_across_files_and_are_checked(tmp_project: Path, home: Path) -> None:
+    _write(home / ".edgar" / "config.toml", '[mcp.gh]\ncommand = "gh-mcp"\nargs = ["-v"]\n')
+    _write(tmp_project / ".edgar" / "config.toml", '[mcp.gh]\nenv = { T = "${env:T}" }\n')
+    config = load(tmp_project, home=home, env={})
+    assert config.mcp["gh"].command == "gh-mcp" and config.mcp["gh"].env == {"T": "${env:T}"}
+    assert config.origins["mcp.gh.env"] == str(tmp_project / ".edgar" / "config.toml")
+    _write(tmp_project / ".edgar" / "config.toml", "[mcp.gh]\nargs = 3\n")
+    with pytest.raises(ConfigError, match=r"\[mcp.gh\] args must be a list"):
+        load(tmp_project, home=home, env={})
 
 
 @pytest.mark.parametrize(

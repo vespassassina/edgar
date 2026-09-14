@@ -33,8 +33,8 @@ Carried forward until done. Newest first.
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** The budget test measures v1: 5,802 of 8,000 lines of code,
-  2,198 left for M8 to M11. Core's own files stayed at 5,000.
+- **Size watch.** The budget test measures v1: 6,419 of 8,000 lines of code,
+  1,581 left for M8b to M11. Core's own files stayed at 5,000.
 - **`/skills` and `/tools` in the REPL** still say they arrive in M6, which is done;
   `edgar skills list` and `edgar tools list` exist. Wire them or relabel them.
 - **A moved project loses its facts** (ADR-0045): the scope is a hash of the path.
@@ -46,6 +46,53 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · M8a: MCP servers, deferred schemas and /browser
+
+**Asked**
+- Build M8.
+
+**Done**
+- `tools/mcp/`: the stdio transport (a child process, one JSON-RPC message to the
+  line, `ping` answered and every other server-initiated method refused) and the
+  Streamable HTTP one (JSON or SSE answers, `Mcp-Session-Id`,
+  `MCP-Protocol-Version` after the handshake), protocol `2025-06-18` [TOOL-7].
+- `Server` starts nothing at session start: its tool list comes from a new
+  `mcp_tools` table in `~/.edgar/edgar.db`, keyed by a sha256 of its config block,
+  and the process starts on the first call [TOOL-8]. `close()` stops what started.
+- `mcp__server__tool` naming, collision order builtins → extra → MCP → user →
+  project with a warning [TOOL-9]; results always untrusted, local servers in the
+  `shell` category and remote ones in `network`, and the annotations a server
+  publishes shown by `edgar mcp list` but never read by `decide()` [TOOL-13].
+- `tool_search` [TOOL-15]: when the schemas pass `tools.schema_budget` (4,000 by
+  default) the MCP ones are deferred, `tool_search`'s own description lists them by
+  name and a line, and a search loads the matches' full schemas for the rest of the
+  session. It also starts a server no session has run yet, and remembers its tools.
+- `[mcp.NAME]` config blocks (not the Blueprint's `[[mcp.servers]]`), `${env:NAME}`
+  expanded at spawn time and scrubbed from every result; project servers need
+  `edgar trust` [PERM-13]; `edgar mcp list|test NAME`.
+- `/browser` [CLI-29]: `[browser] tool = "..."` names a tool you already have,
+  `[browser] command = ...` an MCP server started only when you type `/browser`,
+  and with no block it prints the two blocks you could write. It never picks one.
+- Tests: 13 in `tests/integration/test_mcp.py` against a real stdio server
+  (`tests/support/mcp_server.py`) and an httpx `MockTransport` HTTP one, two REPL
+  tests for `/browser`, and an e2e run with five servers configured that starts
+  none of them. 617 lines of code; v1 is at 6,419 of 8,000.
+
+**Decided** (ADR-0047)
+- `[mcp.NAME]` tables, so layered config merges server by server and key by key.
+- A config-hashed tool cache plus `tool_search` resolves TOOL-8 against needing
+  names up front: a session starts no server, ever, and a cold one is started by
+  the search or by `edgar mcp list`.
+- The deferred listing lives in `tool_search`'s description, not in the prompt
+  builder, and a deferred tool is still callable by name.
+- Streamable HTTP only; the deprecated HTTP+SSE transport is not supported.
+
+**Pending**
+- M8b: OAuth 2.1 with PKCE for remote servers and `edgar login PROVIDER` /
+  `edgar logout` (OpenRouter first), tokens in the keyring [ADR-0032, PRV-18].
+  Copilot [PRV-19] stays gated on its terms.
+- 0.1 still waits on the maintainer; `f89e35b` stays the Core-only commit.
 
 ## 2026-09-14 · M7 done: forks, saved sessions and the daily cap
 

@@ -36,6 +36,21 @@ _COMMAND, _HTTP = {"argv"}, {"method", "url", "headers", "body"}
 SECRETS: set[str] = set()  # every value ${env:…} resolved, for scrub()
 
 
+def expand(text: str) -> str:
+    """`${env:NAME}` read from the environment, for an HTTP tool's headers and an MCP
+    server's env and headers. Every value it resolves is remembered for scrub()."""
+
+    def value(match: re.Match[str]) -> str:
+        found = os.environ.get(match[1])
+        if found is None:
+            raise KeyError(f"environment variable {match[1]} is not set")
+        if len(found) >= 4:
+            SECRETS.add(found)
+        return found
+
+    return _ENV.sub(value, text)
+
+
 def scrub(text: str) -> str:
     for secret in sorted(SECRETS, key=len, reverse=True):
         text = text.replace(secret, "[redacted]")
@@ -146,17 +161,6 @@ class HttpTool:
     def subject(self, args: dict[str, Any], cwd: Path) -> Subject:
         return Subject(_fill(self.url, args, encode=True))  # ${env:…} left unresolved
 
-    def _env(self, text: str) -> str:
-        def value(match: re.Match[str]) -> str:
-            found = os.environ.get(match[1])
-            if found is None:
-                raise KeyError(match[1])
-            if len(found) >= 4:
-                SECRETS.add(found)
-            return found
-
-        return _ENV.sub(value, text)
-
     def _body(self, node: Any, args: dict[str, Any]) -> Any:
         if isinstance(node, str):
             whole = _SLOT.fullmatch(node)
@@ -171,11 +175,11 @@ class HttpTool:
         import httpx  # only runs that call an HTTP tool pay for it (NFR-1)
 
         try:
-            url = _fill(self._env(self.url), args, encode=True)  # env first: args never reach it
-            headers = {k: self._env(v) for k, v in self.headers.items()}
+            url = _fill(expand(self.url), args, encode=True)  # env first: args never reach it
+            headers = {k: expand(v) for k, v in self.headers.items()}
         except KeyError as missing:
             return ToolResult(f"environment variable {missing} is not set", "validation")
-        if urlsplit(url).netloc != urlsplit(self._env(self.url)).netloc:
+        if urlsplit(url).netloc != urlsplit(expand(self.url)).netloc:
             return ToolResult("an argument tried to change the host", "validation")
         body = self._body(self.body, args) if self.body is not None else None
         try:

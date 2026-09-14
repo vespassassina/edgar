@@ -103,6 +103,23 @@ Core is being built, 0.1 at the Core release (M6).
 - `[budget] daily_cost_cap`: the day's spend across every project; a turn gets
   what is left of it as its cap, and once it is spent turns stop with exit 6.
   `edgar cost` shows today and the last seven days; `/cost` adds today's total.
+- MCP servers (v1, M8): `[mcp.NAME]` blocks in config, over stdio (`command`) or
+  Streamable HTTP (`url`). Nothing starts when a session starts: edgar remembers
+  what each server offered last time and starts the server on the first call, so
+  five configured servers cost a session nothing. Their tools are named
+  `mcp__server__tool`, their results are untrusted (they tighten what the rest of
+  the session may do), and what a server claims about its own tools is shown to
+  you, never used to decide. `${env:NAME}` in `env`, `url` and `headers` is read
+  when the server starts and redacted from everything it sends back.
+- `tool_search`: when the tool schemas would cost more than `[tools]
+  schema_budget` (4,000 tokens), the MCP ones are listed by name and one line and
+  their full schemas are loaded on demand, for the rest of the session.
+- `edgar mcp list` shows every configured server and its tools, with the hints the
+  server publishes; `edgar mcp test NAME` starts one server and reports what it
+  answered. A project's `[mcp.NAME]` needs `edgar trust` first.
+- `/browser`: with `[browser] tool = "..."` it checks the tool you already have,
+  with `[browser] command = ...` it starts that MCP server for this session, and
+  with neither it prints the block you could write. It never picks a browser.
 
 ### Changed
 - `edgar sessions rm` refuses a session that has forks, since they read its file.

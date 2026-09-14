@@ -1,7 +1,8 @@
 """The subcommands that look at a project rather than run a turn: `edgar trust`
 and `edgar permissions list|revoke`, what a human decided, shown and changed by a
 human [PERM-6, PERM-13, CLI-19]; `edgar sessions list|show|rm` [CLI-11]; `edgar
-cost`, the spend of the last seven days [BUD-6]."""
+cost`, the spend of the last seven days [BUD-6]; `edgar mcp list|test NAME`, which
+starts the MCP servers a session would use and prints what each offers [TOOL-7]."""
 
 # `edgar tools list|describe` and `edgar skills list|validate` show what a session
 # here would get [SKL-7].
@@ -26,16 +27,21 @@ from edgar.context.tokens import message_text
 from edgar.core.errors import UsageError
 from edgar.storage.db import Store
 from edgar.storage.transcript import conversation, find, forks, listing
+from edgar.tools.mcp.client import FAILURES, Server, close
+from edgar.tools.mcp.schema import hints
 
 USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID
-       edgar tools list | describe NAME | edgar skills list | validate | edgar cost"""
+       edgar tools list | describe NAME | edgar skills list | validate | edgar cost
+       edgar mcp list | test NAME"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
     home = home or Path.home()
     if argv == ["cost"]:
         return _cost(cwd, home)
+    if argv[0] == "mcp" and len(argv) in (2, 3):
+        return _mcp(argv, cwd, home)
     if argv[0] == "sessions" and len(argv) in (2, 3):
         return _sessions(argv[1:], cwd)
     if argv[0] in ("tools", "skills") and len(argv) in (2, 3):
@@ -101,10 +107,53 @@ def _cost(cwd: Path, home: Path) -> int:
     return 0
 
 
+def _mcp(argv: list[str], cwd: Path, home: Path) -> int:
+    # The one place that starts every configured server: `list` to see what a
+    # session would get, `test NAME` to try one. Each answer is cached, so the
+    # next session knows the tools without starting anything [TOOL-8].
+    import asyncio
+
+    config = load(cwd, home=home)
+    trusted = trust.trusted(cwd, config, home)
+    _, _, found = toolset(cwd, home, config, project_exec=trusted)
+    if argv[1] == "test" and len(argv) == 3:
+        found = [s for s in found if s.name == argv[2]]
+        if not found:
+            raise UsageError(f"no MCP server {argv[2]!r}", hint="edgar mcp list shows them")
+    elif argv[1:] != ["list"]:
+        print(USAGE, file=sys.stderr)
+        return 2
+    if not found:
+        print("no MCP servers; add one as [mcp.NAME] in .edgar/config.toml")
+        return 0
+    return asyncio.run(_ask(found))
+
+
+async def _ask(found: list[Server]) -> int:
+    failed = 0
+    for server in found:
+        kind = "stdio" if server.local else "http"
+        try:
+            tools = await server.discover()
+        except FAILURES as exc:
+            print(f"{server.name}  {kind}  {server.where}  failed: {exc}", file=sys.stderr)
+            failed += 1
+            continue
+        print(f"{server.name}  {kind}  {server.where}  {len(tools)} tools")
+        for tool in tools:
+            # What the server claims about a tool is shown, never used [TOOL-13].
+            said = hints(tool.raw)
+            first = tool.schema.description.splitlines()[:1]
+            print(f"  {tool.schema.name:<44} {first[0][:60] if first else ''} {said}".rstrip())
+    await close(found)
+    return 1 if failed else 0
+
+
 def _tools(argv: list[str], cwd: Path, home: Path) -> int:
     # What a session here would get: project tools only once the project is trusted.
     config = load(cwd, home=home)
-    tools, found = toolset(cwd, home, config, project_exec=trust.trusted(cwd, config, home))
+    trusted = trust.trusted(cwd, config, home)
+    tools, found, _ = toolset(cwd, home, config, project_exec=trusted)
     for line in [*tools.warnings, *found.warnings, *found.problems]:
         print(f"warning: {line}", file=sys.stderr)
     if argv[1:] == ["list"] and argv[0] == "tools":

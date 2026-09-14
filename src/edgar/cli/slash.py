@@ -41,9 +41,9 @@ Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
 LATER = {
-    "M8": "/browser",
-    "M6": "/skills /tools",
-    "v1": "/plan /go /agents /init",
+    "M9": "/agents",
+    "M10": "/skills /tools",
+    "v1": "/plan /go /init",
 }
 
 
@@ -77,6 +77,48 @@ async def _help(shell: Shell, arg: str) -> None:
     rows = [f"  {' '.join(names):<18} {text}" for text, names in seen.items()]
     later = [f"  {names}  ({milestone})" for milestone, names in LATER.items()]
     shell.say("\n".join(["commands:", *rows, "coming:", *later]))
+
+
+BROWSER = """/browser needs a [browser] block in .edgar/config.toml. Either name a
+command tool you already have:
+
+  [browser]
+  tool = "browse"
+
+or the MCP server that drives one, which edgar starts only when you type /browser:
+
+  [browser]
+  command = "npx"
+  args = ["@playwright/mcp@X.Y.Z"]   # pin the version you reviewed"""
+
+
+@command("/browser", "connect the browser [browser] names [CLI-29]")
+async def _browser(shell: Shell, arg: str) -> None:
+    # A browser is an ordinary tool or an ordinary MCP server; /browser only starts
+    # what the config already names, and never picks one for you [ADR-0036, PRV-15].
+    from edgar.tools.builtin.tool_search import searchable
+    from edgar.tools.mcp.client import FAILURES
+
+    tools, named = shell.rt.tools, shell.config.browser.tool
+    if named:
+        ready = tools.get(named) is not None
+        shell.say(f"/browser: the {named} tool is ready" if ready else f"no tool named {named!r}")
+        return
+    server = shell.setup.browser
+    if server is None:
+        shell.say(BROWSER)
+        return
+    try:
+        found = await server.discover()
+    except FAILURES as exc:
+        shell.say(f"the browser did not start: {exc}")
+        return
+    shell.setup.servers.append(server)  # so it stops when the session does
+    tools.add(found)
+    searchable(tools, [])
+    waiting = [t.schema.name for t in found if t.schema.name in tools.deferred]
+    how = " · tool_search loads them" if waiting else ""
+    shell.say(f"browser connected: {len(found)} tools{how}")
 
 
 @command("/status", "session, model, mode, context, cost, queue")

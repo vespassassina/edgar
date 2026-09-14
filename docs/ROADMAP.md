@@ -32,7 +32,8 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
 | M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)); release pending | 0.1 |
 | M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 1.0 |
-| M8–M17 | Planned | 1.0, 2.0 |
+| M8 MCP | In progress: MCP built ([ADR-0047](adr/0047-mcp-as-built.md)); OAuth and `edgar login` open | 1.0 |
+| M9–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -293,13 +294,13 @@ prompt nor `recall`; edit and undo are in `tests/unit/test_memory.py`. v1 is at
 
 **Goal:** the ecosystem, lazily.
 
-- `tools/mcp/` — stdio and Streamable HTTP, discovery, lazy spawn [TOOL-7, TOOL-8]
-- Namespacing `mcp__server__tool`, collision order [TOOL-9]
-- MCP results untrusted, annotations ignored by `decide()` [TOOL-13]
-- Deferred tool schemas and `tool_search` [TOOL-15]
-- Project MCP servers require trust [PERM-13]
-- `edgar mcp list|test`
-- `/browser`: the `[browser]` preset, a command tool or an MCP server spawned on
+- ✅ `tools/mcp/` — stdio and Streamable HTTP, discovery, lazy spawn [TOOL-7, TOOL-8]
+- ✅ Namespacing `mcp__server__tool`, collision order [TOOL-9]
+- ✅ MCP results untrusted, annotations ignored by `decide()` [TOOL-13]
+- ✅ Deferred tool schemas and `tool_search` [TOOL-15]
+- ✅ Project MCP servers require trust [PERM-13]
+- ✅ `edgar mcp list|test`
+- ✅ `/browser`: the `[browser]` preset, a command tool or an MCP server spawned on
   demand [CLI-29, ADR-0029, ADR-0036]
 - OAuth for remote servers: OAuth 2.1 with PKCE, tokens in the keyring [TOOL-7,
   ADR-0032], moved from v2
@@ -314,6 +315,10 @@ prompt nor `recall`; edit and undo are in `tests/unit/test_memory.py`. v1 is at
 **Done when:** a stdio server and a Streamable HTTP server both work, startup time
 is unchanged with five servers configured, an MCP result taints the session, and
 forty configured MCP tools cost no more than the schema budget per request.
+
+*2026-09-14: all four hold ([ADR-0047](adr/0047-mcp-as-built.md)); the OAuth and
+`edgar login` items above are what is left of M8. v1 is at 6,419 of 8,000 lines
+of code.*
 
 ---
 

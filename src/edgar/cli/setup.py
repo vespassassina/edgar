@@ -5,7 +5,8 @@ a session."""
 # A session's life, as the REPL and -p both run it:
 #
 #   prepare   the working directory and layered config; yolo only with a human's say-so
-#   setup     once per session: the permission guard, skills and tools, the verify
+#   setup     once per session: the permission guard, skills, tools and the MCP
+#             servers (configured, none started), the verify
 #             check, the prompt's prefix (personality, instruction files, pinned
 #             facts, skill index) and startup warnings
 #   runtime   the provider for the chosen model, and the Runtime the loop runs on;
@@ -22,8 +23,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from edgar.cli.trust import from_project
 from edgar.config.load import load, project_config
-from edgar.config.schema import Config
+from edgar.config.schema import Config, McpSection
 from edgar.context.builder import PERSONALITY_WARN, Section, notes, pinned, skill_index, system_text
 from edgar.context.prompts import choose_profile, load_prompt, profile_prompt
 from edgar.context.tokens import approx_tokens
@@ -46,6 +48,8 @@ from edgar.tools.base import Tool
 from edgar.tools.builtin.memory_tools import Recall, Remember
 from edgar.tools.builtin.shell import Shell
 from edgar.tools.builtin.skill import SkillTool
+from edgar.tools.builtin.tool_search import searchable
+from edgar.tools.mcp.client import Server, servers
 from edgar.tools.registry import ToolRegistry, registry_for
 
 
@@ -101,6 +105,8 @@ class Setup:
     warnings: list[str]
     memory: Memory
     scope: str  # the project's memory scope
+    servers: list[Server]  # the MCP servers this session may use; none is running [TOOL-8]
+    browser: Server | None  # what /browser would start, if [browser] names a server
 
 
 def setup(
@@ -126,7 +132,7 @@ def setup(
         control=control_files(root, home, config.instructions.files),
     )
     guard = Guard(base, asker=asker, store=Store(root / ".edgar" / "edgar.db"))
-    tools, found = toolset(root, home, config, project_exec=project_exec)
+    tools, found, servers_here = toolset(root, home, config, project_exec=project_exec)
     skills = list(found.skills.values())
     from_project = config.origins.get("verify.command") == str(project_config(root))
     command = verify or (config.verify.command if project_exec or not from_project else None)
@@ -147,9 +153,33 @@ def setup(
         listed = ", ".join(changed)
         warnings.append(f"control files changed during session {last}: {listed}; review them")
     control = snapshot(root, home, files)
+    browser = _browser_server(root, home, config, project_exec=project_exec)
     return Setup(
-        root, config, home, env, tools, guard, check, sections, control, warnings, memory, scope
+        root,
+        config,
+        home,
+        env,
+        tools,
+        guard,
+        check,
+        sections,
+        control,
+        warnings,
+        memory,
+        scope,
+        servers_here,
+        browser,
     )
+
+
+def _browser_server(root: Path, home: Path, config: Config, *, project_exec: bool) -> Server | None:
+    # `[browser] command` is an MCP server that starts only when /browser asks
+    # [CLI-29, ADR-0036]; from an untrusted project it does not start at all.
+    b = config.browser
+    if b.command is None or (not project_exec and from_project(config, root, "browser.")):
+        return None
+    block = McpSection(command=b.command, args=b.args)
+    return servers({"browser": block}, root, home)[0]
 
 
 def open_memory(home: Path, config: Config) -> Memory:
@@ -158,17 +188,36 @@ def open_memory(home: Path, config: Config) -> Memory:
 
 def toolset(
     root: Path, home: Path, config: Config, *, project_exec: bool
-) -> tuple[ToolRegistry, Found]:
-    # The session's tools, and the skills found. Skills are instructions, not code,
-    # so they need no trust; the `skill` tool exists only when there is one to load.
-    # Memory's two tools read and propose in this project's scope and the global one.
+) -> tuple[ToolRegistry, Found, list[Server]]:
+    # The session's tools, the skills found and the MCP servers configured. Skills
+    # are instructions, not code, so they need no trust; the `skill` tool exists only
+    # when there is one to load. Memory's two tools read and propose in this
+    # project's scope and the global one.
     found = discover(root, home)
     memory, scope = open_memory(home, config), project_scope(root)
     search = retriever(config.memory.retriever, memory, root)
     extra: list[Tool] = [Remember(memory, scope), Recall(search, [scope, "global"])]
     extra += [SkillTool(found.skills)] if found.skills else []
-    shell = config.shell.program
-    return registry_for(root, home, shell=shell, project_exec=project_exec, extra=extra), found
+    # A project's servers run only once the project is trusted [PERM-13]; none of
+    # them is started here, so five configured servers cost a cache read [TOOL-8].
+    blocks = {
+        name: block
+        for name, block in config.mcp.items()
+        if project_exec or not from_project(config, root, f"mcp.{name}.")
+    }
+    here = servers(blocks, root, home)
+    cached = [tool for server in here for tool in server.tools() or []]
+    registry = registry_for(
+        root,
+        home,
+        shell=config.shell.program,
+        project_exec=project_exec,
+        extra=extra,
+        mcp=cached,
+        budget=config.tools.schema_budget,
+    )
+    searchable(registry, [s for s in here if s.tools() is None])
+    return registry, found, here
 
 
 async def authorise_verify(rt: Runtime, session: Session) -> None:

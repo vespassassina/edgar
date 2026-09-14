@@ -58,6 +58,7 @@ that did not need an ADR.
 | [0044](0044-keyless-cloud-sign-in.md) | Sign in to Azure, Google Cloud and AWS through the cloud's own CLI | Accepted · adds PRV-20 (Core), amends CFG-6 |
 | [0045](0045-memory-as-built.md) | Memory as built: one database, facts that never change, a gate at the end of the turn | Accepted · extends MEM-15 to facts |
 | [0046](0046-forks-saves-and-the-daily-cap.md) | Forks, saved sessions and the daily cap as built: a fork is one line, a save travels redacted, the cap becomes the turn's | Accepted · completes M7 |
+| [0047](0047-mcp-as-built.md) | MCP as built: `[mcp.NAME]` blocks, a config-hashed tool cache so no server starts at session start, deferred schemas listed in `tool_search`, results always untrusted | Accepted · first half of M8 |
 
 ## Writing a new ADR
 

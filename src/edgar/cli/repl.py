@@ -32,6 +32,7 @@ from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Answer
 from edgar.providers.routing import Selection
+from edgar.tools.mcp.client import close
 
 Ask = Callable[[str], Awaitable[str]]
 
@@ -201,6 +202,7 @@ class Shell:
         for task in running:
             task.cancel()
         await asyncio.gather(*running, return_exceptions=True)
+        await close(self.setup.servers)  # the MCP servers this session started
         finish(self.setup, self.session)
 
 

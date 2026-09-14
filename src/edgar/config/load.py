@@ -105,7 +105,7 @@ def _block(section: str, name: str, fields: dict[str, Any], origins: dict[str, s
     missing = [
         f.name
         for f in dataclasses.fields(cls)
-        if f.default is dataclasses.MISSING and f.name not in fields
+        if f.default is f.default_factory is dataclasses.MISSING and f.name not in fields
     ]
     if missing:
         where = origins[f"{section}.{name}.{next(iter(fields))}"]

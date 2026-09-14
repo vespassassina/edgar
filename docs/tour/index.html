@@ -134,7 +134,7 @@
   <p class="ak-eyebrow toc-part"><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></p>
   <ol class="ak-nav">
     <li class="planned"><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
-    <li class="planned"><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
+    <li><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
     <li class="planned"><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
     <li class="planned"><a href="#s23"><span class="n">23</span>Extensions, hooks (M10)</a></li>
     <li class="planned"><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
@@ -200,14 +200,14 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
   <thead><tr><th>Package</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
   <tbody>
     <tr data-package="core"><td><code>core/</code></td><td class="loc">~700</td><td>The turn loop and the types everything else speaks in</td></tr>
-    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~770</td><td>What the model can do, and the pipeline every call goes through</td></tr>
+    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,200</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,100</td><td>Five vendors, two adapters, a table of differences</td></tr>
     <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~60</td><td>Finding skills, and reading only their frontmatter</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~200</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,550</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,750</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
   </tbody>
 </table>
@@ -587,12 +587,26 @@ flowchart LR
   finds <code>config/lo</code> inside a path.</p>
 </article>
 
-<article class="stop planned" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py">
+<article class="stop" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py src/edgar/tools/builtin/tool_search.py">
   <h4><span class="n">21</span>MCP</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M8 · planned</span> <code>tools/mcp/client.py</code> <code>tools/mcp/schema.py</code></p>
-  <p>MCP tools are one more tool source: they go through the same
-  <code>execute()</code> as the built-ins (stop 6). Their results are untrusted, and
-  <code>decide()</code> ignores whatever a server says about its own tools. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m8--mcp">Roadmap: M8</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/client.py"><code>tools/mcp/client.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/schema.py"><code>tools/mcp/schema.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/tool_search.py"><code>tools/builtin/tool_search.py</code></a></p>
+  <p class="look">Look for: <code>Server</code> <code>discover</code> <code>McpTool</code> <code>to_schema</code> <code>ToolSearch</code></p>
+  <p>An MCP server is one more tool source: its tools go through the same
+  <code>execute()</code> as the built-ins (stop 6), and nothing outside
+  <code>tools/mcp/</code> knows the protocol exists. Two things are worth reading
+  for. The first is that a session starts no server at all: <code>Server.tools</code>
+  <code>tools</code> reads what the server listed last time from a cache in <code>~/.edgar/edgar.db</code>,
+  keyed by a hash of its config block, and the process starts on the first call.
+  A server no session has run yet has nothing cached, so <code>tool_search</code>
+  names it and starts it when the model looks for something. The second is in
+  <code>to_schema</code>: a server's tool is always <code>untrusted_output</code>,
+  its category is <code>shell</code> when it is a local program and
+  <code>network</code> when it is a URL, and whatever the server claims about its
+  own tools (<code>readOnlyHint</code> and friends) is shown to you by
+  <code>edgar mcp list</code> and never read by <code>decide()</code>. When forty
+  tool schemas cost more than the conversation, the MCP ones are deferred:
+  <code>tool_search</code>'s own description lists them by name and a line, and a
+  search loads the full schemas of what matches.</p>
 </article>
 
 <article class="stop planned" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/providers/fallback.py">

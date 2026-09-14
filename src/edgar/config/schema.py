@@ -85,6 +85,30 @@ class MemorySection:
 
 
 @dataclass(frozen=True, slots=True)
+class BrowserSection:
+    """What `/browser` connects [CLI-29, ADR-0036]: a command tool by name, or an MCP
+    server started only when `/browser` asks for it. Neither is ever chosen for you."""
+
+    tool: str | None = None
+    command: str | None = None
+    args: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class McpSection:
+    """One `[mcp.NAME]` block [TOOL-7]: `command` starts a stdio server, `url` names
+    a Streamable HTTP one. `${env:NAME}` in `env` and `headers` is read from the
+    environment when the server starts, so a secret never sits in the file."""
+
+    command: str | None = None
+    args: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
+    url: str | None = None
+    headers: dict[str, str] = field(default_factory=dict)
+    timeout_s: float = 60.0
+
+
+@dataclass(frozen=True, slots=True)
 class ProviderSection:
     """One `[providers.NAME]` block [PRV-12]. A key left unset keeps the provider's
     own value from `providers/quirks.py`; a new NAME needs `kind` and `base_url`."""
@@ -127,11 +151,12 @@ SECTIONS: dict[str, type] = {
     "instructions": InstructionsSection,
     "shell": ShellSection,
     "memory": MemorySection,
+    "browser": BrowserSection,
 }
 
-# Sections made of named blocks, `[providers.NAME]` and `[pricing."a/b"]`, each block
-# validated against its dataclass.
-TABLES: dict[str, type] = {"providers": ProviderSection, "pricing": PriceSection}
+# Sections made of named blocks, `[providers.NAME]`, `[pricing."a/b"]` and
+# `[mcp.NAME]`, each block validated against its dataclass.
+TABLES: dict[str, type] = {"providers": ProviderSection, "pricing": PriceSection, "mcp": McpSection}
 
 # Accepted now and validated by the milestone that first reads them, so a config
 # written against the full spec loads today. Listed, not guessed: anything else
@@ -144,8 +169,6 @@ LATER = frozenset(
         "subagents",  # v1
         "extensions",  # v1
         "hooks",  # v1
-        "mcp",  # v1
-        "browser",  # v1, the /browser MCP preset
         "controller",  # v2
         "history",  # v2
     }
@@ -164,8 +187,10 @@ class Config:
     instructions: InstructionsSection = field(default_factory=InstructionsSection)
     shell: ShellSection = field(default_factory=ShellSection)
     memory: MemorySection = field(default_factory=MemorySection)
+    browser: BrowserSection = field(default_factory=BrowserSection)
     providers: dict[str, ProviderSection] = field(default_factory=dict)
     pricing: dict[str, PriceSection] = field(default_factory=dict)
+    mcp: dict[str, McpSection] = field(default_factory=dict)
     # Where each value came from: "default", a file path, "env EDGAR_…" or "flag --…"
     # [CFG-2].
     origins: dict[str, str] = field(default_factory=dict)

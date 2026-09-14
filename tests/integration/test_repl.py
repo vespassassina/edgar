@@ -8,6 +8,7 @@ at the end.
 from __future__ import annotations
 
 import asyncio
+import sys
 from collections.abc import Callable, Coroutine, Sequence
 from dataclasses import replace
 from pathlib import Path
@@ -22,7 +23,7 @@ from edgar.cli.render import Printer, Renderer
 from edgar.cli.repl import Shell
 from edgar.cli.setup import setup
 from edgar.cli.statusbar import Status
-from edgar.config.schema import Config, ModelSection
+from edgar.config.schema import BrowserSection, Config, ModelSection
 from edgar.core.events import (
     AsideFinished,
     EventBus,
@@ -40,7 +41,13 @@ from edgar.storage.transcript import find, replay, start
 
 
 class Rig:
-    def __init__(self, root: Path, steps: Sequence[ScriptedResponse] | None, answers: list[str]):
+    def __init__(
+        self,
+        root: Path,
+        steps: Sequence[ScriptedResponse] | None,
+        answers: list[str],
+        config: Config | None = None,
+    ):
         self.out: list[str] = []
         self.recorder = Recorder()
         self.provider = ScriptedProvider(steps)
@@ -57,7 +64,7 @@ class Rig:
             self.out.append(question)
             return self.answers.pop(0)
 
-        config = Config(model=ModelSection(default="fake/test"))
+        config = config or Config(model=ModelSection(default="fake/test"))
 
         async def permission(tool: str, subject: str, reason: str) -> Answer:
             return await self.shell.permission(tool, subject, reason)
@@ -95,8 +102,9 @@ def play(
     scenario: Scenario,
     steps: Sequence[ScriptedResponse] | None = None,
     answers: list[str] | None = None,
+    config: Config | None = None,
 ) -> Rig:
-    rig = Rig(root, steps, answers or [])
+    rig = Rig(root, steps, answers or [], config)
     asyncio.run(scenario(rig))
     return rig
 
@@ -422,3 +430,30 @@ def test_the_terminal_wiring(
     text = "".join(out)
     assert "edgar " in text and "hello" in text and "world" in text
     assert (home / ".edgar" / "history").read_text(encoding="utf-8").count("read a.txt") == 1
+
+
+def test_browser_starts_the_server_the_config_names_and_not_before(tmp_project: Path) -> None:
+    # [CLI-29, ADR-0036]: the browser is an MCP server like any other, started when
+    # the human asks for it and never chosen for them.
+    fake = Path(__file__).parents[1] / "support" / "mcp_server.py"
+    named = Config(
+        model=ModelSection(default="fake/test"),
+        browser=BrowserSection(command=sys.executable, args=[str(fake)]),
+    )
+
+    async def scenario(r: Rig) -> None:
+        server = r.shell.setup.browser
+        assert server is not None and server.transport is None  # nothing started yet
+        await r.type("/browser")
+        await r.shell.close()
+
+    r = play(tmp_project, scenario, config=named)
+    assert "browser connected: 3 tools" in r.text
+    assert r.shell.rt.tools.get("mcp__browser__echo") is not None
+
+
+def test_browser_with_no_block_says_what_to_write(tmp_project: Path) -> None:
+    async def scenario(r: Rig) -> None:
+        await r.type("/browser")
+
+    assert "[browser]" in play(tmp_project, scenario).text

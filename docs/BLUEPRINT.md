@@ -1107,6 +1107,15 @@ environment, or OAuth 2.1 with PKCE with tokens in the keyring
 results are untrusted, and server annotations such as `readOnlyHint` are displayed
 but never used in `decide()`.
 
+A session starts **no server at all** ([ADR-0047](adr/0047-mcp-as-built.md)). Each
+server's tool list is cached in `~/.edgar/edgar.db` under a hash of its config
+block, the session builds its tools from that cache, and the process starts on the
+first call. A server with nothing cached (new, or its block changed) is named by
+`tool_search`, which starts it when the model looks for something; `edgar mcp
+list` starts every one of them and refreshes the cache. A local server's tools are
+in the `shell` category and a remote server's in `network`. A project `[mcp.NAME]`
+needs `edgar trust` [PERM-13].
+
 ### 6.6 Skills
 
 `skills/discovery.py` and `tools/builtin/skill.py`, [SKL-1..5]. Discovery reads
@@ -1879,10 +1888,15 @@ event = "post_tool"
 match = { tool = "edit" }
 command = ["ruff", "format", "--quiet"]
 
-[[mcp.servers]]                       # (v1)
-name = "filesystem"
+[mcp.filesystem]                      # (v1) one table per server, merged key by key
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-filesystem", "."]
+# env = { TOKEN = "${env:MY_TOKEN}" } # read at spawn time, never stored, scrubbed
+
+[mcp.docs]                            # (v1) a remote server: url instead of command
+url = "https://mcp.example.com/mcp"
+headers = { Authorization = "Bearer ${env:DOCS_TOKEN}" }
+timeout_s = 60.0
 
 [controller]                          # (v2)
 enabled = true

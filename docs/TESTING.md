@@ -28,7 +28,8 @@ tests/
 │                            harness.py (Recorder, runtime(), scripted(), run_turn_sync()),
 │                            wire.py (streams in each provider's format), cassettes.py
 │                            (replay, record, scrub), fixture_server.py (a real
-│                            OpenAI-compatible server on loopback), rig.py (the `rig` fixture)
+│                            OpenAI-compatible server on loopback), rig.py (the `rig` fixture),
+│                            mcp_server.py (a real MCP server over stdio, for the MCP tests)
 └── fixtures/
     ├── projects/            sample .edgar/ trees
     ├── skills/

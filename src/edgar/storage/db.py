@@ -1,5 +1,5 @@
-"""SQLite for what edgar remembers between sessions: grants, trust and spend
-[PERM-6, PERM-13, BUD-2].
+"""SQLite for what edgar remembers between sessions: grants, trust, spend and each
+MCP server's tool list [PERM-6, PERM-13, BUD-2, TOOL-8].
 
 Grants live in the project's `.edgar/edgar.db`; trust and each day's spend, which
 belong to the user across projects, in `~/.edgar/edgar.db`; never in a config file.
@@ -10,6 +10,7 @@ to store.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
 from datetime import date, timedelta
@@ -23,6 +24,8 @@ CREATE TABLE IF NOT EXISTS grants (
 CREATE TABLE IF NOT EXISTS trust (
     project TEXT PRIMARY KEY, digest TEXT NOT NULL, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS spend (day TEXT NOT NULL, cost REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS mcp_tools (
+    digest TEXT PRIMARY KEY, tools TEXT NOT NULL, created REAL NOT NULL);
 """
 
 
@@ -87,3 +90,14 @@ class Store:
         since = (date.today() - timedelta(days=days - 1)).isoformat()
         sql = "SELECT day, SUM(cost) FROM spend WHERE day >= ? GROUP BY day ORDER BY day DESC"
         return [(str(day), float(cost)) for day, cost in self._rows(sql, since)]
+
+    def listed(self, digest: str) -> list[dict[str, Any]] | None:
+        """The tools an MCP server listed the last time it ran, or None [TOOL-8].
+        The key is a hash of its config block, so a changed block starts again."""
+        rows = self._rows("SELECT tools FROM mcp_tools WHERE digest = ?", digest)
+        return list(json.loads(rows[0][0])) if rows else None
+
+    def remember(self, digest: str, tools: list[dict[str, Any]]) -> None:
+        listed = json.dumps(tools, ensure_ascii=False)
+        sql = "INSERT OR REPLACE INTO mcp_tools VALUES (?, ?, ?)"
+        self._write(sql, digest, listed, time.time())

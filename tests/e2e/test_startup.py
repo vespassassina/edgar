@@ -36,6 +36,28 @@ def test_trivial_run_starts_fast(
     assert time.perf_counter() - start < 0.5  # generous on shared CI; the import test holds
 
 
+def test_five_mcp_servers_cost_a_run_nothing(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path, tmp_path: Path
+) -> None:
+    # Five servers configured, none started: a session that calls no MCP tool pays
+    # the same as one with no servers at all [TOOL-8].
+    fake = Path(__file__).parents[1] / "support" / "mcp_server.py"
+    marks = tmp_path / "marks"
+    blocks = [
+        f'[mcp.s{n}]\ncommand = "{sys.executable}"\nargs = ["{fake.as_posix()}"]\n'
+        f'env = {{ EDGAR_TEST_MARK = "{(marks / f"s{n}.txt").as_posix()}" }}\n'
+        for n in range(5)
+    ]
+    config = Path(subprocess_env["HOME"]) / ".edgar" / "config.toml"
+    config.parent.mkdir(parents=True, exist_ok=True)
+    config.write_text("\n".join(blocks), encoding="utf-8")
+    marks.mkdir()
+    argv = [*edgar_argv, "-p", "hi", "--mode", "read-only", "--model", "fake/test"]
+    out = subprocess.run(argv, capture_output=True, text=True, env=subprocess_env, cwd=tmp_project)
+    assert out.returncode == 0, out.stderr
+    assert list(marks.iterdir()) == []  # not one of them was started
+
+
 def test_cli_run_without_tools_stays_off_heavy_imports(
     subprocess_env: dict[str, str], tmp_project: Path
 ) -> None:

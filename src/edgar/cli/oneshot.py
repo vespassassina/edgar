@@ -32,6 +32,7 @@ from edgar.core.events import (
 )
 from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.session import Session
+from edgar.tools.mcp.client import Server, close
 
 Output = Literal["text", "json", "events"]
 
@@ -87,7 +88,7 @@ def run_prompt(
         bus.subscribe(session.log.event)  # the audit trail and the turn's cost [PERM-10]
     try:
         result = asyncio.run(
-            _run(session, prompt, daily(s, rt), [attached] if attached else [], status)
+            _run(session, prompt, daily(s, rt), [attached] if attached else [], status, s.servers)
         )
     finally:
         finish(s, session)
@@ -125,7 +126,12 @@ def run_prompt(
 
 
 async def _run(
-    session: Session, prompt: str, rt: Runtime, attached: list[str], status: Status | None
+    session: Session,
+    prompt: str,
+    rt: Runtime,
+    attached: list[str],
+    status: Status | None,
+    servers: list[Server],
 ) -> TurnResult:
     line = StderrLine(status) if status else None
     ticker = asyncio.create_task(line.run()) if line else None
@@ -133,6 +139,7 @@ async def _run(
         await authorise_verify(rt, session)
         return await run_turn(session, prompt, rt, attached=attached)
     finally:
+        await close(servers)  # a server the turn started stops with it [TOOL-8]
         if ticker and line:
             ticker.cancel()
             line.clear()
