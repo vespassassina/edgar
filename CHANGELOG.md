@@ -120,6 +120,16 @@ Core is being built, 0.1 at the Core release (M6).
 - `/browser`: with `[browser] tool = "..."` it checks the tool you already have,
   with `[browser] command = ...` it starts that MCP server for this session, and
   with neither it prints the block you could write. It never picks a browser.
+- Signing in (M8): `edgar login openrouter` opens your browser, and the key the
+  provider issues is yours, kept in your OS keyring with the optional extra
+  (`pip install 'edgar-harness[keyring]'`) or printed once and stored nowhere.
+  `edgar logout PROVIDER` forgets it here; revoke it where it was issued.
+  `edgar models list` says which providers are signed in.
+- `edgar mcp login NAME` signs in to a remote MCP server: OAuth 2.1 with PKCE, a
+  redirect caught on a loopback port, the client registered on the spot, and a
+  token scoped to that server. A turn never opens a browser by itself; a call to a
+  server with no token fails with the command to run. `edgar mcp logout NAME`
+  forgets it. Tokens are redacted from everything edgar prints or records.
 
 ### Changed
 - `edgar sessions rm` refuses a session that has forks, since they read its file.

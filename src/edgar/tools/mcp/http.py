@@ -27,7 +27,13 @@ class Http:
     async def open(self) -> None:
         import httpx  # only a session that uses a remote server pays for it (NFR-1)
 
+        from edgar.auth.mcp import token  # a token from `edgar mcp login`, if there is one
+
         self.client = httpx.AsyncClient(timeout=self.timeout_s)
+        if "Authorization" not in self.headers:
+            held = await token(self.url)
+            if held:
+                self.headers["Authorization"] = f"Bearer {held}"
 
     async def request(self, message: dict[str, Any]) -> dict[str, Any] | None:
         if self.client is None:
@@ -39,6 +45,13 @@ class Http:
             sent["Mcp-Session-Id"] = self.session
         async with self.client.stream("POST", self.url, json=message, headers=sent) as response:
             self.session = response.headers.get("mcp-session-id") or self.session
+            if response.status_code in (401, 403):
+                # The server wants a token, or the one it has is no longer good. A
+                # turn never opens a browser: the human signs in when they choose.
+                raise ConnectionError(
+                    f"HTTP {response.status_code} from {self.url}: it wants you to sign in. "
+                    f"Run: edgar mcp login NAME"
+                )
             if response.status_code >= 400:
                 raise ConnectionError(f"HTTP {response.status_code} from {self.url}")
             if "id" not in message:

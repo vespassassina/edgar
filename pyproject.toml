@@ -25,6 +25,11 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.optional-dependencies]
+# `pip install edgar-harness[keyring]` to keep a key from `edgar login` in the OS
+# keyring; without it edgar prints the key once and stores nothing [CFG-6].
+keyring = ["keyring>=25"]
+
 [project.scripts]
 edgar = "edgar.cli.main:main"
 # uvx runs the command named after the distribution, so `uvx edgar-harness` needs it.

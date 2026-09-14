@@ -59,6 +59,11 @@ def _describe(name: str, config: Config, env: Mapping[str, str]) -> str:
         if q.api_key_env
         else "no key"
     )
+    if q.oauth is not None and not env.get(q.api_key_env or ""):
+        # Where a credential came from stays visible [ADR-0032].
+        from edgar.auth.keys import stored
+
+        key = f"{key}  {'logged in' if stored(name) else f'edgar login {name}'}"
     return f"{url:<36} {key}"
 
 

@@ -32,7 +32,7 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
 | M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)); release pending | 0.1 |
 | M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 1.0 |
-| M8 MCP | In progress: MCP built ([ADR-0047](adr/0047-mcp-as-built.md)); OAuth and `edgar login` open | 1.0 |
+| M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 1.0 |
 | M9–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A

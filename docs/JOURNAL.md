@@ -33,8 +33,8 @@ Carried forward until done. Newest first.
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** The budget test measures v1: 6,419 of 8,000 lines of code,
-  1,581 left for M8b to M11. Core's own files stayed at 5,000.
+- **Size watch.** The budget test measures v1: 6,809 of 8,000 lines of code,
+  1,191 left for M9 to M11. Core's own files stayed at 5,000.
 - **`/skills` and `/tools` in the REPL** still say they arrive in M6, which is done;
   `edgar skills list` and `edgar tools list` exist. Wire them or relabel them.
 - **A moved project loses its facts** (ADR-0045): the scope is a hash of the path.
@@ -46,6 +46,53 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · M8 done: signing in
+
+**Asked**
+- Build M8 (second half).
+
+**Done**
+- `auth/`, 317 lines of code: `oauth.py` (PKCE, a loopback listener on a port the
+  OS picks, the browser visit, the form or JSON POSTs), `store.py` (the OS keyring
+  through the optional `keyring` extra, every secret registered with `scrub()` as
+  it is written or read), `keys.py` (`edgar login PROVIDER`) and `mcp.py` (a
+  remote MCP server's own sign-in) [PRV-18, CFG-6, ADR-0032].
+- `edgar login openrouter` / `edgar logout NAME`: the browser flow, the exchange,
+  the keyring; with no keyring the key is printed once and stored nowhere. The
+  provider's own shape (a `callback_url` parameter, a JSON body, a `key` field) is
+  an `OAuth` row in `quirks.py`, so a second provider is a row. `connect()` reads
+  the keyring after the environment, and its error names `edgar login NAME`;
+  `edgar models list` says which providers are signed in.
+- `edgar mcp login NAME` / `edgar mcp logout NAME`: RFC 9728 protected-resource
+  metadata, RFC 8414 authorization-server metadata, RFC 7591 dynamic client
+  registration with the exact loopback redirect, the code exchange with an RFC
+  8707 `resource`, and a refresh when the stored token has run out. The transport
+  sends `Authorization: Bearer …` when a token is stored, and a 401 becomes a tool
+  failure saying `edgar mcp login NAME`.
+- `keyring>=25` as an optional extra in `pyproject.toml`; nothing on the startup
+  path imports it (NFR-1).
+- Tests: 10 in `tests/integration/test_login.py`, with no browser and no network —
+  the keyring is a dictionary, the "browser" is a loopback client the test drives,
+  and every HTTP exchange is a function the test supplies. One of them plants a
+  token in the keyring and checks it never reaches anything edgar prints.
+
+**Decided** (ADR-0048)
+- The loopback port is opened *before* the authorization URL is built, because
+  dynamic client registration must declare the exact redirect URI.
+- edgar registers itself as a public client (`token_endpoint_auth_method: "none"`,
+  PKCE as the only proof) rather than shipping a client id it could not keep
+  secret; a server that registers none says to ask its operator.
+- A turn never opens a browser: sign-in is a command a human runs.
+- Tokens live in the OS keyring and nowhere else — no token file — and are
+  registered for redaction when read back, not only when written.
+
+**Pending**
+- GitHub Copilot [PRV-19, ADR-0043] stays gated on GitHub's terms.
+- `tests/integration/test_forks.py::test_fork_and_load_on_the_command_line` failed
+  once during a `just check` run and passed on four full runs after it. Watch it;
+  if it comes back, it is a real race and not a flake.
+- 0.1 still waits on the maintainer; `f89e35b` stays the Core-only commit.
 
 ## 2026-09-14 · M8a: MCP servers, deferred schemas and /browser
 

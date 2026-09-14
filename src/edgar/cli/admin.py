@@ -33,7 +33,8 @@ from edgar.tools.mcp.schema import hints
 USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
-       edgar mcp list | test NAME"""
+       edgar mcp list | test NAME | login NAME | logout NAME
+       edgar login PROVIDER | edgar logout PROVIDER"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
@@ -42,6 +43,8 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         return _cost(cwd, home)
     if argv[0] == "mcp" and len(argv) in (2, 3):
         return _mcp(argv, cwd, home)
+    if argv[0] in ("login", "logout") and len(argv) == 2:
+        return _sign_in(argv[0], argv[1])
     if argv[0] == "sessions" and len(argv) in (2, 3):
         return _sessions(argv[1:], cwd)
     if argv[0] in ("tools", "skills") and len(argv) in (2, 3):
@@ -107,6 +110,45 @@ def _cost(cwd: Path, home: Path) -> int:
     return 0
 
 
+def _sign_in(what: str, name: str) -> int:
+    # `edgar login PROVIDER` for a provider that issues a key through the browser
+    # [PRV-18]. The keyring holds it; nothing is written to a config file [CFG-6].
+    import asyncio
+
+    from edgar.auth import keys
+    from edgar.providers.quirks import quirks_for
+
+    if what == "logout":
+        print(f"signed out of {name}" if keys.logout(name) else f"nothing stored for {name}")
+        return 0
+    row = quirks_for(name, None).oauth
+    if row is None:
+        raise UsageError(
+            f"{name} does not issue keys through a browser",
+            hint="set its API key variable, or api_key_command in ~/.edgar/config.toml",
+        )
+    asyncio.run(keys.login(name, row, print))
+    return 0
+
+
+def _mcp_sign_in(what: str, found: list[Server]) -> int:
+    # The same for a remote MCP server, whose token is discovered from what the
+    # server publishes [ADR-0032]. A turn never opens a browser; this does.
+    import asyncio
+
+    from edgar.auth import mcp as mcp_auth
+
+    server = found[0]
+    if server.local:
+        raise UsageError(f"{server.name} is a local program", hint="it needs no sign-in")
+    url = server.block.url or ""
+    if what == "logout":
+        print(f"signed out of {url}" if mcp_auth.forget(url) else f"nothing stored for {url}")
+        return 0
+    asyncio.run(mcp_auth.sign_in(url, print))
+    return 0
+
+
 def _mcp(argv: list[str], cwd: Path, home: Path) -> int:
     # The one place that starts every configured server: `list` to see what a
     # session would get, `test NAME` to try one. Each answer is cached, so the
@@ -116,10 +158,12 @@ def _mcp(argv: list[str], cwd: Path, home: Path) -> int:
     config = load(cwd, home=home)
     trusted = trust.trusted(cwd, config, home)
     _, _, found = toolset(cwd, home, config, project_exec=trusted)
-    if argv[1] == "test" and len(argv) == 3:
+    if argv[1] in ("test", "login", "logout") and len(argv) == 3:
         found = [s for s in found if s.name == argv[2]]
         if not found:
             raise UsageError(f"no MCP server {argv[2]!r}", hint="edgar mcp list shows them")
+        if argv[1] != "test":
+            return _mcp_sign_in(argv[1], found)
     elif argv[1:] != ["list"]:
         print(USAGE, file=sys.stderr)
         return 2

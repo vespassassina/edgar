@@ -232,6 +232,12 @@ edgar/
 │   │   ├── discovery.py            project and user scope, enable/disable, ext add
 │   │   └── hooks.py                hook matching, stdin JSON, veto semantics
 │   │
+│   ├── auth/                       (v1) signing in [CFG-6, PRV-18, ADR-0048]
+│   │   ├── oauth.py                PKCE, the loopback redirect, the POSTs
+│   │   ├── store.py                the OS keyring, through the optional extra
+│   │   ├── keys.py                 `edgar login PROVIDER`: a key that is yours
+│   │   └── mcp.py                  a remote MCP server: discovery, registration, tokens
+│   │
 │   ├── memory/                     (v1)
 │   │   ├── store.py                the Fact model; SQLite facts, undo log, index (ADR-0045)
 │   │   ├── retriever.py            the Retriever port [MEM-24]

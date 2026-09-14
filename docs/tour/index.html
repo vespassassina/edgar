@@ -209,6 +209,7 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
     <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,750</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
+    <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
   </tbody>
 </table>
 </div>
@@ -607,6 +608,12 @@ flowchart LR
   tool schemas cost more than the conversation, the MCP ones are deferred:
   <code>tool_search</code>'s own description lists them by name and a line, and a
   search loads the full schemas of what matches.</p>
+  <p>A remote server that wants a token is the one case where a turn stops and asks
+  for a human: the call fails with <code>edgar mcp login NAME</code> to run, and that
+  command, not the turn, opens a browser. What it runs is in <code>auth/</code>:
+  authorization code with PKCE, a redirect caught on a loopback port the OS picked,
+  and the token in your keyring. The same three steps serve <code>edgar login
+  openrouter</code>, where the key a provider issues is yours, not edgar's.</p>
 </article>
 
 <article class="stop planned" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/providers/fallback.py">

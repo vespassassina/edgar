@@ -40,6 +40,7 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```bash
 uv tool install git+https://github.com/vespassassina/edgar   # PyPI from 0.1
 export OPENAI_API_KEY=sk-...    # or ANTHROPIC_API_KEY, OPENROUTER_API_KEY
+edgar login openrouter          # or sign in instead; the key is yours, kept in your keyring
 edgar models                    # pick a model; Enter saves it as your default
 edgar                           # the REPL, in the directory you are in
 ```

@@ -33,6 +33,17 @@ from edgar.core.errors import ConfigError
 
 
 @dataclass(frozen=True, slots=True)
+class OAuth:
+    """How a provider issues an API key through the browser [PRV-18, ADR-0032]."""
+
+    authorize_url: str
+    exchange_url: str
+    callback_param: str = "callback_url"  # what the authorize URL calls the redirect
+    send: Literal["json", "form"] = "json"
+    field: str = "key"  # where the key sits in what the exchange answers
+
+
+@dataclass(frozen=True, slots=True)
 class Quirks:
     base_url: str | None  # None: the user must configure it (Azure)
     api_key_env: str | None = None  # None: no key sent
@@ -49,6 +60,7 @@ class Quirks:
     cost_source: Literal["table", "response", "free"] = "table"
     reasoning: bool = False  # the server streams reasoning text back
     thinking_budget: int | None = None  # Anthropic: request extended thinking
+    oauth: OAuth | None = None  # None: this provider issues keys its own way
 
 
 QUIRKS: dict[str, Quirks] = {
@@ -80,6 +92,9 @@ QUIRKS: dict[str, Quirks] = {
         max_output=16_384,
         cost_source="response",
         reasoning=True,
+        # `edgar login openrouter`: it issues a key of your own through PKCE, which
+        # you can see and revoke on openrouter.ai [PRV-18].
+        oauth=OAuth("https://openrouter.ai/auth", "https://openrouter.ai/api/v1/auth/keys"),
     ),
     # Ollama's own context window is set on the server (OLLAMA_CONTEXT_LENGTH) and it
     # truncates silently past it, so say here what the server really has.
@@ -172,6 +187,11 @@ def connect(name: str, quirks: Quirks, env: Mapping[str, str]) -> tuple[Quirks, 
             )
         quirks = dataclasses.replace(quirks, base_url=url)
     key: Key = env.get(quirks.api_key_env) if quirks.api_key_env else None
+    if not key and quirks.oauth is not None:
+        # Nothing in the environment, but `edgar login` may have kept one [CFG-6].
+        from edgar.auth.keys import stored
+
+        key = stored(name)
     if not key and quirks.api_key_command:
         # No key set: mint a token now, so a lapsed sign-in fails before any request,
         # and send it as a bearer token, the way every cloud takes one.
@@ -181,6 +201,10 @@ def connect(name: str, quirks: Quirks, env: Mapping[str, str]) -> tuple[Quirks, 
     if quirks.api_key_env and not key and quirks.auth_style != "none":
         raise ConfigError(
             f"{name}: the API key variable {quirks.api_key_env} is not set",
-            hint=f"export {quirks.api_key_env}=…, or set api_key_command in ~/.edgar/config.toml",
+            hint=(
+                f"edgar login {name}, or export {quirks.api_key_env}=…"
+                if quirks.oauth is not None
+                else f"export {quirks.api_key_env}=…, or api_key_command in ~/.edgar/config.toml"
+            ),
         )
     return quirks, key

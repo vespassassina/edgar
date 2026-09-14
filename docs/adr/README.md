@@ -59,6 +59,7 @@ that did not need an ADR.
 | [0045](0045-memory-as-built.md) | Memory as built: one database, facts that never change, a gate at the end of the turn | Accepted · extends MEM-15 to facts |
 | [0046](0046-forks-saves-and-the-daily-cap.md) | Forks, saved sessions and the daily cap as built: a fork is one line, a save travels redacted, the cap becomes the turn's | Accepted · completes M7 |
 | [0047](0047-mcp-as-built.md) | MCP as built: `[mcp.NAME]` blocks, a config-hashed tool cache so no server starts at session start, deferred schemas listed in `tool_search`, results always untrusted | Accepted · first half of M8 |
+| [0048](0048-signing-in-as-built.md) | Signing in as built: PKCE on a loopback port opened before registration, dynamic client registration, tokens in the OS keyring, and a turn that never opens a browser | Accepted · completes M8, implements ADR-0032 and PRV-18 |
 
 ## Writing a new ADR
 
