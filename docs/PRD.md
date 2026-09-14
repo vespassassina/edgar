@@ -171,7 +171,7 @@ first lands.
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
 | CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | `/scope` and `--scope` (CAP-4) |
-| Providers | 1–13, 15–17 | 14, 18 | — |
+| Providers | 1–13, 15–17 | 14, 18, 19 | — |
 | Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
 | Permissions | 1–14 | 15 | — |
 | Context | 1, 3–9, 11–17, 19 | 2, 10, 18 | — |
@@ -203,7 +203,7 @@ Written down so scope creep has something to argue with.
 | Full TUI framework | Line-oriented output pipes cleanly. See OQ-4. |
 | Plugin marketplace or skill hub | Files in a folder, discovered on disk. That is the plugin system. Skills and extensions are copied in (`edgar ext add` copies a path or git URL), never installed from an index, search or update service. |
 | Provider count race | Five providers, deeply correct, beats fifty shallow. |
-| Signing in with a vendor subscription | Vendors restrict consumer plans to their own products and cut off harnesses that use them; API keys and compatible endpoints keep users free to switch. OAuth only issues keys and authenticates MCP servers ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)). |
+| Signing in with a vendor subscription | Vendors restrict consumer plans to their own products and cut off harnesses that use them; API keys and compatible endpoints keep users free to switch. OAuth only issues keys and authenticates MCP servers ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)). The exception is a vendor that documents third-party use: GitHub Copilot (PRV-19, [ADR-0043](adr/0043-github-copilot-provider.md)). |
 | Agent-to-agent protocols | Subagents are function calls, not a network. |
 | Messaging gateway (Telegram, Slack, Discord…) | Needs a long-running process. A `session_end` hook covers delivery. |
 | User modelling (Honcho-style profiles) | A model of the user built by a model is invisible state. Facts with provenance are the visible version. |
@@ -442,8 +442,9 @@ Requirements are numbered for traceability. Each milestone in
 | PRV-14 | Provider plugins register through the `edgar.providers` entry point, read only when a model string names an unknown provider; the contract suite ships as `edgar.testing.contract` for plugin authors | Must |
 | PRV-15 | **No implicit models, hosts or telemetry.** Every request goes to a model named in config or on the command line; auxiliary roles (compactor, controller, condenser) default to the main model; edgar contacts no host except those in config and those reached by an allowed tool call; no telemetry, update checks or remote configuration. `edgar doctor --network` lists every host the config can reach ([ADR-0023](adr/0023-no-hidden-behaviour.md)) | Must |
 | PRV-16 | Tool-call repair: when a model emits a malformed tool call (JSON in a code fence, trailing text, a single JSON object in plain text where the provider has no native tool format), the adapter applies a fixed, deterministic syntactic repair; anything it cannot repair returns to the model as a validation error (TOOL-2). Repairs are counted in usage and events | Must |
-| PRV-18 | `edgar login PROVIDER` and `edgar logout PROVIDER`: OAuth 2.0 with PKCE (or device code) for providers that issue an API key through OAuth, starting with OpenRouter. The host is printed before the browser opens; the key goes to the OS keyring (CFG-6) and is redacted like any secret; without the `keyring` extra the key is printed once and not stored. Never used to sign in with a subscription ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)) | Should |
+| PRV-18 | `edgar login PROVIDER` and `edgar logout PROVIDER`: OAuth 2.0 with PKCE (or device code) for providers that issue an API key through OAuth, starting with OpenRouter. The host is printed before the browser opens; the key goes to the OS keyring (CFG-6) and is redacted like any secret; without the `keyring` extra the key is printed once and not stored. Never used to sign in with a subscription, except PRV-19 ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)) | Should |
 | PRV-17 | Prompt profiles: `full` or `compact`. `compact` uses `prompts/compact.md`, exposes Core built-ins only unless configured, and lowers `compact_at` and `compact_to` by 0.1. Chosen automatically for models with `max_context` under 32k, overridable per model | Must |
+| PRV-19 | GitHub Copilot provider: `edgar login github-copilot` signs in with GitHub's OAuth device flow under edgar's own registered OAuth app (never a borrowed client id), printing the host and code first; the token goes to the keyring and is redacted. `github-copilot/<model>` resolves through a `quirks.py` row on the OpenAI-compatible adapter; Business and Enterprise base URLs by config override; `edgar models` lists the subscription's models on request. Dollar cost is unknown (premium requests), so cost caps stop at once unless `[pricing]` sets a price. Ships only after GitHub's terms are confirmed to allow it ([ADR-0043](adr/0043-github-copilot-provider.md)) | Should |
 
 ### 7.3 Tools
 

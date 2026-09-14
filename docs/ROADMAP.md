@@ -300,6 +300,10 @@ mid-session does not change the prompt prefix until the next session.
 - `edgar login PROVIDER` / `edgar logout`, on the same OAuth code: providers that
   issue API keys that way (OpenRouter first), the key in the keyring and redacted
   everywhere [PRV-18, CFG-6], moved from M6 ([ADR-0037](adr/0037-core-fits-in-5000.md))
+- GitHub Copilot provider: `edgar login github-copilot` by device flow under edgar's
+  own OAuth app, `github-copilot/<model>` as a quirks row, the subscription's models
+  in `edgar models` [PRV-19, ADR-0043] *(Should; ships only once GitHub's terms are
+  confirmed and the OAuth app is registered)*
 
 **Done when:** a stdio server and a Streamable HTTP server both work, startup time
 is unchanged with five servers configured, an MCP result taints the session, and

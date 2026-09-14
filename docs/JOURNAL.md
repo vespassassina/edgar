@@ -19,6 +19,8 @@ Carried forward until done. Newest first.
   tested with the fake model and through a pseudo-terminal, not live.
 - **`@path` attachments in prompts** (CLI-3) are not built; piped stdin is. M5 did
   not take them (no lines to spare); pick a milestone.
+- **GitHub Copilot's gate** (ADR-0043): register edgar's OAuth app and confirm
+  GitHub allows direct use of the Copilot endpoint, before M8 ships the provider.
 - **Cut 0.1?** Core is built (M0 to M6) and nothing since 0.0.2 is on PyPI. The
   release is bumping the version in `pyproject.toml` and `src/edgar/__init__.py`,
   moving "Unreleased" under "0.1.0", and publishing a `v0.1.0` GitHub release,
@@ -37,6 +39,37 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · GitHub Copilot as a provider, planned for v1
+
+**Asked**
+- Add GitHub Copilot as a provider: a subscription gives access to many models,
+  with OAuth to sign in.
+
+**Done**
+- Checked GitHub's position. It supports Copilot subscriptions in OpenCode
+  through a named partnership (device login), and its Copilot SDK (GA) lets any
+  app use a user's subscription through the app's own OAuth app. Direct use of
+  the Copilot model endpoint is documented for no third party but OpenCode.
+- Specified it, nothing built: ADR-0043, PRV-19 (v1, *Should*), PRD §5.2's
+  non-goal and PRV-18 now name the exception, a bullet under M8 in the roadmap,
+  the Blueprint's §5.2, and a pointer in ADR-0032's status line.
+
+**Decided** (ADR-0043, the maintainer chose option A)
+- Direct endpoint, not the SDK: the SDK runs Copilot's own agent loop, which
+  would drive edgar's tools outside its permissions and verify gate.
+- The device flow uses edgar's own registered OAuth app, never a borrowed
+  client id; the token goes to the keyring; the provider is one `quirks.py` row.
+- It lands in M8 with `edgar login`, about 80 lines of code against v1.
+- Every other subscription is still never; each exception needs its own ADR
+  citing the vendor's documentation.
+
+**Pending**
+- **Gate before shipping:** the maintainer registers the OAuth app on their
+  GitHub account and confirms with GitHub's terms, or GitHub itself, that a
+  registered app may call the Copilot endpoint directly. If not, the ADR is
+  superseded by the SDK route or dropped.
+- How `/cost` shows premium-request multipliers.
 
 ## 2026-09-14 · A skill audit, planned for v1
 

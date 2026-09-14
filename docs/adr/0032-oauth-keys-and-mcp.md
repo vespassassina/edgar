@@ -1,6 +1,6 @@
 # ADR-0032 — OAuth for issuing keys and for MCP servers, never for subscriptions
 
-**Status:** Accepted · 2026-09-13 · Moves MCP OAuth from v2 (ADR-0015) to v1; reaffirms the "not taken" on subscriptions in DECISIONS.md
+**Status:** Accepted · 2026-09-13 · Moves MCP OAuth from v2 (ADR-0015) to v1; reaffirms the "not taken" on subscriptions in DECISIONS.md · Amended by ADR-0043 (GitHub Copilot, the one documented exception)
 
 ## Context
 

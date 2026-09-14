@@ -787,6 +787,14 @@ first request, and a server that refuses them becomes an error whose hint names
 server and it truncates silently past it, so its `max_context` should say what the
 server has.
 
+**GitHub Copilot** (v1, M8, PRV-19, [ADR-0043](adr/0043-github-copilot-provider.md))
+is one more row, not a new adapter: a base URL, the headers Copilot requires, and a
+token source of "keyring, from `edgar login github-copilot`" instead of an
+environment variable. The login is GitHub's device flow under edgar's own OAuth
+app, whose public client id sits in the row. Business and Enterprise plans override
+`base_url` in `[providers.github-copilot]`. The row stays unreleased until
+GitHub's terms are confirmed to allow direct use.
+
 ### 5.3 Lazy loading and plugins
 
 NFR-1 is enforced structurally, not by discipline. [PRV-4, ADR-0012]
