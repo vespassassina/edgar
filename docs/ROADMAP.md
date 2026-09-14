@@ -30,7 +30,7 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M4 REPL, streams, model picker | Done | unreleased |
 | M3 Tools, permissions, verify, custom tools, trust | Done | unreleased |
 | M5 Context and sessions | Done ([ADR-0038](adr/0038-context-and-sessions-as-built.md)) | unreleased |
-| M6 Skills, Core release | **Next** (194 lines left) | 0.1 |
+| M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)); release pending | 0.1 |
 | M7–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -241,14 +241,15 @@ Core budget with room for M6 (about 250 lines).
 M3, [ADR-0033](adr/0033-replan-after-m2.md); `edgar login` to M8,
 [ADR-0037](adr/0037-core-fits-in-5000.md).)
 
-- `skills/discovery.py` (PyYAML, lazily) and `skills/loader.py` + `skill` tool [SKL-1..5]
+- `skills/discovery.py` (PyYAML, lazily) and the `skill` tool, which loads the body [SKL-1..5]; a skill's `verify` moves to v1 ([ADR-0041](adr/0041-skills-as-built.md))
 - `edgar tools list|describe`, `edgar skills list|validate` [SKL-7]
 - Collision order with startup warning (without MCP and extensions yet) [TOOL-9]
 - Examples of each in `examples/`
 - Short docs: README quick start, `docs/COOKBOOK.md` first recipes
 
 **Done when:** J3 and J9 pass their acceptance tests end to end; `src/` is under
-5,000 LOC.
+5,000 LOC. *Met on 2026-09-14: both journeys run through the real CLI in
+`tests/e2e/test_cli.py`, and Core is 4,966 lines of code.*
 
 **Release:** 0.1 to PyPI. From here people can use and fork edgar.
 
@@ -339,6 +340,7 @@ across families and the next request is accepted.
 - Provider plugins through `edgar.providers` entry points [PRV-14]
 - `sandbox/` port: `none`, `bwrap`, `seatbelt`, `container` [PERM-15] *(Should)*
 - Deterministic skill activation, description lint [SKL-17]
+- A skill's `verify` command as a verification source, authorised like activation [SKL-1, VER-1, ADR-0041]
 - `edgar.testing.contract` — the contract kit for plugin authors
 - `edgar.run()` embedding API [EXT-9]
 - Remaining slash commands [CLI-14]

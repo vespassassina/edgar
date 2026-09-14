@@ -176,7 +176,7 @@ first lands.
 | Permissions | 1–14 | 15 | — |
 | Context | 1, 3–9, 11–17, 19 | 2, 10, 18 | — |
 | Subagents | — | 1–11 | — |
-| Skills | 1–5, 7 (`list`, `validate`) | 17 | 6, 7 (rest), 8–16 |
+| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
 | Controller | — | — | 1–13 |
 | Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
@@ -184,7 +184,7 @@ first lands.
 | Broker | — | — | 1–10 |
 | Budget | 1, 2 (turn and session), 3, 5, 6 (`/cost`) | 2 (daily), 4, 6 (`edgar cost`) | — |
 | Config | 1–3, 6–8 | 4, 5 | — |
-| Verification | 1–7 (sources arrive with their features) | — | — |
+| Verification | 1–7 (sources arrive with their features) | VER-1's skill source, with SKL-1's `verify` ([ADR-0041](adr/0041-skills-as-built.md)) | — |
 | Extensions | 11 (the ports rule holds from M0) | 1–10 | — |
 | Non-functional | 1–3, 6, 9, 13, 14 | 4, 5, 7, 8, 10, 11 | 12 |
 

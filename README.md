@@ -12,13 +12,12 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** design complete (spec v0.4). Milestones M1 to M5 are in: the REPL
-> and one-shot runs against real models, with file, shell and web tools behind the
-> permission engine, the verify gate, your own CLI and HTTP tools, sessions you
-> can resume (`edgar --continue`), compaction and cost caps
-> (`edgar --model ollama/qwen3:8b`, or `edgar models` to pick one). Skills and the
-> Core release arrive with M6.
-> The documents in `docs/` are the spec being built against.
+> **Status:** Core is built (M0 to M6): the REPL and one-shot runs against real
+> models, with file, shell and web tools behind the permission engine, the verify
+> gate, your own CLI and HTTP tools, skills, sessions you can resume
+> (`edgar --continue`), compaction and cost caps. The 0.1 release to PyPI is next;
+> until then, install from this repository. The documents in `docs/` are the spec
+> being built against.
 
 ## Why edgar
 
@@ -33,6 +32,23 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
   telemetry, and its system prompt is a short file you can read and replace.
 - **Done means verified.** A turn that changed something ends when your check
   passes, not when the model says it is finished.
+
+## Quick start
+
+```bash
+uv tool install git+https://github.com/vespassassina/edgar   # PyPI from 0.1
+export OPENAI_API_KEY=sk-...    # or ANTHROPIC_API_KEY, OPENROUTER_API_KEY
+edgar models                    # pick a model; Enter saves it as your default
+edgar                           # the REPL, in the directory you are in
+```
+
+No API key? Install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, and run
+`edgar --model ollama/qwen3:8b`: everything stays on your machine.
+
+Then give it your own tools and know-how, without Python. Copy a command tool, an
+HTTP tool or a skill from [`examples/`](examples/) into `.edgar/`, and check what
+edgar sees with `edgar tools list` and `edgar skills list`. The
+[Cookbook](docs/COOKBOOK.md) has the recipes.
 
 ---
 
@@ -214,6 +230,7 @@ something to argue with.
 | [ADRs](docs/adr/) | Decisions, with the alternatives that were rejected |
 | [Decisions](docs/DECISIONS.md) | The v0.3 and v0.4 revisions in one page: tiers, context, memory, extensions, security, ports |
 | [Field review](docs/research/hn-2026-09.md) | What 11,647 Hacker News comments say about agent harnesses |
+| [Cookbook](docs/COOKBOOK.md) | Recipes: a local model, pipes, your own tools and skills, a check that decides done |
 | [Roadmap](docs/ROADMAP.md) | Eighteen milestones in three tiers, each one shippable |
 | [Testing](docs/TESTING.md) | How you test something nondeterministic |
 | [Brainstorm](docs/BRAINSTORM.md) | The original design conversation |

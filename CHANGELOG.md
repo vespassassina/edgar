@@ -70,6 +70,20 @@ Core is being built, 0.1 at the Core release (M6).
   `edgar prompt show`; `~/.edgar/AGENTS.md` for instructions in every project.
 - A warning at start when edgar's own control files (AGENTS.md, config, tools)
   changed during the previous session.
+- Skills (M6): a folder with a `SKILL.md`, in the format Claude uses, in
+  `.edgar/skills/` or `~/.edgar/skills/`. The prompt lists each skill's name and
+  description; the model loads the rest with the `skill` tool when it fits. A
+  project's skill replaces a user one of the same name, with a warning at start.
+  A broken `SKILL.md` is skipped with its reason, never fatal.
+- `edgar skills list|validate` (validate exits 1 when a skill has a problem) and
+  `edgar tools list|describe NAME`, which shows the tools a session here gets.
+- `examples/`: a command tool, an HTTP tool and a skill to copy, and
+  [`docs/COOKBOOK.md`](docs/COOKBOOK.md), short recipes for the first week.
+- A quick start in the README.
+
+### Changed
+- `edgar models`: pressing Enter at "make it the default?" now saves it to your
+  user config; it used to mean no.
 
 ## 0.0.2 — 2026-09-13
 

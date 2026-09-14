@@ -4,9 +4,19 @@ The prefix is the system prompt, the personality and the instruction files, read
 once at session start and joined into one system message whose bytes never change
 until the session ends, so the provider's prompt cache holds (CTX-17). Tool schemas
 travel beside the messages, in the request. After the cache breakpoint come the
-rolling summary, the transcript and the current turn. Pinned facts and the skill
-index join the prefix in later milestones, in the order BLUEPRINT §8.1 fixes.
+rolling summary, the transcript and the current turn. The skill index closes the
+prefix: one line per skill, frozen at session start like the rest [SKL-2]. Pinned
+facts join it in v1, in the order BLUEPRINT §8.1 fixes.
 """
+
+# The prompt, top to bottom:
+#
+#   system prompt              prompts/system.md, or a profile of it
+#   personality                the project's, else the user's; never both
+#   instruction files          each name in [instructions] files, project then user
+#   skill index                "- name: description", one line per skill
+#   ---- cache breakpoint ----
+#   rolling summary, transcript, the current turn
 
 from __future__ import annotations
 
@@ -15,6 +25,7 @@ from pathlib import Path
 
 from edgar.core.message import Message, TextBlock
 from edgar.core.session import Session
+from edgar.skills.discovery import Skill
 
 PERSONALITY_WARN = 500  # tokens [CTX-19]
 
@@ -43,6 +54,16 @@ def pinned(root: Path, home: Path, instructions: list[str]) -> list[Section]:
                 text = path.read_text(encoding="utf-8").strip()
                 sections.append(Section(name, f"Instructions from {path}:\n\n{text}", path))
     return sections
+
+
+def skill_index(skills: list[Skill], root: Path) -> list[Section]:
+    # The prompt's side of progressive disclosure: names and descriptions only; the
+    # `skill` tool loads a body when the model asks for it [SKL-2, SKL-4].
+    if not skills:
+        return []
+    lines = "\n".join(f"- {s.name}: {s.description}" for s in skills)
+    intro = "Skills you can load with the `skill` tool when one fits the task:"
+    return [Section("skills", f"{intro}\n\n{lines}", root / ".edgar" / "skills")]
 
 
 def system_text(system_prompt: str, pinned: list[Section]) -> str:

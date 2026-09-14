@@ -99,8 +99,8 @@
     Nothing is done until it's verified.</p>
   </div>
   <div class="ak-meta">
-    <span class="ak-pill ak-pill-ok">Core built</span> M0 to M5<br>
-    <span class="ak-pill ak-pill-warn">Planned</span> M6 to M17<br>
+    <span class="ak-pill ak-pill-ok">Core built</span> M0 to M6<br>
+    <span class="ak-pill ak-pill-warn">Planned</span> M7 to M17<br>
     Kept in sync by a test
   </div>
 </header>
@@ -129,7 +129,7 @@
     <li><a href="#s16"><span class="n">16</span>Compaction</a></li>
     <li><a href="#s17"><span class="n">17</span>Sessions on disk</a></li>
     <li><a href="#s18"><span class="n">18</span>The surface</a></li>
-    <li class="planned"><a href="#s19"><span class="n">19</span>Skills (M6)</a></li>
+    <li><a href="#s19"><span class="n">19</span>Skills</a></li>
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></p>
   <ol class="ak-nav">
@@ -163,12 +163,13 @@ the numbered comments in the code.</p>
 milestone that brings each one, and the seam in Core where it will attach. As each
 milestone lands, its stop gets links like the rest.</p>
 
-<ol class="ak-stepper" aria-label="The five stages of Core">
+<ol class="ak-stepper" aria-label="The six stages of Core">
   <li class="ak-step"><a href="#stage-1"><span class="ak-t">1. The spine</span>45 minutes</a></li>
   <li class="ak-step"><a href="#stage-2"><span class="ak-t">2. The hands</span>45 minutes</a></li>
   <li class="ak-step"><a href="#stage-3"><span class="ak-t">3. The mouth</span>45 minutes</a></li>
   <li class="ak-step"><a href="#stage-4"><span class="ak-t">4. The memory</span>30 minutes</a></li>
   <li class="ak-step"><a href="#stage-5"><span class="ak-t">5. The surface</span>skim, 15 minutes</a></li>
+  <li class="ak-step"><a href="#stage-6"><span class="ak-t">6. The know-how</span>10 minutes</a></li>
 </ol>
 
 <p>The promise is that Core can be read in an afternoon, so time yourself. If it
@@ -185,9 +186,9 @@ you got stuck.</p>
 
 <!-- ─────────────────────────────── Part I ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART I.</span><h2 class="part" id="core">Core</h2><span class="ak-pill ak-pill-ok">Built, M0 to M5</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART I.</span><h2 class="part" id="core">Core</h2><span class="ak-pill ak-pill-ok">Built, M0 to M6</span></div>
 <p class="part-intro">The smallest honest harness: one loop, eight tools, five
-providers, permissions, verification, sessions. At most 5,000 lines of code.</p>
+providers, permissions, verification, sessions, skills. At most 5,000 lines of code.</p>
 
 <h3 class="stage">The shape of the thing</h3>
 
@@ -202,6 +203,7 @@ providers, permissions, verification, sessions. At most 5,000 lines of code.</p>
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~700</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,100</td><td>Five vendors, two adapters, a table of differences</td></tr>
+    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~60</td><td>Finding skills, and reading only their frontmatter</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~200</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
@@ -462,7 +464,7 @@ between "the model asked" and "the thing happened"?</p>
 <article class="stop" id="s15" data-files="src/edgar/context/builder.py src/edgar/prompts/system.md">
   <h4><span class="n">15</span>The prompt</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/builder.py"><code>context/builder.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/prompts/system.md"><code>prompts/system.md</code></a></p>
-  <p class="look">Look for: <code>build</code> <code>system_text</code> <code>pinned</code></p>
+  <p class="look">Look for: <code>build</code> <code>system_text</code> <code>pinned</code> <code>skill_index</code></p>
   <p>Everything the model is told, in one short file, and the function that puts it
   in front of the transcript. Nothing above the cache breakpoint changes within a
   session, so there is no date or anything volatile in the prefix.</p>
@@ -509,14 +511,20 @@ flowchart TD
 </article>
 
 <!-- Stage 6 -->
-<h3 class="stage">Next in Core</h3>
+<h3 class="stage" id="stage-6">Stage 6. The know-how <small>about 10 minutes</small></h3>
 
-<article class="stop planned" id="s19" data-files="src/edgar/skills/discovery.py src/edgar/skills/loader.py src/edgar/tools/builtin/skill.py">
+<article class="stop" id="s19" data-files="src/edgar/skills/discovery.py src/edgar/tools/builtin/skill.py">
   <h4><span class="n">19</span>Skills</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M6 · planned</span> <code>skills/discovery.py</code> <code>skills/loader.py</code> <code>tools/builtin/skill.py</code></p>
-  <p>Only the frontmatter of each skill is read at startup; the body loads when the
-  model calls the <code>skill</code> tool. A skill is instructions, never code that
-  runs. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m6--skills-and-the-core-release--core-release">Roadmap: M6</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/discovery.py"><code>skills/discovery.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/skill.py"><code>tools/builtin/skill.py</code></a></p>
+  <p class="look">Look for: <code>discover</code> <code>split</code> <code>Found</code> <code>SkillTool</code></p>
+  <p>A skill is a folder with a <code>SKILL.md</code>, in the same format Claude
+  uses. At startup only its frontmatter is read, so the prompt carries one line per
+  skill (<code>skill_index</code> in <code>context/builder.py</code>); the body loads
+  when the model calls the <code>skill</code> tool. Notice the order in
+  <code>discover</code>: the project beats the user, and anything a human wrote beats
+  anything learned. A skill is instructions, never code that runs: a script it
+  bundles goes through the <code>shell</code> tool and its permission check like any
+  other command.</p>
 </article>
 
 <p class="check"><strong>By the end of Core</strong> you should be able to answer three

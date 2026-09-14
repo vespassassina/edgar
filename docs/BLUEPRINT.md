@@ -178,7 +178,7 @@ edgar/
 │   │   │   ├── fs.py               read write edit ls glob grep
 │   │   │   ├── shell.py            shell selection per platform
 │   │   │   ├── fetch.py
-│   │   │   ├── skill.py
+│   │   │   ├── skill.py            loads a skill's body on demand [SKL-4]
 │   │   │   ├── todo.py             the todo list [TOOL-14]
 │   │   │   ├── tool_search.py      (v1) deferred schemas [TOOL-15]
 │   │   │   ├── task.py             (v1) ★ spawns a subagent (re-enters loop)
@@ -217,8 +217,8 @@ edgar/
 │   │   └── container.py            Docker or Podman, any OS
 │   │
 │   ├── skills/
-│   │   ├── discovery.py            frontmatter-only scan (yaml.safe_load)
-│   │   └── loader.py               body load on demand
+│   │   └── discovery.py            frontmatter-only scan (yaml.safe_load); the
+│   │                               `skill` tool loads a body (ADR-0041)
 │   │
 │   ├── agents/                     (v1)
 │   │   ├── definition.py           markdown + frontmatter parsing
@@ -1091,10 +1091,18 @@ but never used in `decide()`.
 
 ### 6.6 Skills
 
-`skills/`, [SKL-1..5]. Discovery reads frontmatter only, with `yaml.safe_load`, so
-name and description sit in the prompt while the body does not. The `skill` tool
-loads the body on demand. Skills may bundle scripts, which run through the `shell`
-tool under normal permissions.
+`skills/discovery.py` and `tools/builtin/skill.py`, [SKL-1..5]. Discovery reads
+frontmatter only, with `yaml.safe_load`, so name and description sit in the prompt
+while the body does not. The `skill` tool loads the body on demand, under a line
+naming the skill's folder so paths in it resolve. Skills may bundle scripts, which
+run through the `shell` tool under normal permissions.
+
+Four scopes are read, lowest priority first: `~/.edgar/skills/learned/`,
+`.edgar/skills/learned/`, `~/.edgar/skills/`, `.edgar/skills/`. The project beats
+the user, and anything a human wrote beats anything learned, whatever its scope.
+Each replacement is a startup warning. Skills need no trust: they are instructions,
+and `.edgar/skills/**` is a control file. A skill's `verify` field is accepted and
+ignored until v1 ([ADR-0041](adr/0041-skills-as-built.md)).
 
 **Deterministic activation** (v1, SKL-17). Models often fail to invoke a skill that
 would have helped. An edgar-only frontmatter block lets the harness decide instead:

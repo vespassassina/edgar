@@ -6,6 +6,12 @@ question the config answers [PRV-15]. `edgar models` and `/model` pick a model
 interactively [CLI-30, ADR-0034].
 """
 
+# `edgar models list`:  for each role, the model it resolves to; then each provider,
+#                       its endpoint, and whether its key variable is set
+# `edgar models`:       pick a provider; only then ask it for its models (or take a
+#                       typed name); pick one; then offer to save it: Enter saves it
+#                       for the user (every project), `p` for this project, `n` not
+
 from __future__ import annotations
 
 import asyncio
@@ -123,9 +129,10 @@ def pick_command(cwd: Path, home: Path | None = None) -> int:
         choice = await pick(config, None, session.prompt_async, print)
         if choice is None:
             return 0
-        where = await session.prompt_async(f"make {choice} the default? [p]roject, [u]ser, [n]o: ")
+        ask = f"make {choice} the default? [U]ser, [p]roject, [n]o: "
+        where = (await session.prompt_async(ask)).strip().lower()[:1] or "u"  # Enter: user
         target = {"p": project_config(cwd), "u": user_config(home or Path.home())}
-        path = target.get(where.strip().lower()[:1])
+        path = target.get(where)
         print(remember(choice, path) if path else f"not saved; use --model {choice}")
         return 0
 

@@ -19,18 +19,58 @@ Carried forward until done. Newest first.
   tested with the fake model and through a pseudo-terminal, not live.
 - **`@path` attachments in prompts** (CLI-3) are not built; piped stdin is. M5 did
   not take them (no lines to spare); pick a milestone.
-- **Release M1 to M5?** Nothing since 0.0.2 is on PyPI. An interim release would be
-  0.0.3; the roadmap keeps 0.1 for the Core release (M6). Waiting on the maintainer.
+- **Cut 0.1?** Core is built (M0 to M6) and nothing since 0.0.2 is on PyPI. The
+  release is bumping the version in `pyproject.toml` and `src/edgar/__init__.py`,
+  moving "Unreleased" under "0.1.0", and publishing a `v0.1.0` GitHub release,
+  which triggers trusted publishing. Waiting on the maintainer's yes.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 4,825 of 5,000 lines of code after the loop's
-  refactor; M6 has about 175. Next
-  candidates to move if needed: `/sessions`, then the personality warning
-  (ADR-0038).
+- **Size watch.** Core is at 4,966 of 5,000 lines of code after M6, 34 left. v1
+  starts its own budget; anything more for Core means moving something first
+  (`/sessions`, then the personality warning, ADR-0038).
+- **The picker's provider question has no default.** In `edgar models`, Enter at
+  "provider?" cancels. A sensible default would be the first provider whose key
+  is set, or Ollama if it answers; it needs a few lines of code Core does not have.
+- **A skill's `verify` command** is accepted and ignored in Core; it moves to M10
+  with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · M6: skills
+
+**Asked**
+- "next item in harness": M6, skills and the Core release.
+
+**Done**
+- Skills: `skills/discovery.py` finds `SKILL.md` folders in four scopes and reads
+  their frontmatter only (PyYAML, imported lazily); `context/builder.py` adds one
+  index line per skill to the end of the pinned prefix; `tools/builtin/skill.py`
+  loads a body on request, naming its folder so bundled files can be found. The
+  tool is registered only when a skill exists.
+- `edgar skills list|validate` and `edgar tools list|describe` (`cli/admin.py`,
+  sharing `toolset()` with session setup, so the listing is what a session gets).
+- `examples/` (a command tool, an HTTP tool, a skill), `docs/COOKBOOK.md` and a
+  README quick start. `test_skills.py` and the e2e journey J9 load every example,
+  so the recipes cannot drift. J3 now checks stdout holds only the answer.
+- `edgar models` saves to user config on Enter (the sensible-defaults rule).
+- The tour: stop 19 is built, as a sixth Core stage, "The know-how".
+- ADR-0041; PRD §5.1, BLUEPRINT §6.6 and the ROADMAP updated. Core is 4,966 of
+  5,000 lines of code; 479 tests pass.
+
+**Decided** (ADR-0041)
+- The tool is the loader; no `skills/loader.py`.
+- Anything a human wrote beats anything learned, whatever the scope.
+- A skill's `verify` command moves to v1: it would need authorising mid-turn.
+- Only the four scopes that can hold a skill today; bundled and extension scopes
+  come later.
+- No trust gate for skills: they are instructions, and `.edgar/skills/**` is
+  already a control file.
+
+**Pending**
+- The 0.1 release, on the maintainer's yes. The picker's provider default. See
+  the open items.
 
 ## 2026-09-14 · The tour in artifactkit, on a midnight theme
 

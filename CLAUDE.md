@@ -23,8 +23,8 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0 to M5 are done (https://github.com/vespassassina/edgar); M6 (skills, the Core
-release) is next, with about 175 lines of code of Core budget left. ADR-0037 and ADR-0038 moved
+M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built, at
+4,966 of 5,000 lines of code, and the 0.1 release waits on the maintainer. ADR-0037 and ADR-0038 moved
 plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
 `edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
@@ -36,7 +36,8 @@ bus, the loop with cancellation (`core/cancel.py`) and pause, `/btw`
 (`storage/transcript.py`), staged compaction as pure functions over the view
 (`context/compact.py`), cost caps, eight built-in tools plus command and HTTP tools, the tool
 pipeline with spill, the permission engine (`permissions/`: pure `decide()`, the
-guard, grants, trust), the verify gate (`core/verify.py`), the prompt file with profiles,
+guard, grants, trust), the verify gate (`core/verify.py`), skills (`skills/discovery.py` and the
+`skill` tool, ADR-0041), the prompt file with profiles,
 layered config with provenance, and the model picker. Provider decisions that
 differ from the Blueprint's first sketch are in ADR-0031; the REPL's in ADR-0035;
 context and sessions' in ADR-0038. Releases go out through trusted

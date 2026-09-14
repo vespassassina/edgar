@@ -1,0 +1,11 @@
+# A command tool: an argv template, started directly, never through a shell.
+# Copy to .edgar/tools/ (this project) or ~/.edgar/tools/ (everywhere), then run
+# `edgar trust` once in the project. Needs the GitHub CLI, `gh`, signed in.
+name = "gh_issue"
+description = "Read a GitHub issue with the gh CLI."
+argv = ["gh", "issue", "view", "{number}", "--json", "title,body,comments"]
+read_only = true
+[input]
+type = "object"
+required = ["number"]
+properties.number = { type = "integer" }

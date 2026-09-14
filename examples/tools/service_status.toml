@@ -1,0 +1,14 @@
+# An HTTP tool: a request template whose host is fixed. Arguments fill only the
+# path, query and body; ${env:NAME} fills the base URL and headers from the
+# environment, and whatever it resolves is scrubbed from the tool's output.
+# Point `url` at a real status API and set STATUS_API_TOKEN before using it.
+name = "service_status"
+description = "Current status of a service from the status API."
+method = "GET"
+url = "https://status.example.com/api/v2/services/{service}"
+headers = { Authorization = "Bearer ${env:STATUS_API_TOKEN}" }
+read_only = true
+[input]
+type = "object"
+required = ["service"]
+properties.service = { type = "string" }

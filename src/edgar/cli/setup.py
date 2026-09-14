@@ -2,6 +2,17 @@
 check, the prompt's prefix, the runtime built from them, and opening and closing
 a session."""
 
+# A session's life, as the REPL and -p both run it:
+#
+#   prepare   the working directory and layered config; yolo only with a human's say-so
+#   setup     once per session: the permission guard, skills and tools, the verify
+#             check, the prompt's prefix (personality, instruction files, skill
+#             index) and startup warnings
+#   runtime   the provider for the chosen model, and the Runtime the loop runs on;
+#             built again by /model, which keeps everything setup made
+#   begin     a new session on disk, or one replayed from its JSONL (--resume)
+#   finish    note control files that changed while it ran, for the next session
+
 from __future__ import annotations
 
 import os
@@ -11,7 +22,7 @@ from pathlib import Path
 
 from edgar.config.load import load, project_config
 from edgar.config.schema import Config
-from edgar.context.builder import PERSONALITY_WARN, Section, pinned, system_text
+from edgar.context.builder import PERSONALITY_WARN, Section, pinned, skill_index, system_text
 from edgar.context.prompts import choose_profile, load_prompt, profile_prompt
 from edgar.context.tokens import approx_tokens
 from edgar.core.errors import ConfigError, PermissionDenied, UsageError
@@ -24,9 +35,11 @@ from edgar.permissions.guard import Asker, Guard
 from edgar.permissions.policy import Deny, Policy
 from edgar.providers.registry import resolve, split
 from edgar.providers.routing import RoutingContext, Selection, select_model
+from edgar.skills.discovery import Found, discover
 from edgar.storage.db import Store
 from edgar.storage.transcript import control_changes, find, replay, start
 from edgar.tools.builtin.shell import Shell
+from edgar.tools.builtin.skill import SkillTool
 from edgar.tools.registry import ToolRegistry, registry_for
 
 
@@ -105,13 +118,14 @@ def setup(
         control=control_files(root, home, config.instructions.files),
     )
     guard = Guard(base, asker=asker, store=Store(root / ".edgar" / "edgar.db"))
-    tools = registry_for(root, home, shell=config.shell.program, project_exec=project_exec)
+    tools, found = toolset(root, home, config, project_exec=project_exec)
+    skills = list(found.skills.values())
     from_project = config.origins.get("verify.command") == str(project_config(root))
     command = verify or (config.verify.command if project_exec or not from_project else None)
     check = Check(command, config.verify.max_attempts, config.shell.program) if command else None
     files = config.instructions.files
-    sections = pinned(root, home, files)
-    warnings = list(tools.warnings)
+    sections = pinned(root, home, files) + skill_index(skills, root)
+    warnings = [*tools.warnings, *found.warnings, *found.problems]
     for sec in sections:
         if sec.name == "personality" and approx_tokens(sec.text) > PERSONALITY_WARN:
             warnings.append(f"{sec.source} is ~{approx_tokens(sec.text):,} tokens; keep it short")
@@ -121,6 +135,17 @@ def setup(
         warnings.append(f"control files changed during session {last}: {listed}; review them")
     control = snapshot(root, home, files)
     return Setup(root, config, home, env, tools, guard, check, sections, control, warnings)
+
+
+def toolset(
+    root: Path, home: Path, config: Config, *, project_exec: bool
+) -> tuple[ToolRegistry, Found]:
+    # The session's tools, and the skills found. Skills are instructions, not code,
+    # so they need no trust; the `skill` tool exists only when there is one to load.
+    found = discover(root, home)
+    extra = [SkillTool(found.skills)] if found.skills else []
+    shell = config.shell.program
+    return registry_for(root, home, shell=shell, project_exec=project_exec, extra=extra), found
 
 
 async def authorise_verify(rt: Runtime, session: Session) -> None:

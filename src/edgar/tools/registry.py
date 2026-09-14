@@ -6,6 +6,13 @@ MCP and extensions join the order in v1. A replaced tool is reported, never
 silent.
 """
 
+# Building a registry:
+#
+#   for each tool, lowest priority first (built-ins, the `skill` tool, user, project):
+#     a tool whose name is taken replaces the old one, and a warning says so
+#   the registry then answers "which tool is called NAME?" and "which schemas go
+#   in the request?"
+
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -43,13 +50,15 @@ def core_registry(shell: str = "auto") -> ToolRegistry:
     return ToolRegistry(builtins(shell))
 
 
-def registry_for(cwd: Path, home: Path, *, shell: str, project_exec: bool) -> ToolRegistry:
-    """Built-ins, then `~/.edgar/tools/*.toml`, then, in a trusted project,
-    `.edgar/tools/*.toml` [PERM-13]."""
+def registry_for(
+    cwd: Path, home: Path, *, shell: str, project_exec: bool, extra: Iterable[Tool] = ()
+) -> ToolRegistry:
+    """Built-ins and `extra` (the `skill` tool), then `~/.edgar/tools/*.toml`, then,
+    in a trusted project, `.edgar/tools/*.toml` [PERM-13]."""
     from edgar.tools.builtin.fs import builtins
     from edgar.tools.custom import load
 
     folders = [(home / ".edgar" / "tools", "user")]
     if project_exec:
         folders.append((cwd / ".edgar" / "tools", "project"))
-    return ToolRegistry([*builtins(shell), *load(folders)])
+    return ToolRegistry([*builtins(shell), *extra, *load(folders)])

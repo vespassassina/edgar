@@ -124,3 +124,41 @@ def test_no_terminal_and_no_prompt_is_a_usage_error(
         edgar_argv, stdin=subprocess.DEVNULL, capture_output=True, text=True, env=subprocess_env
     )
     assert out.returncode == 2 and "use -p" in out.stderr
+
+
+def test_j3_stdout_carries_only_the_answer(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # J3's acceptance: `edgar -p "hi" > out.txt 2>/dev/null` holds only the answer.
+    argv = [*edgar_argv, "-p", "hi", "--model", "fake/test", "--mode", "read-only"]
+    out = subprocess.run(argv, capture_output=True, text=True, env=subprocess_env, cwd=tmp_project)
+    assert (out.returncode, out.stdout) == (0, "fake/test heard: hi\n")
+
+
+def test_j9_the_example_tools_from_the_docs(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # J9, as a user would do it from examples/README.md: copy two tools in, find
+    # the untrusted project refused (exit 3, naming `edgar trust`), trust it, list.
+    examples = Path(__file__).resolve().parents[2] / "examples"
+    shutil.copytree(examples / "tools", tmp_project / ".edgar" / "tools")
+    shutil.copytree(examples / "skills", tmp_project / ".edgar" / "skills")
+
+    def edgar(*args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [*edgar_argv, *args],
+            capture_output=True,
+            text=True,
+            env=subprocess_env,
+            cwd=tmp_project,
+        )
+
+    run = ("-p", "hi", "--model", "fake/test", "--mode", "read-only")
+    refused = edgar(*run)
+    assert refused.returncode == 3 and "edgar trust" in refused.stderr
+    assert edgar("trust", "--yes").returncode == 0
+    listed = edgar("tools", "list").stdout
+    assert "gh_issue" in listed and "service_status" in listed and "skill " in listed
+    assert "changelog" in edgar("skills", "list").stdout
+    assert edgar("skills", "validate").returncode == 0
+    assert edgar(*run).returncode == 0
