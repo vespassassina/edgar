@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A Tour of the Harness · edgar</title>
+<meta name="description" content="A guided read of edgar, the agent harness you can read in an afternoon: which files to open, in which order, and what to look for.">
+<style>
+  :root {
+    --paper: #fbfaf7;
+    --paper-2: #f3f1ea;
+    --ink: #1d1d1b;
+    --ink-2: #55534d;
+    --rule: #dedbd1;
+    --accent: #0f6b62;
+    --accent-2: #e5f1ef;
+    --planned: #8a6d1f;
+    --planned-2: #f7f0dc;
+    --code-bg: #efece4;
+    --serif: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #161614;
+      --paper-2: #1f1f1c;
+      --ink: #e9e7e1;
+      --ink-2: #a8a59c;
+      --rule: #34332f;
+      --accent: #5cc2b5;
+      --accent-2: #1b2f2c;
+      --planned: #d8b863;
+      --planned-2: #2c2718;
+      --code-bg: #262521;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 18px/1.6 var(--serif);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  code { font: 0.84em var(--mono); background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 4px; }
+  a code { color: inherit; }
+  pre { overflow-x: auto; }
+
+  .layout { display: grid; grid-template-columns: 17rem minmax(0, 46rem); gap: 3.5rem; max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
+  @media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+
+  /* Contents */
+  nav.toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 2.5rem 0 2rem; font: 14px/1.45 var(--sans); }
+  @media (max-width: 960px) { nav.toc { position: static; max-height: none; padding: 1.5rem 0 0; border-bottom: 1px solid var(--rule); } }
+  nav.toc .brand { font-weight: 650; letter-spacing: 0.01em; color: var(--ink); text-decoration: none; display: block; margin-bottom: 1.5rem; }
+  nav.toc .brand span { color: var(--ink-2); font-weight: 400; }
+  nav.toc h2 { font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); margin: 1.4rem 0 0.6rem; display: flex; justify-content: space-between; }
+  nav.toc h2 .count { letter-spacing: 0; text-transform: none; font-weight: 500; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li a { display: flex; gap: 0.5rem; padding: 0.22rem 0; color: var(--ink-2); text-decoration: none; }
+  nav.toc li a:hover { color: var(--ink); }
+  nav.toc li a .n { font-variant-numeric: tabular-nums; min-width: 1.4rem; color: var(--ink-2); opacity: 0.7; }
+  nav.toc li.read a { color: var(--accent); }
+  nav.toc li.read a .n::after { content: " ✓"; }
+  nav.toc li.planned a { font-style: italic; }
+
+  main { padding: 3rem 0 6rem; min-width: 0; }
+  header.hero h1 { font: 700 clamp(2.2rem, 5vw, 3.2rem)/1.1 var(--sans); letter-spacing: -0.02em; margin: 0 0 0.8rem; }
+  header.hero .lede { font-size: 1.2rem; color: var(--ink-2); margin: 0 0 1.5rem; }
+  header.hero .tag { font: 13px/1.4 var(--sans); color: var(--ink-2); }
+
+  h2.part { font: 700 1.9rem/1.2 var(--sans); letter-spacing: -0.01em; margin: 4.5rem 0 0.4rem; padding-top: 1.2rem; border-top: 3px solid var(--ink); display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
+  h2.part .numeral { color: var(--ink-2); font-weight: 500; }
+  .badge { font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.1em; padding: 0.4em 0.7em; border-radius: 999px; background: var(--accent-2); color: var(--accent); align-self: center; }
+  .badge.planned { background: var(--planned-2); color: var(--planned); }
+  .part-intro { color: var(--ink-2); }
+  h3.stage { font: 650 1.3rem/1.3 var(--sans); margin: 3rem 0 0.3rem; }
+  h3.stage small { font-weight: 400; color: var(--ink-2); font-size: 0.8em; }
+
+  article.stop { position: relative; margin: 1.8rem 0; padding: 1.3rem 1.4rem 0.6rem; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 10px; }
+  article.stop.planned { background: transparent; border-style: dashed; }
+  article.stop h4 { font: 650 1.08rem/1.35 var(--sans); margin: 0 0 0.35rem; padding-right: 6.5rem; }
+  article.stop h4 .n { color: var(--ink-2); font-weight: 500; margin-right: 0.3rem; }
+  article.stop .files { font: 14px/1.5 var(--sans); margin: 0 0 0.8rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; }
+  article.stop .files .ms { color: var(--planned); font-weight: 600; }
+  p.look { font: 14px/1.9 var(--sans); color: var(--ink-2); margin: 0 0 0.8rem; }
+  p.look code { background: var(--paper); border: 1px solid var(--rule); }
+  label.done { position: absolute; top: 1.2rem; right: 1.2rem; font: 12px/1 var(--sans); color: var(--ink-2); display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; }
+  label.done input { accent-color: var(--accent); margin: 0; }
+  .take { border-left: 3px solid var(--accent); padding: 0.1rem 0 0.1rem 0.9rem; margin: 1rem 0; }
+  .check { font: 15px/1.5 var(--sans); background: var(--accent-2); border-radius: 8px; padding: 0.8rem 1rem; margin: 2rem 0; }
+  .check strong { color: var(--accent); }
+
+  .diagram { margin: 1.2rem 0 1.4rem; padding: 1rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow-x: auto; text-align: center; }
+  article.stop .diagram { background: var(--paper); }
+  pre.mermaid { margin: 0; font: 13px/1.4 var(--mono); color: var(--ink-2); background: none; text-align: left; }
+  pre.mermaid[data-processed] { text-align: center; }
+
+  table { border-collapse: collapse; width: 100%; font: 15px/1.45 var(--sans); margin: 1rem 0; }
+  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+  td.loc { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+  .table-wrap { overflow-x: auto; }
+
+  .clock { font: 15px/1.5 var(--sans); display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px; padding: 0.8rem 1rem; margin: 1.5rem 0; }
+  .clock output { font: 600 1.2rem/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 5.5rem; }
+  button { font: 600 14px/1 var(--sans); padding: 0.55rem 0.9rem; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--paper); cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); }
+
+  footer { margin-top: 5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); font: 14px/1.6 var(--sans); color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc" aria-label="Contents">
+  <a class="brand" href="#top">edgar <span>· A Tour of the Harness</span></a>
+  <h2><a href="#core">I. Core</a><span class="count" data-count="core"></span></h2>
+  <ol>
+    <li><a href="#s1"><span class="n">1</span>The loop</a></li>
+    <li><a href="#s2"><span class="n">2</span>The vocabulary</a></li>
+    <li><a href="#s3"><span class="n">3</span>The output</a></li>
+    <li><a href="#s4"><span class="n">4</span>Done means verified</a></li>
+    <li><a href="#s5"><span class="n">5</span>The tool contract</a></li>
+    <li><a href="#s6"><span class="n">6</span>The pipeline</a></li>
+    <li><a href="#s7"><span class="n">7</span>The decision</a></li>
+    <li><a href="#s8"><span class="n">8</span>The asking</a></li>
+    <li><a href="#s9"><span class="n">9</span>Tools that can hurt</a></li>
+    <li><a href="#s10"><span class="n">10</span>Your own tools</a></li>
+    <li><a href="#s11"><span class="n">11</span>The provider port</a></li>
+    <li><a href="#s12"><span class="n">12</span>Four vendors, one adapter</a></li>
+    <li><a href="#s13"><span class="n">13</span>Anthropic's adapter</a></li>
+    <li><a href="#s14"><span class="n">14</span>Repair and routing</a></li>
+    <li><a href="#s15"><span class="n">15</span>The prompt</a></li>
+    <li><a href="#s16"><span class="n">16</span>Compaction</a></li>
+    <li><a href="#s17"><span class="n">17</span>Sessions on disk</a></li>
+    <li><a href="#s18"><span class="n">18</span>The surface</a></li>
+    <li class="planned"><a href="#s19"><span class="n">19</span>Skills (M6)</a></li>
+  </ol>
+  <h2><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></h2>
+  <ol>
+    <li class="planned"><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
+    <li class="planned"><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
+    <li class="planned"><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
+    <li class="planned"><a href="#s23"><span class="n">23</span>Extensions, hooks (M10)</a></li>
+    <li class="planned"><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
+  </ol>
+  <h2><a href="#v2">III. v2</a><span class="count" data-count="v2"></span></h2>
+  <ol>
+    <li class="planned"><a href="#s25"><span class="n">25</span>Learning (M12)</a></li>
+    <li class="planned"><a href="#s26"><span class="n">26</span>The controller (M13)</a></li>
+    <li class="planned"><a href="#s27"><span class="n">27</span>Skill synthesis (M14)</a></li>
+    <li class="planned"><a href="#s28"><span class="n">28</span>Escalation (M15)</a></li>
+    <li class="planned"><a href="#s29"><span class="n">29</span>Capability broker (M17)</a></li>
+    <li class="planned"><a href="#s30"><span class="n">30</span>Scheduling (M16)</a></li>
+  </ol>
+</nav>
+
+<main id="top">
+
+<header class="hero">
+  <h1>A Tour of the Harness</h1>
+  <p class="lede">A guided read of <a href="https://github.com/vespassassina/edgar">edgar</a>: which files to open, in which order, and what to look for in each.</p>
+  <p class="tag">The agent harness you can read in an afternoon. Any model. No hidden calls. Nothing is done until it's verified.</p>
+</header>
+
+<p>Every stop links to the file on GitHub and names the functions worth finding. The
+order follows dependencies, not the alphabet: each stop only needs the stops before
+it. Keep the code open beside this page. The numbered steps in the diagrams match
+the numbered comments in the code.</p>
+
+<p>The tour comes in three parts, one per tier, so you can read it a tier at a time.
+<strong>Core</strong> is built: read it now. <strong>v1</strong> and
+<strong>v2</strong> are planned. Their stops name the files they will be, the
+milestone that brings each one, and the seam in Core where it will attach. As each
+milestone lands, its stop gets links like the rest.</p>
+
+<p>The promise is that Core can be read in an afternoon, so time yourself. If it
+takes longer, that is worth knowing:
+<a href="https://github.com/vespassassina/edgar/issues">open an issue</a> and say where
+you got stuck.</p>
+
+<div class="clock" id="clock">
+  <output id="clock-time">0:00:00</output>
+  <button type="button" id="clock-start">Start the clock</button>
+  <button type="button" class="ghost" id="clock-reset" hidden>Reset</button>
+  <span id="clock-note">It keeps running if you close the tab.</span>
+</div>
+
+<!-- ─────────────────────────────── Part I ─────────────────────────────── -->
+
+<h2 class="part" id="core"><span class="numeral">I.</span> Core <span class="badge">Built, M0 to M5</span></h2>
+<p class="part-intro">The smallest honest harness: one loop, eight tools, five
+providers, permissions, verification, sessions. At most 5,000 lines of code.</p>
+
+<h3 class="stage">The shape of the thing</h3>
+
+<p>Sizes are in lines of code: blank lines and comments do not count, docstrings do.
+<code>just loc</code> prints the current totals.</p>
+
+<div class="table-wrap">
+<table id="sizes">
+  <thead><tr><th>Package</th><th style="text-align:right">Lines of code</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr data-package="core"><td><code>core/</code></td><td class="loc">~700</td><td>The turn loop and the types everything else speaks in</td></tr>
+    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~700</td><td>What the model can do, and the pipeline every call goes through</td></tr>
+    <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
+    <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,100</td><td>Five vendors, two adapters, a table of differences</td></tr>
+    <tr data-package="context"><td><code>context/</code></td><td class="loc">~200</td><td>Building the prompt, and compacting it</td></tr>
+    <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
+    <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,400</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The loop is under 200 lines of code; the command line is the biggest package.
+The hard part is small and the surface is large. That is typical of harnesses, and
+worth noticing.</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+    ways["Ways in<br/>cli/repl.py<br/>cli/oneshot.py"] --> loop["core/loop.py<br/>run_turn"]
+    loop --> ctx["context/<br/>build · compact"]
+    loop --> prov["providers/<br/>openai_compat · anthropic · fake"]
+    loop --> exe["tools/execute.py<br/>the pipeline"]
+    exe --> pol["permissions/<br/>decide, pure"]
+    exe --> tools["tools/builtin/<br/>tools/custom.py"]
+    loop --> ver["core/verify.py<br/>the gate"]
+    loop --> disk[("storage/<br/>session JSONL")]
+    loop --> bus["core/events.py<br/>EventBus"]
+    bus -.->|"the only output path"| ways
+</pre></div>
+
+<!-- Stage 1 -->
+<h3 class="stage">Stage 1. The spine <small>about 45 minutes</small></h3>
+<p>These four files are the whole system in miniature. Everything else is detail
+hanging off them.</p>
+
+<article class="stop" id="s1" data-files="src/edgar/core/loop.py">
+  <h4><span class="n">1</span>The loop</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/loop.py"><code>core/loop.py</code></a></p>
+  <p class="look">Look for: <code>run_turn</code> <code>_Turn</code> <code>_start</code> <code>_ask</code> <code>_run_tools</code> <code>_check</code> <code>Runtime</code></p>
+  <p>The file opens with the whole turn as pseudocode, and <code>run_turn</code>
+  follows it step by step, numbered 1 to 10 in the comments. The diagram uses the
+  same numbers. Each step with any detail is a helper one level down; no helper
+  calls another, and nothing recurses.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart TD
+    start(["1. record the prompt"]) --> safe["3. safe point:<br/>pause, /steer"]
+    safe --> caps{"4. over a<br/>cost cap?"}
+    caps -->|yes| budget(["budget_exceeded"])
+    caps -->|no| ask["5. ask the model<br/>_ask"]
+    ask --> calls{"6. tool<br/>calls?"}
+    calls -->|yes| run["run them in order<br/>_run_tools"] --> safe
+    calls -->|no| steer{"7. steer<br/>pending?"}
+    steer -->|yes| safe
+    steer -->|no| acted{"8. changed<br/>something?"}
+    acted -->|"no, or no check"| done(["9. completed"])
+    acted -->|yes| check["run the check<br/>_check"]
+    check -->|passed| done
+    check -->|"failed, tries left"| safe
+    check -->|"failed, none left"| failed(["verification_failed"])
+</pre></div>
+  <p>There are four ways out: <code>budget_exceeded</code>, <code>completed</code>,
+  <code>verification_failed</code>, and a cancel, which raises. On a cancel,
+  <code>seal()</code> first gives every open tool call a result, so the transcript
+  stays valid.</p>
+  <p class="take"><strong>Take with you:</strong> the safe point (step 3) is the only
+  place a pause or a <code>/steer</code> takes effect. The previous round always
+  ended on a complete call-and-result pair, which is what keeps the transcript valid
+  (stop 16).</p>
+</article>
+
+<article class="stop" id="s2" data-files="src/edgar/core/message.py">
+  <h4><span class="n">2</span>The vocabulary</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/message.py"><code>core/message.py</code></a></p>
+  <p class="look">Look for: <code>Message</code> <code>TextBlock</code> <code>ToolUseBlock</code> <code>ToolResultBlock</code> <code>ErrorRecord</code> <code>ThinkingBlock</code></p>
+  <p>These are the shapes the model sees. The comment at the top shows a whole
+  conversation written in these types. Everything is frozen: compaction builds new
+  transcripts rather than editing old ones. A failed tool call is a
+  <code>ToolResultBlock</code> with <code>is_error</code> set, never an
+  exception.</p>
+</article>
+
+<article class="stop" id="s3" data-files="src/edgar/core/events.py">
+  <h4><span class="n">3</span>The output</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/events.py"><code>core/events.py</code></a></p>
+  <p class="look">Look for: <code>EventBus</code> <code>Event</code> <code>TurnStarted</code> <code>ToolProposed</code> <code>PermissionResolved</code> <code>TurnFinished</code></p>
+  <p>These are the shapes the outside world sees. The loop and tools never print;
+  they emit events, and the renderer, the status line, <code>--events</code> and the
+  tests subscribe. Each event says in a comment who emits it, and the comment at the
+  top lists a typical turn's events in order.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+    src["loop · tools · providers"] -->|"emit(event)"| bus["EventBus"]
+    bus --> r["cli/render.py<br/>stdout: the answer"]
+    bus --> s["cli/statusbar.py<br/>stderr: status"]
+    bus --> j["--events<br/>one JSON line each"]
+    bus --> t["tests<br/>record and assert"]
+</pre></div>
+</article>
+
+<article class="stop" id="s4" data-files="src/edgar/core/verify.py">
+  <h4><span class="n">4</span>Done means verified</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/verify.py"><code>core/verify.py</code></a></p>
+  <p class="look">Look for: <code>verify</code> <code>Check</code></p>
+  <p>This is the smallest important file in the repository. When the model stops
+  after changing something, the declared check runs. If it fails, its output goes
+  back to the model while attempts remain. Decide for yourself whether it is as
+  strong as the README claims.</p>
+</article>
+
+<p class="check"><strong>Before moving on:</strong> can you draw the turn from memory?</p>
+
+<!-- Stage 2 -->
+<h3 class="stage">Stage 2. The hands <small>about 45 minutes</small></h3>
+<p>How the loop touches the world: where "the model asked" turns into "the thing
+happened".</p>
+
+<article class="stop" id="s5" data-files="src/edgar/tools/base.py">
+  <h4><span class="n">5</span>The tool contract</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/base.py"><code>tools/base.py</code></a></p>
+  <p class="look">Look for: <code>Tool</code> <code>ToolSchema</code> <code>ToolContext</code> <code>ToolResult</code></p>
+  <p>A tool is a schema plus an async <code>run</code>. The schema's category (read,
+  write, shell, network) is what the permission engine reasons about.</p>
+</article>
+
+<article class="stop" id="s6" data-files="src/edgar/tools/execute.py">
+  <h4><span class="n">6</span>The pipeline</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/execute.py"><code>tools/execute.py</code></a></p>
+  <p class="look">Look for: <code>execute</code> <code>_validate</code> <code>_failed</code></p>
+  <p>Every call from every source takes this one path, so this is the single place
+  where a check on every tool call can sit.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart TD
+    call["a tool call"] --> proposed[/"ToolProposed"/]
+    proposed --> known{"tool exists?"}
+    known -->|yes| shape{"arguments a<br/>JSON object?"}
+    shape -->|yes| valid{"match the<br/>schema?"}
+    valid -->|yes| guard[["guard.check<br/>decide, ask if needed"]]
+    guard -->|allow| runit["run, with a timeout"]
+    runit --> spillit["spill big output to a blob"]
+    spillit --> block["ToolResultBlock"]
+    known -->|"no: not_found"| err["error result"]
+    shape -->|"no: validation"| err
+    valid -->|"no: validation"| err
+    guard -->|"deny: permission_denied"| err
+    err --> block
+    block --> back(["back to the model"])
+</pre></div>
+  <p>Nothing here raises into the loop. A timeout or a crashing tool also becomes an
+  error result the model can recover from.</p>
+</article>
+
+<article class="stop" id="s7" data-files="src/edgar/permissions/policy.py">
+  <h4><span class="n">7</span>The decision</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/policy.py"><code>permissions/policy.py</code></a></p>
+  <p class="look">Look for: <code>decide</code> <code>_decide</code> <code>_mode</code> <code>Policy</code> <code>Allow</code> <code>Deny</code> <code>Ask</code></p>
+  <p>One pure function: no I/O, and the first match wins.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart TD
+    in["tool, subject, policy"] --> c1{"catastrophic?"}
+    c1 -->|yes| d1["Deny"]
+    c1 -->|no| yolo{"yolo mode?"}
+    yolo -->|yes| a0["Allow"]
+    yolo -->|no| cred{"credential<br/>path?"}
+    cred -->|yes| d2["Deny"]
+    cred -->|no| ctrl{"writes a<br/>control file?"}
+    ctrl -->|yes| k1["Ask"]
+    ctrl -->|no| out{"outside cwd,<br/>not granted?"}
+    out -->|yes| k2["Ask"]
+    out -->|no| rule{"config rule?"}
+    rule -->|"deny, allow, ask"| r1["that answer"]
+    rule -->|none| grant{"granted<br/>before?"}
+    grant -->|yes| a2["Allow"]
+    grant -->|no| mode["the mode's default<br/>tightened by taint"]
+    mode --> dang{"allowed, but<br/>dangerous?"}
+    dang -->|yes| k4["Ask"]
+    dang -->|no| final["the mode's answer"]
+</pre></div>
+  <p>When nobody is there to answer, <code>decide</code> turns an <code>Ask</code>
+  into a <code>Deny</code> with <code>needed_prompt</code> set, and
+  <code>edgar -p</code> exits 5. Taint is sticky: once a tool returns content from
+  the network, <code>auto</code> mode asks before shell and network calls for the
+  rest of the session.</p>
+</article>
+
+<article class="stop" id="s8" data-files="src/edgar/permissions/guard.py src/edgar/permissions/matcher.py">
+  <h4><span class="n">8</span>The asking</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/guard.py"><code>permissions/guard.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/matcher.py"><code>permissions/matcher.py</code></a></p>
+  <p class="look">Look for: <code>Guard</code> <code>subject</code> <code>CATASTROPHIC</code> <code>credential</code> <code>inside</code></p>
+  <p>The I/O half that keeps <code>decide</code> pure. <code>Guard</code> works out
+  what a call touches, builds the <code>Policy</code>, asks you when the answer is
+  <code>Ask</code>, and remembers your "always" answers. The matcher holds the list
+  of commands that never run and the detection of credential paths.</p>
+</article>
+
+<article class="stop" id="s9" data-files="src/edgar/tools/builtin/fs.py src/edgar/tools/builtin/shell.py">
+  <h4><span class="n">9</span>The tools that can hurt you</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/fs.py"><code>tools/builtin/fs.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/shell.py"><code>tools/builtin/shell.py</code></a></p>
+  <p class="look">Look for: <code>Read</code> <code>Write</code> <code>Edit</code> <code>Grep</code> <code>Shell</code> <code>Fetch</code></p>
+  <p>Read <code>fs.py</code> first. <code>Fetch</code> is the tool whose output is
+  marked untrusted, which is what taints a session.</p>
+</article>
+
+<article class="stop" id="s10" data-files="src/edgar/tools/custom.py">
+  <h4><span class="n">10</span>Your own tools</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/custom.py"><code>tools/custom.py</code></a></p>
+  <p class="look">Look for: <code>CommandTool</code> <code>HttpTool</code> <code>load</code></p>
+  <p>This turns a CLI or an API into a tool with config alone. A command tool is an
+  argv template and never a shell string. An HTTP tool has its host fixed and takes
+  secrets only from the environment.</p>
+</article>
+
+<p class="check"><strong>Before moving on:</strong> where exactly is the boundary
+between "the model asked" and "the thing happened"?</p>
+
+<!-- Stage 3 -->
+<h3 class="stage">Stage 3. The mouth <small>about 45 minutes</small></h3>
+<p>Talking to models, which is where most harnesses hide their complexity.</p>
+
+<article class="stop" id="s11" data-files="src/edgar/providers/base.py">
+  <h4><span class="n">11</span>The provider port</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/base.py"><code>providers/base.py</code></a></p>
+  <p class="look">Look for: <code>Provider</code> <code>ProviderResponse</code> <code>Usage</code> <code>Capabilities</code></p>
+  <p>Everything after this is an adapter behind this protocol.</p>
+</article>
+
+<article class="stop" id="s12" data-files="src/edgar/providers/openai_compat.py src/edgar/providers/quirks.py">
+  <h4><span class="n">12</span>Four vendors, one adapter</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/openai_compat.py"><code>providers/openai_compat.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/quirks.py"><code>providers/quirks.py</code></a></p>
+  <p class="look">Look for: <code>OpenAICompatible</code> <code>Quirks</code> <code>QUIRKS</code></p>
+  <p>OpenAI, Azure, OpenRouter, Ollama and any compatible server share one adapter.
+  How they differ is a table of data, not branches in code. Check whether the table
+  earns the claim.</p>
+</article>
+
+<article class="stop" id="s13" data-files="src/edgar/providers/anthropic.py">
+  <h4><span class="n">13</span>The one that needed its own adapter</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/anthropic.py"><code>providers/anthropic.py</code></a></p>
+  <p class="look">Look for: <code>Anthropic</code></p>
+  <p>Ask yourself why this one needed its own adapter, specifically. Follow how
+  thinking blocks, their signatures and cache breakpoints travel.</p>
+</article>
+
+<article class="stop" id="s14" data-files="src/edgar/providers/repair.py src/edgar/providers/routing.py">
+  <h4><span class="n">14</span>When the model gets it wrong</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/repair.py"><code>providers/repair.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/routing.py"><code>providers/routing.py</code></a></p>
+  <p class="look">Look for: <code>text_call</code> <code>arguments</code> <code>select_model</code></p>
+  <p>Small local models fence their tool calls or write them as plain JSON; the
+  repair recovers them deterministically and never invents a call. Routing in Core
+  is a pure function that binds roles to models. It never picks a model you did not
+  name.</p>
+  <p>Skip these on a first pass: <code>pricing.py</code>, <code>registry.py</code>,
+  <code>fake.py</code>, <code>http.py</code>.</p>
+</article>
+
+<!-- Stage 4 -->
+<h3 class="stage">Stage 4. The memory <small>about 30 minutes</small></h3>
+
+<article class="stop" id="s15" data-files="src/edgar/context/builder.py src/edgar/prompts/system.md">
+  <h4><span class="n">15</span>The prompt</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/builder.py"><code>context/builder.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/prompts/system.md"><code>prompts/system.md</code></a></p>
+  <p class="look">Look for: <code>build</code> <code>system_text</code> <code>pinned</code></p>
+  <p>Everything the model is told, in one short file, and the function that puts it
+  in front of the transcript. Nothing above the cache breakpoint changes within a
+  session, so there is no date or anything volatile in the prefix.</p>
+</article>
+
+<article class="stop" id="s16" data-files="src/edgar/context/compact.py src/edgar/core/units.py">
+  <h4><span class="n">16</span>Compaction</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/compact.py"><code>context/compact.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/units.py"><code>core/units.py</code></a></p>
+  <p class="look">Look for: <code>compact</code> <code>elide</code> <code>fold</code> <code>assert_pairing</code> <code>units</code></p>
+  <p>The hardest correctness problem in the repository: shrinking a transcript
+  without ever separating a tool call from its result. <code>units.py</code> is the
+  invariant; <code>compact.py</code> works only on whole units. The stages run
+  cheapest first.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart TD
+    view["the view"] --> big{"over<br/>compact_at?"}
+    big -->|no| same(["unchanged"])
+    big -->|yes| s1["S1 elide:<br/>old results become stubs"]
+    s1 --> ok1{"under<br/>compact_to?"}
+    ok1 -->|yes| done(["done"])
+    ok1 -->|no| s2["S2 fold:<br/>old turns become one summary"]
+    s2 --> done
+</pre></div>
+</article>
+
+<article class="stop" id="s17" data-files="src/edgar/storage/transcript.py src/edgar/core/session.py src/edgar/core/cancel.py">
+  <h4><span class="n">17</span>Sessions on disk</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/storage/transcript.py"><code>storage/transcript.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/session.py"><code>core/session.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/cancel.py"><code>core/cancel.py</code></a></p>
+  <p class="look">Look for: <code>Log</code> <code>replay</code> <code>Session</code> <code>seal</code></p>
+  <p>A session is recorded as JSONL, append-only, never rewritten. Undo, compaction
+  and cancel each append a record, and replaying the file rebuilds the exact view.
+  Check that the append-only claim holds everywhere, including for a cancel and for
+  <code>/undo</code>.</p>
+</article>
+
+<!-- Stage 5 -->
+<h3 class="stage">Stage 5. The surface <small>skim, 15 minutes</small></h3>
+
+<article class="stop" id="s18" data-files="src/edgar/cli/repl.py src/edgar/cli/slash.py src/edgar/cli/oneshot.py src/edgar/cli/render.py src/edgar/config/load.py">
+  <h4><span class="n">18</span>The surface</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/repl.py"><code>cli/repl.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/slash.py"><code>cli/slash.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/oneshot.py"><code>cli/oneshot.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/render.py"><code>cli/render.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/config/load.py"><code>config/load.py</code></a></p>
+  <p class="look">Look for: <code>Shell</code> <code>dispatch</code> <code>run_prompt</code> <code>Renderer</code></p>
+  <p>This is where the size goes. Skim it; do not study it.</p>
+</article>
+
+<!-- Stage 6 -->
+<h3 class="stage">Next in Core</h3>
+
+<article class="stop planned" id="s19" data-files="src/edgar/skills/discovery.py src/edgar/skills/loader.py src/edgar/tools/builtin/skill.py">
+  <h4><span class="n">19</span>Skills</h4>
+  <p class="files"><span class="ms">M6</span> <code>skills/discovery.py</code> <code>skills/loader.py</code> <code>tools/builtin/skill.py</code></p>
+  <p>Only the frontmatter of each skill is read at startup; the body loads when the
+  model calls the <code>skill</code> tool. A skill is instructions, never code that
+  runs. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m6--skills-and-the-core-release--core-release">Roadmap: M6</a></p>
+</article>
+
+<p class="check"><strong>By the end of Core</strong> you should be able to answer three
+questions without the docs open. What happens in a turn, step by step? Where does
+every tool call pass, and what can stop it there? How does a long session stay
+valid as it is compacted, cancelled and resumed? Any file you could not follow is a
+readability bug: <a href="https://github.com/vespassassina/edgar/issues">open an
+issue</a>.</p>
+
+<!-- ─────────────────────────────── Part II ─────────────────────────────── -->
+
+<h2 class="part" id="v1"><span class="numeral">II.</span> v1 <span class="badge planned">Planned, M7 to M11</span></h2>
+<p class="part-intro">Extensible, and it remembers: memory, MCP, subagents,
+extensions and hooks. At most 8,000 lines of code for Core plus v1. Nothing in v1
+changes the shape of the turn: each piece plugs into a seam you have already
+read.</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+    subgraph read["Seams you read in Core"]
+        builder["context/builder.py<br/>pinned sections"]
+        registry["tools/registry.py<br/>tool sources"]
+        exe["tools/execute.py<br/>the pipeline"]
+        loop["core/loop.py<br/>run_turn"]
+        prov["providers/<br/>the port"]
+    end
+    mem["memory/<br/>facts, frozen at session start"] --> builder
+    mcp["tools/mcp/<br/>MCP servers"] --> registry
+    hooks["extensions/hooks.py<br/>pre_tool vetoes"] --> exe
+    task["tools/builtin/task.py<br/>a subagent"] -->|"re-enters with a fresh session"| loop
+    fb["providers/fallback.py<br/>sideways on an outage"] --> prov
+</pre></div>
+
+<article class="stop planned" id="s20" data-files="src/edgar/memory/store.py src/edgar/memory/facts.py src/edgar/memory/recall.py">
+  <h4><span class="n">20</span>Memory and session search</h4>
+  <p class="files"><span class="ms">M7</span> <code>memory/store.py</code> <code>memory/facts.py</code> <code>memory/recall.py</code></p>
+  <p>Look for the security boundary: an active fact comes only from text a human
+  typed or from an <code>ErrorRecord</code> the harness computed. Everything else,
+  including the model's own <code>remember</code> calls, stays pending until you
+  confirm it. The pinned set is frozen at session start so the prompt prefix stays
+  stable. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m7--memory-and-session-search">Roadmap: M7</a></p>
+</article>
+
+<article class="stop planned" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py">
+  <h4><span class="n">21</span>MCP</h4>
+  <p class="files"><span class="ms">M8</span> <code>tools/mcp/client.py</code> <code>tools/mcp/schema.py</code></p>
+  <p>MCP tools are one more tool source: they go through the same
+  <code>execute()</code> as the built-ins (stop 6). Their results are untrusted, and
+  <code>decide()</code> ignores whatever a server says about its own tools. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m8--mcp">Roadmap: M8</a></p>
+</article>
+
+<article class="stop planned" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/providers/fallback.py">
+  <h4><span class="n">22</span>Subagents, routing rules and fallback</h4>
+  <p class="files"><span class="ms">M9</span> <code>tools/builtin/task.py</code> <code>agents/spawn.py</code> <code>providers/fallback.py</code></p>
+  <p>A subagent is not a second engine. The <code>task</code> tool calls the same
+  <code>run_turn</code> (stop 1) with a fresh transcript and a narrower policy.
+  Consecutive <code>task</code> calls fan out concurrently. Fallback goes sideways
+  when a provider is down, and is kept apart from routing and escalation. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
+</article>
+
+<article class="stop planned" id="s23" data-files="src/edgar/extensions/manifest.py src/edgar/extensions/hooks.py src/edgar/sandbox/base.py">
+  <h4><span class="n">23</span>Extensions, hooks, plugins, embedding</h4>
+  <p class="files"><span class="ms">M10</span> <code>extensions/manifest.py</code> <code>extensions/hooks.py</code> <code>sandbox/base.py</code></p>
+  <p>An extension is a folder of files: tools, skills, agents and hooks. A hook can
+  observe or veto, never allow. Its veto sits in the pipeline's <code>pre_tool</code>
+  stage, just before the permission check, and a failing hook denies. Python is a
+  plugin surface only for providers. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
+</article>
+
+<article class="stop planned" id="s24" data-files="src/edgar/config/init.py src/edgar/config/doctor.py">
+  <h4><span class="n">24</span>Init and doctor</h4>
+  <p class="files"><span class="ms">M11</span> <code>config/init.py</code> <code>config/doctor.py</code></p>
+  <p>Scaffolding a project and checking an environment. Skim it: it is surface, like
+  stage 5. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m11--init-doctor-docs--v10-release">Roadmap: M11</a></p>
+</article>
+
+<!-- ─────────────────────────────── Part III ─────────────────────────────── -->
+
+<h2 class="part" id="v2"><span class="numeral">III.</span> v2 <span class="badge planned">Planned, M12 to M17</span></h2>
+<p class="part-intro">It learns, and runs unattended: learning, the controller,
+escalation, the capability broker and scheduling. At most 11,000 lines of code in
+all. v2 is removable. Nothing in Core or v1 imports it, and CI deletes the v2
+packages and runs the v1 suite to prove it.</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart LR
+    subgraph v1["Core and v1: never import v2"]
+        loop["core/loop.py<br/>post-turn gate"]
+        exe["tools/execute.py<br/>pre_tool vetoes"]
+        bus["core/events.py<br/>EventBus"]
+    end
+    ctrl["controller/<br/>triggers, proposals"] -.->|"loaded by name"| loop
+    syn["learning/synthesis.py"] -.-> loop
+    broker["broker/authorize.py<br/>tickets and caveats"] -.->|"loaded by name"| exe
+    exp["learning/experience.py<br/>telemetry"] -.->|subscribes| bus
+    sched["schedule/tick.py"] -->|"runs edgar -p on a clock"| v1
+</pre></div>
+
+<article class="stop planned" id="s25" data-files="src/edgar/learning/learner.py src/edgar/learning/error_facts.py src/edgar/learning/experience.py">
+  <h4><span class="n">25</span>Learning foundations</h4>
+  <p class="files"><span class="ms">M12</span> <code>learning/learner.py</code> <code>learning/error_facts.py</code> <code>learning/experience.py</code></p>
+  <p>Learning from what you type and from what breaks. Nothing on this path reads
+  tool output, error text or fetched content, and that is enforced by what each
+  function accepts, not by filtering. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m12--learning-foundations">Roadmap: M12</a></p>
+</article>
+
+<article class="stop planned" id="s26" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/apply.py">
+  <h4><span class="n">26</span>The controller</h4>
+  <p class="files"><span class="ms">M13</span> <code>controller/triggers.py</code> <code>controller/proposals.py</code> <code>controller/apply.py</code></p>
+  <p>Self-management that cannot hurt you. The triggers are pure checks, actions come
+  from a whitelist of eight, and every change is dry-run by default, logged and
+  revertible. The controller can only tighten policy. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m13--controller">Roadmap: M13</a></p>
+</article>
+
+<article class="stop planned" id="s27" data-files="src/edgar/learning/synthesis.py src/edgar/learning/curator.py">
+  <h4><span class="n">27</span>Skill synthesis</h4>
+  <p class="files"><span class="ms">M14</span> <code>learning/synthesis.py</code> <code>learning/curator.py</code></p>
+  <p>Only verified procedures become skills. The synthesiser sees the outline of a
+  run, never tool output. It writes only into <code>.edgar/skills/learned/</code>,
+  and only after a passing check. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m14--skill-synthesis">Roadmap: M14</a></p>
+</article>
+
+<article class="stop planned" id="s28" data-files="src/edgar/providers/escalation.py">
+  <h4><span class="n">28</span>Escalation</h4>
+  <p class="files"><span class="ms">M15</span> <code>providers/escalation.py</code></p>
+  <p>A weak model that fails gets help from a stronger one, visibly: upward only,
+  capped and announced. Compare it with routing (stop 14) and fallback (stop 22).
+  Keeping the three apart is the point. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m15--escalation-and-route-suggest">Roadmap: M15</a></p>
+</article>
+
+<article class="stop planned" id="s29" data-files="src/edgar/broker/authorize.py src/edgar/broker/ticket.py src/edgar/broker/receipt.py">
+  <h4><span class="n">29</span>The capability broker</h4>
+  <p class="files"><span class="ms">M17</span> <code>broker/authorize.py</code> <code>broker/ticket.py</code> <code>broker/receipt.py</code></p>
+  <p>Every tool call answers to what the human actually asked for. A typed request
+  becomes a ticket with caveats. A subagent can only narrow it. A pure
+  <code>authorize()</code> vetoes calls in the <code>pre_tool</code> stage, and
+  every decision goes into a signed receipt. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m17--capability-broker">Roadmap: M17</a></p>
+</article>
+
+<article class="stop planned" id="s30" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/install.py">
+  <h4><span class="n">30</span>Scheduling</h4>
+  <p class="files"><span class="ms">M16</span> <code>schedule/due.py</code> <code>schedule/tick.py</code> <code>schedule/install.py</code></p>
+  <p>Unattended runs that cannot run away. Working out what is due is a pure function
+  tested with a frozen clock. A run the harness schedules for itself never holds
+  more authority than the run that created it. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m16--scheduling--v20-release">Roadmap: M16</a></p>
+</article>
+
+<footer>
+  <p><strong>Where next:</strong> the <a href="https://github.com/vespassassina/edgar/blob/main/docs/BLUEPRINT.md">Blueprint</a>
+  for the full module map and interfaces, and the <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/README.md">ADRs</a>
+  for why things are the way they are.</p>
+  <p><strong>Keeping this tour honest.</strong> The tour changes in the same commit
+  as the code it describes. <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_tour.py"><code>tests/unit/test_tour.py</code></a>
+  fails when a linked file no longer exists, when a name under "Look for" is gone
+  from its files, when a size in the table drifts more than 100 lines of code from
+  the real one, when a package has no row, or when a planned file lands and its stop
+  still says planned. It cannot tell when a description has gone stale, so reread a
+  stop whenever you change its code. The source of this page is
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/tour/index.html"><code>docs/tour/index.html</code></a>.</p>
+</footer>
+
+</main>
+</div>
+
+<script>
+  // Progress, kept in this browser only: a "read" box on each built stop, and the clock.
+  (function () {
+    var store = {
+      get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+      set: function (k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+    };
+
+    // 1. A "read" box on every built stop; the contents list shows a tick and a count.
+    var parts = { core: [], v1: [], v2: [] };
+    var part = "core";
+    document.querySelectorAll("h2.part, article.stop").forEach(function (el) {
+      if (el.matches("h2.part")) { part = el.id; return; }
+      parts[part].push(el);
+      if (el.classList.contains("planned")) return;
+      var box = document.createElement("label");
+      box.className = "done";
+      box.innerHTML = '<input type="checkbox"> read';
+      var input = box.querySelector("input");
+      input.checked = store.get("tour:read:" + el.id) === "1";
+      input.addEventListener("change", function () {
+        store.set("tour:read:" + el.id, input.checked ? "1" : null);
+        refresh();
+      });
+      el.appendChild(box);
+    });
+
+    function refresh() {
+      Object.keys(parts).forEach(function (name) {
+        var built = parts[name].filter(function (el) { return !el.classList.contains("planned"); });
+        var read = built.filter(function (el) { return store.get("tour:read:" + el.id) === "1"; });
+        built.forEach(function (el) {
+          var item = document.querySelector('nav.toc a[href="#' + el.id + '"]');
+          if (item) item.parentElement.classList.toggle("read", read.indexOf(el) >= 0);
+        });
+        var count = document.querySelector('[data-count="' + name + '"]');
+        if (count) count.textContent = built.length ? read.length + " / " + built.length : "planned";
+      });
+    }
+    refresh();
+
+    // 2. The clock: the start time is stored, so it survives closing the tab.
+    var out = document.getElementById("clock-time");
+    var start = document.getElementById("clock-start");
+    var reset = document.getElementById("clock-reset");
+    function show() {
+      var began = Number(store.get("tour:clock:start"));
+      var ended = Number(store.get("tour:clock:end")) || Date.now();
+      var s = began ? Math.floor((ended - began) / 1000) : 0;
+      var pad = function (n) { return String(n).padStart(2, "0"); };
+      out.textContent = Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+      var running = began && !store.get("tour:clock:end");
+      start.textContent = running ? "Stop" : began ? "Finished" : "Start the clock";
+      start.disabled = Boolean(began && !running);
+      reset.hidden = !began;
+    }
+    start.addEventListener("click", function () {
+      if (!store.get("tour:clock:start")) store.set("tour:clock:start", String(Date.now()));
+      else store.set("tour:clock:end", String(Date.now()));
+      show();
+    });
+    reset.addEventListener("click", function () {
+      store.set("tour:clock:start", null);
+      store.set("tour:clock:end", null);
+      show();
+    });
+    show();
+    setInterval(show, 1000);
+  })();
+</script>
+<script type="module">
+  // Diagrams are written as Mermaid text above, so they read as plain text without this.
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", flowchart: { htmlLabels: true, nodeSpacing: 28, rankSpacing: 36, padding: 10 } });
+</script>
+</body>
+</html>

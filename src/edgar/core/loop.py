@@ -13,6 +13,26 @@ stops after changing something, the verify gate runs the declared check
 (core/verify.py). Still to join: the post-turn gate for v2.
 """
 
+# The whole turn, as pseudocode:
+#
+#   record what the human typed
+#   repeat:
+#       apply any pause or /steer            (only here, between whole units)
+#       if a cost cap is reached:            stop, keep the last answer
+#       compact the context if it is too big
+#       ask the model, streaming its answer
+#       if it asked for tools:
+#           run each call in order, record the results
+#           go round again
+#       if the user steered meanwhile:       go round again
+#       if it changed something and a check is declared:
+#           run the check
+#           if it failed and attempts remain: show the model why, go round again
+#       stop
+#   announce how the turn ended and return the answer
+#
+# Cancelling at any point seals the transcript so every call has a result.
+
 from __future__ import annotations
 
 import asyncio
@@ -35,7 +55,7 @@ from edgar.core.events import (
     TurnFinished,
     TurnStarted,
 )
-from edgar.core.message import Message, TextBlock, ToolResultBlock
+from edgar.core.message import Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.session import Session, new_id
 from edgar.core.units import assert_pairing
 from edgar.core.verify import Check, verify
@@ -74,112 +94,178 @@ class TurnResult:
     usage: Usage
 
 
+@dataclass(slots=True)
+class _Turn:
+    # What one turn keeps track of while it runs. The helpers below read and
+    # update it, so each of them stays one level deep.
+    id: str
+    ctx: ToolContext  # what every tool call gets: cwd, bus, where to spill
+    guard: Guard  # the permission engine, plus whoever answers its prompts
+    usage: Usage = field(default_factory=Usage)
+    cost: float | None = 0.0  # None once any request's pricing is unknown [BUD-5]
+    partial: list[str] = field(default_factory=list)  # streamed text, kept on cancel
+    results: list[ToolResultBlock] = field(default_factory=list)  # this round's results
+    acted: bool = False  # a non-read tool ran: the verify gate will run [VER-2]
+    attempt: int = 0  # verify attempts so far
+    text: str = ""  # the last answer: the result, or what a cap leaves [BUD-3]
+
+
 async def run_turn(
     session: Session, prompt: str, rt: Runtime, *, attached: Sequence[str] = ()
 ) -> TurnResult:
     """`attached` is piped stdin or an @file: context, never the prompt [CLI-3]."""
-    bus = rt.bus
-    turn_id = new_id()
-    bus.emit(TurnStarted(turn_id=turn_id, model=session.model, depth=session.depth))
-    wrapped = (f"\n\n<attached>\n{a.rstrip()}\n</attached>" for a in attached)
-    blocks = (TextBlock(prompt), *(TextBlock(a, attached=True) for a in wrapped))
-    session.append(Message("user", blocks))
-    blobs, limit = session.dir / "blobs", rt.max_output_tokens
-    ctx = ToolContext(cwd=session.cwd, bus=bus, blob_dir=blobs, max_output_tokens=limit)
-    usage = Usage()
-    cost: float | None = 0.0  # None once any request's pricing is unknown [BUD-5]
-    partial: list[str] = []  # text streamed so far, kept if the turn is cancelled
-    results: list[ToolResultBlock] = []
-    guard = rt.guard or Guard(Policy(mode=session.mode, cwd=session.cwd, home=Path.home()))
-    acted, attempt, reason = False, 0, "completed"  # the verify gate's state [VER-2]
-    text = ""  # the last answer: the result, or the partial result a cap leaves [BUD-3]
+    # 1. Record what the human typed, with anything attached marked as attached.
+    turn = _start(session, prompt, rt, attached)
+    reason = "completed"
 
+    # 2. Keep the text as it streams in, so a cancel can save what was said.
     def collect(event: Event) -> None:
         if isinstance(event, TextDelta) and event.depth == session.depth:
-            partial.append(event.text)
+            turn.partial.append(event.text)
 
-    bus.subscribe(collect)
+    rt.bus.subscribe(collect)
     try:
         while True:
-            # The one safe point: the previous iteration ended on a complete unit, so
-            # a steer or a pause never lands between a call and its result [CLI-13].
+            # 3. The one safe point: the previous round ended on a complete unit,
+            #    so a steer or a pause never lands between a call and its result
+            #    [CLI-13].
             await session.wait_if_paused()
             for steer in session.drain_steers():
-                bus.emit(SteerApplied(turn_id=turn_id, text=steer))
-            caps = rt.budget
-            if _over(caps.turn_cost_cap, cost) or _over(caps.session_cost_cap, session.cost):
+                rt.bus.emit(SteerApplied(turn_id=turn.id, text=steer))
+
+            # 4. Out of money? Stop here and keep the last answer [BUD-3].
+            if _capped(session, rt, turn):
                 reason = "budget_exceeded"
                 break
-            await compact(session, rt)
-            messages = build(session, rt.system_prompt)
-            bus.emit(
-                RequestStarted(
-                    provider=rt.provider.name,
-                    model=session.model,
-                    input_tokens=rt.provider.count_tokens(messages),
-                )
-            )
-            response = await rt.provider.stream(
-                messages, rt.tools.schemas(), model=rt.model, bus=bus
-            )
-            usage += response.usage
-            cost, session.cost = plus(cost, response.cost), plus(session.cost, response.cost)
-            cached = response.usage.cache_read_tokens
-            bus.emit(RequestFinished(usage=response.usage, cost=response.cost, cached=cached))
-            session.append(response.message)
-            partial.clear()
-            text = response.message.text
 
-            calls = response.message.tool_calls
-            if calls:
-                # In order, one at a time [TOOL-12]. Failures come back as error
-                # results, so the model can recover; nothing here raises.
-                results.clear()
-                for call in calls:
-                    result = await execute(
-                        call,
-                        registry=rt.tools,
-                        ctx=ctx,
-                        guard=guard,
-                        mode=session.mode,
-                        tainted=session.tainted,
-                    )
-                    results.append(result)
-                    acted = acted or _acted(rt, call.name, result)
-                    if result.untrusted and not session.tainted:  # sticky [PERM-11]
-                        session.tainted = True
-                        bus.emit(SessionTainted(by_tool=call.name))
-                session.append(Message("tool", tuple(results)))
-                assert_pairing(session.transcript)  # [CTX-4]
+            # 5. Ask the model. It answers with text, tool calls, or both.
+            answer = await _ask(session, rt, turn)
+
+            # 6. It asked for tools: run them, then go round again with the results.
+            if answer.tool_calls:
+                await _run_tools(answer.tool_calls, session, rt, turn)
                 continue
 
-            if session.steers_pending():  # the model stopped, but the user steered
+            # 7. It stopped, but the user steered in the meantime: go round again.
+            if session.steers_pending():
                 continue
-            if rt.verify and acted:  # done means the check passed [VER-2, VER-3]
-                attempt += 1
-                feedback = await verify(
-                    rt.verify,
-                    attempt,
-                    cwd=session.cwd,
-                    blob_dir=ctx.blob_dir,
-                    bus=bus,
-                    max_tokens=rt.max_output_tokens,
-                )
-                if feedback is not None and attempt < rt.verify.max_attempts:
+
+            # 8. It stopped after changing something: done means the check passes
+            #    [VER-2, VER-3]. A failure goes back to the model while attempts remain.
+            if rt.verify and turn.acted:
+                feedback = await _check(rt.verify, session, rt, turn)
+                if feedback is not None and turn.attempt < rt.verify.max_attempts:
                     session.append(Message.user(feedback, via="verify"))
                     continue
                 reason = "completed" if feedback is None else "verification_failed"
+
+            # 9. Nothing left to do.
             break
     except asyncio.CancelledError:
-        seal(session, partial_text="".join(partial), results=results)
+        # Cancelled mid-turn: give every open call a result and keep the partial
+        # answer, so the transcript is valid for the next request [CTX-4].
+        seal(session, partial_text="".join(turn.partial), results=turn.results)
         assert_pairing(session.transcript)
-        bus.emit(TurnFinished(turn_id=turn_id, usage=usage, cost=cost, reason="cancelled"))
+        rt.bus.emit(
+            TurnFinished(turn_id=turn.id, usage=turn.usage, cost=turn.cost, reason="cancelled")
+        )
         raise
     finally:
-        bus.unsubscribe(collect)
+        rt.bus.unsubscribe(collect)
 
-    bus.emit(TurnFinished(turn_id=turn_id, usage=usage, cost=cost, reason=reason))
-    return TurnResult(text, reason, usage)
+    # 10. Announce how the turn ended and hand back the answer.
+    rt.bus.emit(TurnFinished(turn_id=turn.id, usage=turn.usage, cost=turn.cost, reason=reason))
+    return TurnResult(turn.text, reason, turn.usage)
+
+
+def _start(session: Session, prompt: str, rt: Runtime, attached: Sequence[str]) -> _Turn:
+    # Announce the turn.
+    turn_id = new_id()
+    rt.bus.emit(TurnStarted(turn_id=turn_id, model=session.model, depth=session.depth))
+    # The prompt is one block; each attachment is its own block, tagged as attached
+    # so nothing downstream mistakes it for something the human typed.
+    wrapped = (f"\n\n<attached>\n{a.rstrip()}\n</attached>" for a in attached)
+    blocks = (TextBlock(prompt), *(TextBlock(a, attached=True) for a in wrapped))
+    session.append(Message("user", blocks))
+    # Set up what tool calls share for the whole turn.
+    blobs, limit = session.dir / "blobs", rt.max_output_tokens
+    ctx = ToolContext(cwd=session.cwd, bus=rt.bus, blob_dir=blobs, max_output_tokens=limit)
+    guard = rt.guard or Guard(Policy(mode=session.mode, cwd=session.cwd, home=Path.home()))
+    return _Turn(id=turn_id, ctx=ctx, guard=guard)
+
+
+def _capped(session: Session, rt: Runtime, turn: _Turn) -> bool:
+    # Either cap reached: this turn's spend, or the whole session's.
+    caps = rt.budget
+    return _over(caps.turn_cost_cap, turn.cost) or _over(caps.session_cost_cap, session.cost)
+
+
+async def _ask(session: Session, rt: Runtime, turn: _Turn) -> Message:
+    # 1. Make room first if the context has grown past `compact_at` [CTX-3].
+    await compact(session, rt)
+    # 2. Build the request: system prompt, then the (possibly compacted) view.
+    messages = build(session, rt.system_prompt)
+    rt.bus.emit(
+        RequestStarted(
+            provider=rt.provider.name,
+            model=session.model,
+            input_tokens=rt.provider.count_tokens(messages),
+        )
+    )
+    # 3. Stream the answer. Text arrives as TextDelta events on the bus.
+    response = await rt.provider.stream(messages, rt.tools.schemas(), model=rt.model, bus=rt.bus)
+    # 4. Add up what it cost, for the turn and for the session.
+    turn.usage += response.usage
+    turn.cost, session.cost = plus(turn.cost, response.cost), plus(session.cost, response.cost)
+    cached = response.usage.cache_read_tokens
+    rt.bus.emit(RequestFinished(usage=response.usage, cost=response.cost, cached=cached))
+    # 5. Record the answer. What streamed is now in the transcript, so drop the copy.
+    session.append(response.message)
+    turn.partial.clear()
+    turn.text = response.message.text
+    return response.message
+
+
+async def _run_tools(
+    calls: Sequence[ToolUseBlock], session: Session, rt: Runtime, turn: _Turn
+) -> None:
+    # In order, one at a time [TOOL-12]. Failures come back as error results, so
+    # the model can recover; nothing here raises.
+    turn.results.clear()
+    for call in calls:
+        # 1. Validate, check permission, run, spill: all inside execute().
+        result = await execute(
+            call,
+            registry=rt.tools,
+            ctx=turn.ctx,
+            guard=turn.guard,
+            mode=session.mode,
+            tainted=session.tainted,
+        )
+        turn.results.append(result)
+        # 2. Remember whether anything changed, for the verify gate.
+        turn.acted = turn.acted or _acted(rt, call.name, result)
+        # 3. Content from the network taints the session, for good [PERM-11].
+        if result.untrusted and not session.tainted:
+            session.tainted = True
+            rt.bus.emit(SessionTainted(by_tool=call.name))
+    # 4. All results go back in one tool message, right after the calls [CTX-4].
+    session.append(Message("tool", tuple(turn.results)))
+    assert_pairing(session.transcript)
+
+
+async def _check(check: Check, session: Session, rt: Runtime, turn: _Turn) -> str | None:
+    # Run the declared check once more. None means it passed; otherwise the
+    # feedback to show the model.
+    turn.attempt += 1
+    return await verify(
+        check,
+        turn.attempt,
+        cwd=session.cwd,
+        blob_dir=turn.ctx.blob_dir,
+        bus=rt.bus,
+        max_tokens=rt.max_output_tokens,
+    )
 
 
 def _over(cap: float | None, spent: float | None) -> bool:
@@ -194,4 +280,5 @@ def _acted(rt: Runtime, name: str, result: ToolResultBlock) -> bool:
     return tool is not None and category(tool.schema) != "read" and not refused
 
 
+# Error kinds that mean the tool never ran, so it cannot have changed anything.
 NOT_RUN = frozenset({"permission_denied", "validation", "not_found"})

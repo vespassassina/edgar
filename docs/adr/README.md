@@ -51,6 +51,7 @@ that did not need an ADR.
 | [0037](0037-core-fits-in-5000.md) | Core stays under 5,000 lines: simplify first, then move four features to v1 | Accepted · plan and todo, save and load, login, daily cap to v1 |
 | [0038](0038-context-and-sessions-as-built.md) | Context and sessions as built: records by position, S3 only past the window, three commands to v1 | Accepted · `/history`, `edgar cost`, `edgar context show` to v1 |
 | [0039](0039-capability-broker.md) | A capability broker in v2: every tool call checked against a ticket bound to what the human typed, with a signed receipt | Accepted · new milestone M17 |
+| [0040](0040-written-to-be-read.md) | Written to be read: pseudocode comments, shallow functions, every limit in lines of code, A Tour of the Harness | Accepted · the loop's limit is now lines of code |
 
 ## Writing a new ADR
 

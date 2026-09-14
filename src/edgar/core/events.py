@@ -8,6 +8,26 @@ a subscriber that needs async work queues it itself.
 Event names and fields are part of the 1.0 format freeze [EXT-10].
 """
 
+# How output flows:
+#
+#   loop, tools, providers ──emit(event)──> EventBus ──> each subscriber, in order
+#                                                        ├─ cli/render.py    stdout: the answer
+#                                                        ├─ cli/statusbar.py stderr: status
+#                                                        ├─ --events writer  one JSON line each
+#                                                        └─ tests            record and assert
+#
+# A typical turn, in the order its events arrive:
+#
+#   TurnStarted
+#     RequestStarted → TextDelta… → RequestFinished        the model answers
+#     ToolProposed → PermissionResolved → ToolStarted
+#                  → ToolFinished                          once per tool call
+#     RequestStarted → TextDelta… → RequestFinished        the model reads the results
+#     VerifyStarted → VerifyFinished                       if a check is declared
+#   TurnFinished
+#
+# Each event below says who emits it.
+
 from __future__ import annotations
 
 import dataclasses
@@ -21,6 +41,8 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Event:
+    # Every event says which agent it came from, so a subagent's output can be
+    # told apart from the main loop's (depth 0 is the main loop).
     agent_id: str = "main"
     depth: int = 0
 
@@ -28,6 +50,7 @@ class Event:
     def name(self) -> str:
         return type(self).__name__
 
+    # e.g. {"event": "ToolStarted", "agent_id": "main", "depth": 0, "id": "t1", …}
     def to_dict(self) -> dict[str, Any]:
         """The `--events` line: the event's name, then its fields [CLI-18]."""
         return {"event": self.name, **dataclasses.asdict(self)}
@@ -37,6 +60,8 @@ Subscriber = Callable[[Event], None]
 
 
 class EventBus:
+    # A list of callables. emit() calls each one, in the order they subscribed,
+    # before returning: no queue, no thread, no ordering surprises.
     def __init__(self) -> None:
         self._subscribers: list[Subscriber] = []
 
@@ -56,12 +81,14 @@ class EventBus:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TurnStarted(Event):
+    # core/loop.py, as a turn begins.
     turn_id: str
     model: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TurnFinished(Event):
+    # core/loop.py, as a turn ends, however it ends (reason says how).
     turn_id: str
     usage: Usage
     cost: float | None  # None: some request had unknown pricing [BUD-5]
@@ -73,6 +100,7 @@ class TurnFinished(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RequestStarted(Event):
+    # core/loop.py, before each request to the model.
     provider: str
     model: str
     input_tokens: int
@@ -80,16 +108,19 @@ class RequestStarted(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TextDelta(Event):
+    # The provider adapter, for each piece of answer text as it streams in.
     text: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ThinkingDelta(Event):
+    # The provider adapter, for each piece of reasoning as it streams in.
     text: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class RequestFinished(Event):
+    # core/loop.py, when the model's answer is complete.
     usage: Usage
     cost: float | None  # None: unknown pricing, never a wrong zero [BUD-5]
     cached: int
@@ -97,6 +128,7 @@ class RequestFinished(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ProviderRetry(Event):
+    # providers/http.py, before retrying a failed request.
     attempt: int
     after_s: float
     reason: str  # "HTTP 429", "HTTP 503", "connection error"
@@ -104,12 +136,14 @@ class ProviderRetry(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ReasoningDropped(Event):
+    # The provider adapter, when another family's reasoning is left out of a request.
     from_origin: str
     to_family: str  # [PRV-13]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolCallRepaired(Event):
+    # providers/http.py, when a small model's malformed tool call was fixed.
     tool: str
     repair: str  # which fixed repair applied [PRV-16]
 
@@ -119,6 +153,7 @@ class ToolCallRepaired(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ModelSelected(Event):
+    # cli/setup.py, when the model for the session is chosen.
     model: str
     rule: str
     reason: str
@@ -129,6 +164,7 @@ class ModelSelected(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolProposed(Event):
+    # tools/execute.py, when a call arrives, before anything is decided.
     id: str
     tool: str
     args_preview: str
@@ -137,6 +173,8 @@ class ToolProposed(Event):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class PermissionResolved(Event):
     """Every decision, with what it was about and why: the audit trail [PERM-10]."""
+
+    # permissions/guard.py, once per tool call, allow or deny.
 
     id: str
     decision: str  # allow | deny
@@ -148,17 +186,20 @@ class PermissionResolved(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SessionTainted(Event):
+    # core/loop.py, the first time network content enters the session.
     by_tool: str  # [PERM-11]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VerifyStarted(Event):
+    # core/verify.py, as the declared check starts.
     command: str
     attempt: int  # [VER-6]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class VerifyFinished(Event):
+    # core/verify.py, when the check exits.
     ok: bool
     exit_code: int | None
     attempt: int
@@ -167,12 +208,14 @@ class VerifyFinished(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolStarted(Event):
+    # tools/execute.py, once the call is allowed and starts running.
     id: str
     tool: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ToolFinished(Event):
+    # tools/execute.py, when the call returns, fails or times out.
     id: str
     ok: bool
     duration_ms: int
@@ -185,6 +228,7 @@ class ToolFinished(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Compacted(Event):
+    # context/compact.py, after the context was shrunk.
     stages: str  # "S1", "S1+S2", …
     before: int  # tokens
     after: int
@@ -196,33 +240,39 @@ class Compacted(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class InputQueued(Event):
+    # cli/repl.py, when the user types while a turn runs.
     text: str
     position: int
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class SteerApplied(Event):
+    # core/loop.py, when a /steer reaches the model at the safe point.
     turn_id: str
     text: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Paused(Event):
+    # cli/slash.py, on /pause.
     turn_id: str  # [CLI-27]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Resumed(Event):
+    # cli/slash.py, on /resume.
     turn_id: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AsideStarted(Event):
+    # core/aside.py, when /btw asks a side question.
     question: str  # [CLI-24]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class AsideFinished(Event):
+    # core/aside.py, with the side answer (never added to the transcript).
     answer: str
     usage: Usage
     cost: float | None

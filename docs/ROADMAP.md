@@ -10,6 +10,9 @@ milestone ships something that works, is tested, and is documented. Nothing is
 | **v1** | M7–M11 | 1.0 | Extensible and remembers; extension formats frozen | ≤ 8,000 LOC |
 | **v2** | M12–M17 | 2.0 | Learns and runs unattended; removable | ≤ 11,000 LOC |
 
+LOC means lines of code: non-blank lines that are not only a comment. Docstrings
+count; comments do not ([ADR-0040](adr/0040-written-to-be-read.md)).
+
 ## Status
 
 Milestone IDs keep their numbers; the order of work is **M0, M1, M2, M4, M3, M5,
@@ -360,7 +363,9 @@ contract kit; a failing `pre_tool` hook denies; and startup time is unchanged.
 - `edgar sessions compact ID` [CTX-10]
 - `edgar context show` with per-section token counts [CTX-2] (moved from M5,
   [ADR-0038](adr/0038-context-and-sessions-as-built.md))
-- `docs/TOUR.md` — guided walk through BLUEPRINT §18
+- ~~`docs/TOUR.md`~~ done early as [A Tour of the Harness](tour/index.html),
+  published to GitHub Pages ([ADR-0040](adr/0040-written-to-be-read.md)); M11 checks
+  it covers all of v1
 - `docs/COOKBOOK.md` — piping, command and HTTP tools, subagents, skills,
   extensions, hooks, a devcontainer for untrusted work
 - `docs/EXTENDING.md` — add a provider, a tool, an agent, a skill, an extension

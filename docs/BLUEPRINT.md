@@ -286,8 +286,8 @@ edgar/
 └── pyproject.toml
 ```
 
-Files marked ★ are the ones a reader should open first. `docs/TOUR.md` walks them
-in order.
+Files marked ★ are the ones a reader should open first.
+[A Tour of the Harness](tour/index.html) walks them in order.
 
 ## 3. Core data model
 
@@ -488,7 +488,7 @@ rewriting (§8.3).
 
 ## 4. The turn loop
 
-The single most important file. Kept under 200 lines by pushing every concern into
+The single most important file. Kept under 200 lines of code by pushing every concern into
 a collaborator. [CLI-1, CLI-2]
 
 ```mermaid
@@ -1946,7 +1946,7 @@ written to stdout.
 ## 18. Reading order for contributors
 
 1. `core/message.py` and `core/units.py` — the vocabulary and the invariant
-2. `core/loop.py` — the whole thing in 200 lines
+2. `core/loop.py` — the whole thing in under 200 lines of code
 3. `prompts/system.md` — everything the model is told, in one short file
 4. `tools/base.py` + `tools/execute.py` — the contract and its pipeline
 5. `permissions/policy.py` — a pure decision function
@@ -1958,4 +1958,6 @@ written to stdout.
 10. `agents/spawn.py` (v1) — subagents as a re-entrant loop
 11. `controller/` and `learning/` (v2) — self-management and learning with guardrails
 
-`docs/TOUR.md` narrates this path with runnable examples at each step.
+[A Tour of the Harness](tour/index.html) (`docs/tour/`, published at
+<https://vespassassina.github.io/edgar/>) narrates this path with a diagram at each
+turn, one part per tier.

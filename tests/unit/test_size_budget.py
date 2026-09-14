@@ -19,11 +19,22 @@ def test_blank_lines_and_comments_do_not_count(tmp_path: Path) -> None:
     assert count_loc(source) == 2
 
 
-def test_loop_is_budgeted_in_physical_lines(tmp_path: Path) -> None:
-    (tmp_path / "core").mkdir()
-    (tmp_path / "core" / "loop.py").write_text("\n" * 201)
-    loop = next(lim for lim in limits(tmp_path) if lim.label.startswith("core/loop.py"))
-    assert not loop.ok
+def _loop_limit(root: Path, source: str) -> Limit:
+    # Write a fake core/loop.py and return the loop's budget line for it.
+    (root / "core").mkdir()
+    (root / "core" / "loop.py").write_text(source)
+    return next(lim for lim in limits(root) if lim.label.startswith("core/loop.py"))
+
+
+def test_the_loop_is_budgeted_in_lines_of_code(tmp_path: Path) -> None:
+    # 201 lines of code: over the loop's 200 [ADR-0040].
+    assert not _loop_limit(tmp_path, "x = 1\n" * 201).ok
+
+
+def test_comments_in_the_loop_are_free(tmp_path: Path) -> None:
+    # 200 lines of code plus 300 lines of comments and blanks: still within budget.
+    source = "# step\n\n" * 150 + "x = 1\n" * 200
+    assert _loop_limit(tmp_path, source).ok
 
 
 def test_v2_tier_also_checks_the_v1_remainder(tmp_path: Path) -> None:

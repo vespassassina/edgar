@@ -24,7 +24,7 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 ## Current state
 
 M0 to M5 are done (https://github.com/vespassassina/edgar); M6 (skills, the Core
-release) is next, with 194 lines of Core budget left. ADR-0037 and ADR-0038 moved
+release) is next, with about 175 lines of code of Core budget left. ADR-0037 and ADR-0038 moved
 plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
 `edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
@@ -85,6 +85,32 @@ A single test is plain pytest, for example
 The offline suite must stay under 60 s (NFR-2) and applies the `no_network` fixture
 suite-wide, so any accidental socket call fails loudly rather than passing slowly.
 
+## Writing code here
+
+The maintainer's standing rules, recorded in ADR-0040 and PRD §4. `AGENTS.md` still
+has the old comment rule until the maintainer applies the patch; follow these.
+
+- **Lines means lines of code.** Every size limit counts non-blank lines that are
+  not only a comment. Docstrings count; comments are free. Say "lines of code" in
+  docs whenever a limit is stated.
+- **Pseudocode comments in every file you touch.** A file with a flow opens with
+  that flow as a pseudocode comment block; long functions number their steps
+  (`# 1. …`). Narrate in `#` comments, not docstrings. `core/loop.py`,
+  `core/message.py` and `core/events.py` show the style.
+- **Shallow functions, no recursion where a loop works.** A top-level function reads
+  as a list of steps; each step with detail is a helper one level down; helpers do
+  not call each other. Shared state goes in a small mutable dataclass (`_Turn` in
+  `core/loop.py`).
+- **Sensible defaults.** Every prompt or setup question offers a pre-selected
+  answer that is right most of the time, so Enter is usually enough. Installing,
+  `init` and deploying leave working, commented config files, never blanks. A
+  default is shown and never picks a model or host the user did not configure.
+- **Keep the tour in sync.** [A Tour of the Harness](docs/tour/index.html),
+  published at https://vespassassina.github.io/edgar/, changes in the same commit
+  as the code it describes. `tests/unit/test_tour.py` catches broken references,
+  not stale prose, so reread the stop for any file you change. A milestone that
+  adds a module turns its planned stop into a built one.
+
 ## Architecture in one pass
 
 `docs/BLUEPRINT.md` has the full module map, data model and interfaces. The shape worth
@@ -99,7 +125,7 @@ v1 may import it: v2 attaches through the loop's post-turn gate and the tool
 pipeline's `pre_tool` vetoes (both filled by name with `importlib`) and the event bus
 (ADR-0015, NFR-12). PRD §5.1 maps every requirement ID to its tier.
 
-**One loop.** `core/loop.py` is under 200 lines and pushes every concern into a
+**One loop.** `core/loop.py` is under 200 lines of code and pushes every concern into a
 collaborator: context assembly, provider resolution, tool execution, the verify gate.
 Tool calls from one response run in order; consecutive `task` calls fan out
 concurrently (TOOL-12). A subagent is not a second engine, the `task` tool re-enters the

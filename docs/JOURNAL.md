@@ -24,14 +24,75 @@ Carried forward until done. Newest first.
 - **Record the remaining cassettes** with real keys: `just record-cassettes openai`
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Apply the `AGENTS.md` patch.** It is hand-authored, so the maintainer applies it:
-  `patch -p1 < …/scratchpad/AGENTS.md.patch` (ADR-0007). It still lists `pydantic` in
-  the startup import ban.
+  `git apply docs/proposals/AGENTS.md.patch` (ADR-0007), then delete the file. It
+  still lists `pydantic` in the startup import ban and allows comments only where
+  the code cannot explain itself, which ADR-0040 reverses.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** Core is at 4,806 of 5,000 after M5; M6 has 194 lines. Next
+- **Size watch.** Core is at 4,825 of 5,000 lines of code after the loop's
+  refactor; M6 has about 175. Next
   candidates to move if needed: `/sessions`, then the personality warning
   (ADR-0038).
-- Update the GitHub repository description to the headline (optional).
+- **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
+  the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-14 · Written to be read, and A Tour of the Harness
+
+**Asked**
+- Add granular comments, close to pseudocode, to `core/loop.py`, `core/message.py`
+  and `core/events.py`. From now on, add them to any code file touched. Prefer
+  shallow functions and avoid recursion.
+- "Lines" always means lines of code, and comments do not count: the 5,000 limit is
+  Core's code without comments. Say so in the docs and the checks.
+- Write a step-by-step reading guide, a tour of the harness, with diagrams and
+  sections that point at the files on GitHub, and keep it in sync. Base it on the
+  maintainer's own reading guide (`OneDrive/Writing/projects/edgar/`).
+- Make it HTML, split into Core, v1 and v2 so it can be read a tier at a time,
+  publish it on GitHub, link it from the repository's description, and call it "A
+  Tour of the Harness".
+- Add to the docs and the style guide: always propose sensible defaults (Enter
+  accepts about 90% of the time) and preconfigured config files when installing and
+  deploying.
+
+**Done**
+- `core/loop.py`: a pseudocode header, and `run_turn` as ten numbered steps over
+  five shallow helpers and a `_Turn` dataclass. Behaviour is unchanged. `core/message.py`
+  and `core/events.py`: an example transcript, the pairing rule, the bus diagram,
+  the order of a turn's events, and who emits each event.
+- `tests/support/budget.py`: the loop counted in lines of code like everything
+  else; `broker` added to the v2 paths. Budget tests rewritten: comments in the loop
+  are free, code is not.
+- [ADR-0040](adr/0040-written-to-be-read.md). PRD §4 gains principles 11 (sensible
+  defaults) and 12 (written to be read); NFR-3 and NFR-4 define a line of code.
+  README, BLUEPRINT, TESTING, ROADMAP and CLAUDE.md say "lines of code".
+- [A Tour of the Harness](tour/index.html): 18 built stops in five stages, the M6
+  skills stop, five v1 stops and six v2 stops marked planned with their milestone.
+  Five diagrams, checked against the code: the layer map, the turn (numbered like
+  `run_turn`), the bus, the tool pipeline, the permission decision and compaction,
+  plus one showing where v1 plugs in and one showing where v2 attaches. A per-reader
+  "read" box and a reading clock, kept in the browser.
+  `.github/workflows/tour.yml` publishes it to <https://vespassassina.github.io/edgar/>;
+  the repository's website link points there. `tests/unit/test_tour.py` keeps it
+  honest.
+- The `AGENTS.md` patch moved into the repository, at
+  `docs/proposals/AGENTS.md.patch`, and gained the new comment, function and
+  defaults rules, "LOC" for the loop, and `edgar.broker` in tier isolation.
+
+**Decided**
+- Every limit is lines of code; the loop's physical-line limit is gone (ADR-0040).
+- Narration goes in `#` comments, not docstrings, because docstrings count.
+- The tour is hand-written HTML with fixed hooks a test reads, not a generated
+  file. It replaces the planned `docs/TOUR.md` (M11).
+- Diagrams corrected against the code: a denied, invalid or unknown call still ends
+  as a `ToolResultBlock`; `decide` checks yolo right after catastrophic commands and
+  before credential paths; an `Ask` with nobody to answer becomes a `Deny` with
+  `needed_prompt`.
+- Left out of the tour from the maintainer's guide: the article, the broker
+  decision notes and the reading log, which are personal.
+
+**Pending**
+- The shallow-helper split cost 19 lines of Core; M6 has about 175.
+- Apply `docs/proposals/AGENTS.md.patch`.
 
 ## 2026-09-14 · Capability broker added to v2 (spec only)
 

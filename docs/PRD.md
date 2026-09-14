@@ -94,6 +94,15 @@ enterprise audit story, or anyone who wants a GUI.
 10. **No hidden behaviour.** No model, host or telemetry the user did not
     configure; the system prompt is a file you can read and replace; nothing from a
     remote source is executed ([ADR-0023](adr/0023-no-hidden-behaviour.md)).
+11. **Sensible defaults.** Every question offers a pre-selected answer that is
+    right most of the time, so pressing Enter is usually enough. Installing,
+    `init` and deploying leave working config files with their choices commented,
+    not blanks to fill in. A default is always shown, and it never picks a model or
+    host the user has not configured (principle 10).
+12. **Written to be read.** Every file explains itself in plain comments close to
+    pseudocode. Functions stay shallow, one level of helpers and no recursion where
+    a loop works. Size is counted in lines of code, so a comment costs nothing
+    ([ADR-0040](adr/0040-written-to-be-read.md)).
 
 ## 5. Scope
 
@@ -720,8 +729,8 @@ of the engine's decision and the ticket. Rationale in
 |---|---|---|
 | NFR-1 | **Startup budget.** Time from process start to first byte of output for a trivial `-p` run with a fake provider | ≤ 150 ms on a 2020-era laptop; enforced by a CI test using `-X importtime` |
 | NFR-2 | **Offline test suite runtime** | ≤ 60 s on CI |
-| NFR-3 | **Core readability.** Lines of code in `core/` excluding tests | ≤ 2,000 |
-| NFR-4 | **Total source size.** `src/` excluding tests, per tier ([ADR-0015](adr/0015-release-tiers.md)) | Core ≤ 5,000 LOC · v1.0 ≤ 8,000 · v2.0 ≤ 11,000 |
+| NFR-3 | **Core readability.** Lines of code in `core/` excluding tests; `core/loop.py` ≤ 200. A line of code is a non-blank line that is not only a comment: docstrings count, comments do not ([ADR-0040](adr/0040-written-to-be-read.md)) | ≤ 2,000 |
+| NFR-4 | **Total source size.** Lines of code in `src/` excluding tests, per tier, counted as in NFR-3 ([ADR-0015](adr/0015-release-tiers.md)) | Core ≤ 5,000 LOC · v1.0 ≤ 8,000 · v2.0 ≤ 11,000 |
 | NFR-5 | **Runtime dependencies**, counting optional extras ([ADR-0019](adr/0019-dependency-budget.md)) | ≤ 8 direct; currently 5 required + 1 optional, each justified in `docs/DEPENDENCIES.md` with its measured import cost |
 | NFR-6 | **Platform parity.** Same test suite passes on Windows, macOS, Linux | Green CI matrix, no platform skips in core |
 | NFR-7 | **Memory footprint** for a typical session | < 200 MB RSS |

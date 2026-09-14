@@ -512,10 +512,22 @@ result on a nearly empty `src/` still proves the check works.
 
 `tests/unit/test_size_budget.py` fails the build when `src/` passes the budget of
 the tier being built (`TARGET_TIER` in `tests/support/budget.py`), when `core/`
-passes 2,000, or when `core/loop.py` passes 200 physical lines [NFR-4]. A line of
-code is a non-blank line that is not only a comment; docstrings count. At v2 the
+passes 2,000, or when `core/loop.py` passes 200 [NFR-4]. Every one of these
+limits is in lines of code ([ADR-0040](adr/0040-written-to-be-read.md)). A line of
+code is a non-blank line that is not only a comment; docstrings count, comments do
+not, so explaining the code never costs budget. At v2 the
 code outside the v2 packages is also held to the v1 budget. `just loc` prints the
 same numbers as a report, and CI prints it on every run.
+
+### The tour
+
+`tests/unit/test_tour.py` keeps [A Tour of the Harness](tour/index.html) true to
+the code (ADR-0040). It fails when a linked file is gone, when a name a stop says
+to look for is no longer defined in that stop's files, when the size table drifts
+more than 100 lines of code from `count_loc`, when a package has no row, when a
+planned stop's file has landed, or when the turn diagram's numbered steps stop
+matching the numbered comments in `run_turn`. It does not catch prose that has gone
+stale, so a change to a file on the tour rereads its stop.
 
 ### No hidden behaviour
 

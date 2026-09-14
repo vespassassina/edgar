@@ -8,6 +8,8 @@ Core is being built, 0.1 at the Core release (M6).
 ## Unreleased
 
 ### Added
+- [A Tour of the Harness](https://vespassassina.github.io/edgar/): a guided read
+  of the code, stop by stop, with diagrams, one part per tier.
 - `edgar -p PROMPT` runs one turn (M1): the turn loop, the `read` and `ls` tools,
   deny-by-default permissions (reads inside the working directory only), the
   system prompt as a file (`edgar prompt show`), and layered config with

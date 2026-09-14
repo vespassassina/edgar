@@ -19,8 +19,10 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 
 ## Why edgar
 
-- **Small enough to read.** The core is under 5,000 lines, with a size budget
-  enforced in CI. Fork it and change it without first learning 40,000 lines.
+- **Small enough to read.** The core is under 5,000 lines of code, with a size
+  budget enforced in CI, and every file explains itself in plain comments, which
+  are free. Fork it and change it without first learning 40,000 lines.
+  [Take the tour](https://vespassassina.github.io/edgar/).
 - **Any model.** OpenAI, Azure, Anthropic, OpenRouter, Ollama, or any
   OpenAI-compatible server as a config block. API keys, not a vendor's subscription.
   Works with small local models too.
@@ -38,13 +40,14 @@ against OpenAI, Azure, Anthropic, OpenRouter, Ollama or any OpenAI-compatible
 server. It has permissions, a verify-before-done gate, context compression,
 custom tools for CLIs and APIs, skills, subagents, memory, MCP and extensions.
 
-It ships in three tiers, each with a size budget:
+It ships in three tiers, each with a size budget in lines of code (blank lines and
+comments don't count):
 
 | Tier | What you get | Size |
 |---|---|---|
-| **Core** (0.x) | The loop, five providers, built-in and custom tools, skills, permissions, verify gate, staged compaction, sessions, REPL and pipes | ≤ 5,000 lines |
-| **v1.0** | Memory, MCP, subagents, routing and fallback, extensions and hooks, an embedding API. Extension formats frozen | ≤ 8,000 lines |
-| **v2.0** | Learning from what you type and what breaks, skill synthesis, a controller, a capability broker, scheduling | ≤ 11,000 lines |
+| **Core** (0.x) | The loop, five providers, built-in and custom tools, skills, permissions, verify gate, staged compaction, sessions, REPL and pipes | ≤ 5,000 LOC |
+| **v1.0** | Memory, MCP, subagents, routing and fallback, extensions and hooks, an embedding API. Extension formats frozen | ≤ 8,000 LOC |
+| **v2.0** | Learning from what you type and what breaks, skill synthesis, a controller, a capability broker, scheduling | ≤ 11,000 LOC |
 
 None of that is unusual. What is unusual is that the whole thing is small enough
 to read in an afternoon, and the parts usually hidden behind an SDK are written
@@ -67,7 +70,7 @@ flowchart TB
         api["edgar.run()"]
     end
 
-    subgraph core["Core: one loop, under 200 lines"]
+    subgraph core["Core: one loop, under 200 lines of code"]
         direction LR
         ctx["context<br/>prompt file · compaction<br/>plan · todos"] --> loop["turn loop"]
         loop --> exec["tool pipeline<br/>validate → hooks<br/>→ permissions → run"]
@@ -202,6 +205,7 @@ something to argue with.
 
 | | |
 |---|---|
+| [A Tour of the Harness](https://vespassassina.github.io/edgar/) | A guided read of the code, stop by stop, with diagrams ([source](docs/tour/index.html)) |
 | [PRD](docs/PRD.md) | What it does and why, numbered requirements |
 | [Blueprint](docs/BLUEPRINT.md) | Architecture, module map, data model, interfaces |
 | [ADRs](docs/adr/) | Decisions, with the alternatives that were rejected |
@@ -214,10 +218,11 @@ something to argue with.
 
 ## Reading the source
 
-Once it exists, in this order:
+[A Tour of the Harness](https://vespassassina.github.io/edgar/) walks the code
+stop by stop, with diagrams, one part per tier. The short version:
 
 1. `core/message.py` and `core/units.py` — the vocabulary and the invariant
-2. `core/loop.py` — the whole thing in 200 lines
+2. `core/loop.py` — the whole thing in under 200 lines of code
 3. `tools/base.py` and `tools/execute.py` — the contract and its pipeline
 4. `permissions/policy.py` — one pure function
 5. `context/compact.py` — where the subtlety is
