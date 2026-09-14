@@ -521,7 +521,7 @@ same numbers as a report, and CI prints it on every run.
 
 ### The tour
 
-`tests/unit/test_tour.py` keeps [A Tour of the Harness](tour/index.html) true to
+`tests/unit/test_tour.py` keeps [A Tour of the Harness](https://vespassassina.github.io/edgar/) true to
 the code (ADR-0040). It fails when a linked file is gone, when a name a stop says
 to look for is no longer defined in that stop's files, when the size table drifts
 more than 100 lines of code from `count_loc`, when a package has no row, when a

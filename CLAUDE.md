@@ -105,8 +105,8 @@ has the old comment rule until the maintainer applies the patch; follow these.
   answer that is right most of the time, so Enter is usually enough. Installing,
   `init` and deploying leave working, commented config files, never blanks. A
   default is shown and never picks a model or host the user did not configure.
-- **Keep the tour in sync.** [A Tour of the Harness](docs/tour/index.html),
-  published at https://vespassassina.github.io/edgar/, changes in the same commit
+- **Keep the tour in sync.** [A Tour of the Harness](https://vespassassina.github.io/edgar/)
+  (source: `docs/tour/index.html`) changes in the same commit
   as the code it describes. `tests/unit/test_tour.py` catches broken references,
   not stale prose, so reread the stop for any file you change. A milestone that
   adds a module turns its planned stop into a built one.

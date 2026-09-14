@@ -3,6 +3,9 @@
 **The agent harness you can read in an afternoon.**
 Any model. No hidden calls. Nothing is done until it's verified.
 
+**[Take A Tour of the Harness →](https://vespassassina.github.io/edgar/)** a guided read
+of the code, stop by stop, with diagrams.
+
 ```bash
 uvx edgar-harness                                # interactive
 git diff | edgar -p "review this" --mode read-only

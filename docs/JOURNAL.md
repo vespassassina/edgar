@@ -36,6 +36,35 @@ Carried forward until done. Newest first.
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
 
+## 2026-09-14 · The tour in artifactkit, on a midnight theme
+
+**Asked**
+- The tour must be HTML, published on GitHub as HTML, and linked from the repo's
+  docs so a reader can just click. Use the maintainer's HTML style guide, with a
+  dark, desaturated midnight-blue background.
+
+**Done**
+- Restyled `docs/tour/index.html` with artifactkit (the maintainer's kit): page
+  head, sticky contents, section heads with status pills, stops as exhibits, a
+  stepper for the five stages that marks a stage done when its stops are read, the
+  size table as an `ak-table` with its source line, print rules. The three
+  stylesheets are vendored in `docs/tour/artifactkit/`; only the theme block differs
+  (`--t-bg:#121826`). Mermaid is themed from the same tokens and loads as the UMD
+  build.
+- Fixed a rendering bug: Mermaid read the turn diagram's "1. record the prompt"
+  labels as Markdown lists and drew "Unsupported markdown: list". Steps are now
+  written "1 · …"; `test_tour.py` checks for it and that the page's own files exist.
+- Every doc link to the tour now opens the published page
+  (<https://vespassassina.github.io/edgar/>), not the HTML source: README (a line
+  under the headline, plus the Documentation table), BLUEPRINT, ROADMAP, TESTING and
+  CLAUDE.md. The repository description ends with "Take the tour" and the address.
+- ADR-0040 amended.
+
+**Decided**
+- The kit's stylesheets are linked, not inlined: it is a hosted page, and the
+  source stays readable. artifactkit's single-file validator therefore reports the
+  linked files, the Mermaid script and the raw storage keys; accepted for Pages.
+
 ## 2026-09-14 · Written to be read, and A Tour of the Harness
 
 **Asked**

@@ -107,10 +107,26 @@ def test_the_size_table_matches_the_code() -> None:
 
 
 def test_the_turn_diagram_follows_the_loop() -> None:
-    # Each numbered step in the turn diagram is a numbered comment in run_turn.
+    # Each numbered step in the turn diagram ("1 · record the prompt") is a numbered
+    # comment in run_turn ("# 1. Record the prompt").
     diagram = next(body for stop, _, body in BUILT if stop == "s1")
-    steps = re.findall(r'"(\d+)\. ', diagram)
+    steps = re.findall(r'"(\d+) · ', diagram)
     loop = (SRC / "core" / "loop.py").read_text(encoding="utf-8")
     assert steps
     for step in steps:
         assert f"# {step}. " in loop, f"step {step} is in the diagram but not in loop.py"
+
+
+def test_the_page_loads_its_own_files() -> None:
+    # Every relative href or src (the vendored artifactkit stylesheets) is on disk.
+    for ref in re.findall(r'(?:href|src)="(?!https?:|#|data:)([^"]+)"', PAGE):
+        assert (ROOT / "docs" / "tour" / ref).exists(), f"missing next to the page: {ref}"
+
+
+def test_no_diagram_label_reads_as_a_list() -> None:
+    # Mermaid renders a label that opens with "1. " as a Markdown list, which it cannot
+    # draw: the node shows "Unsupported markdown: list". Write "1 · " instead.
+    diagrams = re.findall(r'<pre class="mermaid">(.*?)</pre>', PAGE, re.S)
+    assert diagrams
+    for diagram in diagrams:
+        assert not re.search(r'"\d+[.)] ', diagram), "a label opens like a Markdown list"

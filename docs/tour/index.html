@@ -5,119 +5,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>A Tour of the Harness · edgar</title>
 <meta name="description" content="A guided read of edgar, the agent harness you can read in an afternoon: which files to open, in which order, and what to look for.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<!-- Styled with artifactkit, vendored in artifactkit/. Only its theme block is ours. -->
+<link rel="stylesheet" href="artifactkit/theme.css">
+<link rel="stylesheet" href="artifactkit/components.css">
+<link rel="stylesheet" href="artifactkit/print.css">
 <style>
-  :root {
-    --paper: #fbfaf7;
-    --paper-2: #f3f1ea;
-    --ink: #1d1d1b;
-    --ink-2: #55534d;
-    --rule: #dedbd1;
-    --accent: #0f6b62;
-    --accent-2: #e5f1ef;
-    --planned: #8a6d1f;
-    --planned-2: #f7f0dc;
-    --code-bg: #efece4;
-    --serif: Charter, "Bitstream Charter", "Iowan Old Style", "Sitka Text", Georgia, serif;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  /* The tour's own pieces, built from artifactkit tokens only: no literal colours. */
+  html { scroll-behavior: smooth; scroll-padding-top: var(--ak-s4); }
+  [hidden] { display: none !important; }
+  body { line-height: 1.6; }
+  .tour-layout { grid-template-columns: 250px minmax(0, 1fr); gap: var(--ak-s7); }
+  @media (max-width: 960px) {
+    .tour-layout { grid-template-columns: minmax(0, 1fr); gap: var(--ak-s5); }
+    .ak-toc { position: static; max-height: none; }
+    .ak-pagehead { flex-direction: column; align-items: flex-start; }
+    .ak-meta { text-align: left; }
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --paper: #161614;
-      --paper-2: #1f1f1c;
-      --ink: #e9e7e1;
-      --ink-2: #a8a59c;
-      --rule: #34332f;
-      --accent: #5cc2b5;
-      --accent-2: #1b2f2c;
-      --planned: #d8b863;
-      --planned-2: #2c2718;
-      --code-bg: #262521;
-    }
+  .ak-toc { max-height: calc(100vh - var(--ak-s6)); overflow-y: auto; padding-right: var(--ak-s2); scrollbar-width: thin; }
+  .ak-toc .toc-part { display: flex; justify-content: space-between; margin-top: var(--ak-s5); }
+  .ak-toc .toc-part a { color: inherit; text-decoration: none; }
+  .ak-toc .count { letter-spacing: 0; text-transform: none; font-weight: 500; }
+  .ak-nav a { display: flex; gap: var(--ak-s2); }
+  .ak-nav .n { min-width: 1.6em; color: var(--ak-ink-soft); }
+  .ak-nav li.planned a { color: var(--ak-ink-soft); font-style: italic; }
+  .ak-nav li.read a { color: var(--ak-accent); border-left-color: var(--ak-accent); }
+  .ak-nav li.read .n::after { content: " ✓"; }
+
+  .tour-main { max-width: 760px; min-width: 0; }
+  .tour-main > p, .stop > p { max-width: 70ch; }
+  .part-head { margin-top: var(--ak-s8); border-bottom-color: var(--ak-rule-mid); }
+  .part-head h2 { font-size: 28px; margin: 0; }
+  .part-head .ak-pill { margin-left: auto; }
+  .part-intro { color: var(--ak-ink-muted); font-size: 17px; }
+  h3.stage { font-size: 19px; margin: var(--ak-s7) 0 var(--ak-s2); }
+  h3.stage small { font-size: 13px; font-weight: 500; color: var(--ak-ink-soft); margin-left: var(--ak-s2); }
+
+  /* A stop is an artifactkit exhibit; a planned one is its dashed outline. */
+  article.stop { position: relative; background: var(--ak-surface); border: 1px solid var(--ak-rule);
+    border-radius: var(--ak-radius); padding: var(--ak-s5) var(--ak-s5) var(--ak-s2); margin: var(--ak-s5) 0; }
+  article.stop.planned { background: transparent; border-style: dashed; border-color: var(--ak-rule-mid); }
+  article.stop h4 { font-size: 18px; margin: 0 0 var(--ak-s2); padding-right: 6rem; }
+  article.stop h4 .n { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ak-accent); margin-bottom: var(--ak-s1); }
+  article.stop h4 .n::before { content: "Stop "; }
+  article.stop.planned h4 .n { color: var(--ak-warn); }
+  .files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ak-s2) var(--ak-s3); font-size: 14px; }
+  .files a code, .look code { background: var(--ak-fill-2); border: 1px solid var(--ak-rule); padding: 1px 6px; border-radius: 3px; }
+  .files a { text-decoration: none; }
+  .files a:hover code { border-color: var(--ak-accent); }
+  p.look { font-size: 13px; line-height: 2; color: var(--ak-ink-muted); }
+  code { overflow-wrap: anywhere; }
+  label.done { position: absolute; top: var(--ak-s5); right: var(--ak-s5); display: flex; align-items: center;
+    gap: var(--ak-s1); font-size: 12px; color: var(--ak-ink-muted); cursor: pointer; user-select: none; }
+  label.done input { accent-color: var(--ak-accent); margin: 0; }
+
+  .take { border-left: 3px solid var(--ak-accent); background: var(--ak-accent-wash);
+    padding: var(--ak-s3) var(--ak-s4); border-radius: 0 var(--ak-radius) var(--ak-radius) 0; }
+  .check { border: 1px solid var(--ak-rule-mid); border-left: 3px solid var(--ak-accent-2);
+    background: var(--ak-fill); padding: var(--ak-s3) var(--ak-s4); border-radius: var(--ak-radius);
+    margin: var(--ak-s6) 0; font-size: 15px; }
+  .check strong { color: var(--ak-accent-2); }
+
+  .diagram { margin: var(--ak-s4) 0 var(--ak-s5); padding: var(--ak-s4); background: var(--ak-bg);
+    border: 1px solid var(--ak-rule); border-radius: var(--ak-radius); overflow-x: auto; }
+  pre.mermaid { margin: 0; font-size: 12.5px; color: var(--ak-ink-muted); white-space: pre; }
+  pre.mermaid[data-processed] { text-align: center; white-space: normal; }
+
+  #sizes td.loc, #sizes th.loc { text-align: right; white-space: nowrap; padding-right: var(--ak-s4); }
+
+  .ak-stepper .ak-step a { color: inherit; text-decoration: none; }
+  .clock { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ak-s3); }
+  .clock output { font: 600 22px/1 var(--ak-mono); min-width: 6.5rem; color: var(--ak-ink); }
+  .clock .ak-small { margin: 0; }
+  .ak-footer p { max-width: 80ch; }
+  @media print {
+    .ak-toc, label.done, .clock { display: none !important; }
+    .tour-layout { display: block; }
+    article.stop, .diagram, .check { break-inside: avoid; }
   }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
-  body {
-    margin: 0; background: var(--paper); color: var(--ink);
-    font: 18px/1.6 var(--serif);
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: var(--accent); text-underline-offset: 2px; }
-  code { font: 0.84em var(--mono); background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 4px; }
-  a code { color: inherit; }
-  pre { overflow-x: auto; }
-
-  .layout { display: grid; grid-template-columns: 17rem minmax(0, 46rem); gap: 3.5rem; max-width: 72rem; margin: 0 auto; padding: 0 1.5rem; }
-  @media (max-width: 960px) { .layout { grid-template-columns: minmax(0, 1fr); gap: 0; } }
-
-  /* Contents */
-  nav.toc { position: sticky; top: 0; align-self: start; max-height: 100vh; overflow-y: auto; padding: 2.5rem 0 2rem; font: 14px/1.45 var(--sans); }
-  @media (max-width: 960px) { nav.toc { position: static; max-height: none; padding: 1.5rem 0 0; border-bottom: 1px solid var(--rule); } }
-  nav.toc .brand { font-weight: 650; letter-spacing: 0.01em; color: var(--ink); text-decoration: none; display: block; margin-bottom: 1.5rem; }
-  nav.toc .brand span { color: var(--ink-2); font-weight: 400; }
-  nav.toc h2 { font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-2); margin: 1.4rem 0 0.6rem; display: flex; justify-content: space-between; }
-  nav.toc h2 .count { letter-spacing: 0; text-transform: none; font-weight: 500; }
-  nav.toc ol { list-style: none; margin: 0; padding: 0; }
-  nav.toc li a { display: flex; gap: 0.5rem; padding: 0.22rem 0; color: var(--ink-2); text-decoration: none; }
-  nav.toc li a:hover { color: var(--ink); }
-  nav.toc li a .n { font-variant-numeric: tabular-nums; min-width: 1.4rem; color: var(--ink-2); opacity: 0.7; }
-  nav.toc li.read a { color: var(--accent); }
-  nav.toc li.read a .n::after { content: " ✓"; }
-  nav.toc li.planned a { font-style: italic; }
-
-  main { padding: 3rem 0 6rem; min-width: 0; }
-  header.hero h1 { font: 700 clamp(2.2rem, 5vw, 3.2rem)/1.1 var(--sans); letter-spacing: -0.02em; margin: 0 0 0.8rem; }
-  header.hero .lede { font-size: 1.2rem; color: var(--ink-2); margin: 0 0 1.5rem; }
-  header.hero .tag { font: 13px/1.4 var(--sans); color: var(--ink-2); }
-
-  h2.part { font: 700 1.9rem/1.2 var(--sans); letter-spacing: -0.01em; margin: 4.5rem 0 0.4rem; padding-top: 1.2rem; border-top: 3px solid var(--ink); display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; }
-  h2.part .numeral { color: var(--ink-2); font-weight: 500; }
-  .badge { font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: 0.1em; padding: 0.4em 0.7em; border-radius: 999px; background: var(--accent-2); color: var(--accent); align-self: center; }
-  .badge.planned { background: var(--planned-2); color: var(--planned); }
-  .part-intro { color: var(--ink-2); }
-  h3.stage { font: 650 1.3rem/1.3 var(--sans); margin: 3rem 0 0.3rem; }
-  h3.stage small { font-weight: 400; color: var(--ink-2); font-size: 0.8em; }
-
-  article.stop { position: relative; margin: 1.8rem 0; padding: 1.3rem 1.4rem 0.6rem; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 10px; }
-  article.stop.planned { background: transparent; border-style: dashed; }
-  article.stop h4 { font: 650 1.08rem/1.35 var(--sans); margin: 0 0 0.35rem; padding-right: 6.5rem; }
-  article.stop h4 .n { color: var(--ink-2); font-weight: 500; margin-right: 0.3rem; }
-  article.stop .files { font: 14px/1.5 var(--sans); margin: 0 0 0.8rem; display: flex; flex-wrap: wrap; gap: 0.35rem 0.6rem; }
-  article.stop .files .ms { color: var(--planned); font-weight: 600; }
-  p.look { font: 14px/1.9 var(--sans); color: var(--ink-2); margin: 0 0 0.8rem; }
-  p.look code { background: var(--paper); border: 1px solid var(--rule); }
-  label.done { position: absolute; top: 1.2rem; right: 1.2rem; font: 12px/1 var(--sans); color: var(--ink-2); display: flex; align-items: center; gap: 0.35rem; cursor: pointer; user-select: none; }
-  label.done input { accent-color: var(--accent); margin: 0; }
-  .take { border-left: 3px solid var(--accent); padding: 0.1rem 0 0.1rem 0.9rem; margin: 1rem 0; }
-  .check { font: 15px/1.5 var(--sans); background: var(--accent-2); border-radius: 8px; padding: 0.8rem 1rem; margin: 2rem 0; }
-  .check strong { color: var(--accent); }
-
-  .diagram { margin: 1.2rem 0 1.4rem; padding: 1rem; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow-x: auto; text-align: center; }
-  article.stop .diagram { background: var(--paper); }
-  pre.mermaid { margin: 0; font: 13px/1.4 var(--mono); color: var(--ink-2); background: none; text-align: left; }
-  pre.mermaid[data-processed] { text-align: center; }
-
-  table { border-collapse: collapse; width: 100%; font: 15px/1.45 var(--sans); margin: 1rem 0; }
-  th, td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
-  th { font-weight: 600; color: var(--ink-2); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
-  td.loc { font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
-  .table-wrap { overflow-x: auto; }
-
-  .clock { font: 15px/1.5 var(--sans); display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px; padding: 0.8rem 1rem; margin: 1.5rem 0; }
-  .clock output { font: 600 1.2rem/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 5.5rem; }
-  button { font: 600 14px/1 var(--sans); padding: 0.55rem 0.9rem; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--paper); cursor: pointer; }
-  button.ghost { background: transparent; color: var(--accent); }
-
-  footer { margin-top: 5rem; padding-top: 1.5rem; border-top: 1px solid var(--rule); font: 14px/1.6 var(--sans); color: var(--ink-2); }
 </style>
 </head>
 <body>
-<div class="layout">
+<div class="ak-wrap" id="top">
 
-<nav class="toc" aria-label="Contents">
-  <a class="brand" href="#top">edgar <span>· A Tour of the Harness</span></a>
-  <h2><a href="#core">I. Core</a><span class="count" data-count="core"></span></h2>
-  <ol>
+<header class="ak-pagehead">
+  <div>
+    <p class="ak-eyebrow"><a href="https://github.com/vespassassina/edgar">edgar</a> · a guided read of the code</p>
+    <h1>A Tour of the Harness</h1>
+    <p class="ak-lede">Which files to open, in which order, and what to look for in each.
+    The agent harness you can read in an afternoon. Any model. No hidden calls.
+    Nothing is done until it's verified.</p>
+  </div>
+  <div class="ak-meta">
+    <span class="ak-pill ak-pill-ok">Core built</span> M0 to M5<br>
+    <span class="ak-pill ak-pill-warn">Planned</span> M6 to M17<br>
+    Kept in sync by a test
+  </div>
+</header>
+
+<div class="ak-sidebar tour-layout">
+
+<nav class="ak-toc toc" aria-label="Contents">
+  <p class="ak-eyebrow">Contents</p>
+  <p class="ak-eyebrow toc-part"><a href="#core">I. Core</a><span class="count" data-count="core"></span></p>
+  <ol class="ak-nav">
     <li><a href="#s1"><span class="n">1</span>The loop</a></li>
     <li><a href="#s2"><span class="n">2</span>The vocabulary</a></li>
     <li><a href="#s3"><span class="n">3</span>The output</a></li>
@@ -138,16 +131,16 @@
     <li><a href="#s18"><span class="n">18</span>The surface</a></li>
     <li class="planned"><a href="#s19"><span class="n">19</span>Skills (M6)</a></li>
   </ol>
-  <h2><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></h2>
-  <ol>
+  <p class="ak-eyebrow toc-part"><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></p>
+  <ol class="ak-nav">
     <li class="planned"><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
     <li class="planned"><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
     <li class="planned"><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
     <li class="planned"><a href="#s23"><span class="n">23</span>Extensions, hooks (M10)</a></li>
     <li class="planned"><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
   </ol>
-  <h2><a href="#v2">III. v2</a><span class="count" data-count="v2"></span></h2>
-  <ol>
+  <p class="ak-eyebrow toc-part"><a href="#v2">III. v2</a><span class="count" data-count="v2"></span></p>
+  <ol class="ak-nav">
     <li class="planned"><a href="#s25"><span class="n">25</span>Learning (M12)</a></li>
     <li class="planned"><a href="#s26"><span class="n">26</span>The controller (M13)</a></li>
     <li class="planned"><a href="#s27"><span class="n">27</span>Skill synthesis (M14)</a></li>
@@ -157,13 +150,7 @@
   </ol>
 </nav>
 
-<main id="top">
-
-<header class="hero">
-  <h1>A Tour of the Harness</h1>
-  <p class="lede">A guided read of <a href="https://github.com/vespassassina/edgar">edgar</a>: which files to open, in which order, and what to look for in each.</p>
-  <p class="tag">The agent harness you can read in an afternoon. Any model. No hidden calls. Nothing is done until it's verified.</p>
-</header>
+<main class="tour-main">
 
 <p>Every stop links to the file on GitHub and names the functions worth finding. The
 order follows dependencies, not the alphabet: each stop only needs the stops before
@@ -176,21 +163,29 @@ the numbered comments in the code.</p>
 milestone that brings each one, and the seam in Core where it will attach. As each
 milestone lands, its stop gets links like the rest.</p>
 
+<ol class="ak-stepper" aria-label="The five stages of Core">
+  <li class="ak-step"><a href="#stage-1"><span class="ak-t">1. The spine</span>45 minutes</a></li>
+  <li class="ak-step"><a href="#stage-2"><span class="ak-t">2. The hands</span>45 minutes</a></li>
+  <li class="ak-step"><a href="#stage-3"><span class="ak-t">3. The mouth</span>45 minutes</a></li>
+  <li class="ak-step"><a href="#stage-4"><span class="ak-t">4. The memory</span>30 minutes</a></li>
+  <li class="ak-step"><a href="#stage-5"><span class="ak-t">5. The surface</span>skim, 15 minutes</a></li>
+</ol>
+
 <p>The promise is that Core can be read in an afternoon, so time yourself. If it
 takes longer, that is worth knowing:
 <a href="https://github.com/vespassassina/edgar/issues">open an issue</a> and say where
 you got stuck.</p>
 
-<div class="clock" id="clock">
+<div class="clock ak-exhibit" id="clock">
   <output id="clock-time">0:00:00</output>
-  <button type="button" id="clock-start">Start the clock</button>
-  <button type="button" class="ghost" id="clock-reset" hidden>Reset</button>
-  <span id="clock-note">It keeps running if you close the tab.</span>
+  <button type="button" class="ak-btn ak-btn-primary" id="clock-start">Start the clock</button>
+  <button type="button" class="ak-btn" id="clock-reset" hidden>Reset</button>
+  <p class="ak-small" id="clock-note">It keeps running if you close the tab. Your ticks and the clock stay in this browser.</p>
 </div>
 
 <!-- ─────────────────────────────── Part I ─────────────────────────────── -->
 
-<h2 class="part" id="core"><span class="numeral">I.</span> Core <span class="badge">Built, M0 to M5</span></h2>
+<div class="ak-sechead part-head"><span class="ak-n">PART I.</span><h2 class="part" id="core">Core</h2><span class="ak-pill ak-pill-ok">Built, M0 to M5</span></div>
 <p class="part-intro">The smallest honest harness: one loop, eight tools, five
 providers, permissions, verification, sessions. At most 5,000 lines of code.</p>
 
@@ -199,9 +194,9 @@ providers, permissions, verification, sessions. At most 5,000 lines of code.</p>
 <p>Sizes are in lines of code: blank lines and comments do not count, docstrings do.
 <code>just loc</code> prints the current totals.</p>
 
-<div class="table-wrap">
-<table id="sizes">
-  <thead><tr><th>Package</th><th style="text-align:right">Lines of code</th><th>What it is</th></tr></thead>
+<div class="ak-tblwrap">
+<table class="ak-table" id="sizes">
+  <thead><tr><th>Package</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
   <tbody>
     <tr data-package="core"><td><code>core/</code></td><td class="loc">~700</td><td>The turn loop and the types everything else speaks in</td></tr>
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~700</td><td>What the model can do, and the pipeline every call goes through</td></tr>
@@ -214,6 +209,9 @@ providers, permissions, verification, sessions. At most 5,000 lines of code.</p>
   </tbody>
 </table>
 </div>
+<p class="ak-source">Source: <code>just loc</code>, which counts with
+<code>tests/support/budget.py</code>. Rounded; the tour's test fails if a figure drifts
+more than 100 lines of code from the code.</p>
 
 <p>The loop is under 200 lines of code; the command line is the biggest package.
 The hard part is small and the surface is large. That is typical of harnesses, and
@@ -234,7 +232,7 @@ flowchart LR
 </pre></div>
 
 <!-- Stage 1 -->
-<h3 class="stage">Stage 1. The spine <small>about 45 minutes</small></h3>
+<h3 class="stage" id="stage-1">Stage 1. The spine <small>about 45 minutes</small></h3>
 <p>These four files are the whole system in miniature. Everything else is detail
 hanging off them.</p>
 
@@ -246,18 +244,19 @@ hanging off them.</p>
   follows it step by step, numbered 1 to 10 in the comments. The diagram uses the
   same numbers. Each step with any detail is a helper one level down; no helper
   calls another, and nothing recurses.</p>
+  <!-- Steps are written "1 · …", not "1. …", which Mermaid would read as a Markdown list. -->
   <div class="diagram"><pre class="mermaid">
 flowchart TD
-    start(["1. record the prompt"]) --> safe["3. safe point:<br/>pause, /steer"]
-    safe --> caps{"4. over a<br/>cost cap?"}
+    start(["1 · record the prompt"]) --> safe["3 · safe point:<br/>pause, /steer"]
+    safe --> caps{"4 · over a<br/>cost cap?"}
     caps -->|yes| budget(["budget_exceeded"])
-    caps -->|no| ask["5. ask the model<br/>_ask"]
-    ask --> calls{"6. tool<br/>calls?"}
+    caps -->|no| ask["5 · ask the model<br/>_ask"]
+    ask --> calls{"6 · tool<br/>calls?"}
     calls -->|yes| run["run them in order<br/>_run_tools"] --> safe
-    calls -->|no| steer{"7. steer<br/>pending?"}
+    calls -->|no| steer{"7 · steer<br/>pending?"}
     steer -->|yes| safe
-    steer -->|no| acted{"8. changed<br/>something?"}
-    acted -->|"no, or no check"| done(["9. completed"])
+    steer -->|no| acted{"8 · changed<br/>something?"}
+    acted -->|"no, or no check"| done(["9 · completed"])
     acted -->|yes| check["run the check<br/>_check"]
     check -->|passed| done
     check -->|"failed, tries left"| safe
@@ -315,7 +314,7 @@ flowchart LR
 <p class="check"><strong>Before moving on:</strong> can you draw the turn from memory?</p>
 
 <!-- Stage 2 -->
-<h3 class="stage">Stage 2. The hands <small>about 45 minutes</small></h3>
+<h3 class="stage" id="stage-2">Stage 2. The hands <small>about 45 minutes</small></h3>
 <p>How the loop touches the world: where "the model asked" turns into "the thing
 happened".</p>
 
@@ -418,7 +417,7 @@ flowchart TD
 between "the model asked" and "the thing happened"?</p>
 
 <!-- Stage 3 -->
-<h3 class="stage">Stage 3. The mouth <small>about 45 minutes</small></h3>
+<h3 class="stage" id="stage-3">Stage 3. The mouth <small>about 45 minutes</small></h3>
 <p>Talking to models, which is where most harnesses hide their complexity.</p>
 
 <article class="stop" id="s11" data-files="src/edgar/providers/base.py">
@@ -458,7 +457,7 @@ between "the model asked" and "the thing happened"?</p>
 </article>
 
 <!-- Stage 4 -->
-<h3 class="stage">Stage 4. The memory <small>about 30 minutes</small></h3>
+<h3 class="stage" id="stage-4">Stage 4. The memory <small>about 30 minutes</small></h3>
 
 <article class="stop" id="s15" data-files="src/edgar/context/builder.py src/edgar/prompts/system.md">
   <h4><span class="n">15</span>The prompt</h4>
@@ -500,7 +499,7 @@ flowchart TD
 </article>
 
 <!-- Stage 5 -->
-<h3 class="stage">Stage 5. The surface <small>skim, 15 minutes</small></h3>
+<h3 class="stage" id="stage-5">Stage 5. The surface <small>skim, 15 minutes</small></h3>
 
 <article class="stop" id="s18" data-files="src/edgar/cli/repl.py src/edgar/cli/slash.py src/edgar/cli/oneshot.py src/edgar/cli/render.py src/edgar/config/load.py">
   <h4><span class="n">18</span>The surface</h4>
@@ -514,7 +513,7 @@ flowchart TD
 
 <article class="stop planned" id="s19" data-files="src/edgar/skills/discovery.py src/edgar/skills/loader.py src/edgar/tools/builtin/skill.py">
   <h4><span class="n">19</span>Skills</h4>
-  <p class="files"><span class="ms">M6</span> <code>skills/discovery.py</code> <code>skills/loader.py</code> <code>tools/builtin/skill.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M6 · planned</span> <code>skills/discovery.py</code> <code>skills/loader.py</code> <code>tools/builtin/skill.py</code></p>
   <p>Only the frontmatter of each skill is read at startup; the body loads when the
   model calls the <code>skill</code> tool. A skill is instructions, never code that
   runs. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m6--skills-and-the-core-release--core-release">Roadmap: M6</a></p>
@@ -529,7 +528,7 @@ issue</a>.</p>
 
 <!-- ─────────────────────────────── Part II ─────────────────────────────── -->
 
-<h2 class="part" id="v1"><span class="numeral">II.</span> v1 <span class="badge planned">Planned, M7 to M11</span></h2>
+<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">Planned, M7 to M11</span></div>
 <p class="part-intro">Extensible, and it remembers: memory, MCP, subagents,
 extensions and hooks. At most 8,000 lines of code for Core plus v1. Nothing in v1
 changes the shape of the turn: each piece plugs into a seam you have already
@@ -553,7 +552,7 @@ flowchart LR
 
 <article class="stop planned" id="s20" data-files="src/edgar/memory/store.py src/edgar/memory/facts.py src/edgar/memory/recall.py">
   <h4><span class="n">20</span>Memory and session search</h4>
-  <p class="files"><span class="ms">M7</span> <code>memory/store.py</code> <code>memory/facts.py</code> <code>memory/recall.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M7 · planned</span> <code>memory/store.py</code> <code>memory/facts.py</code> <code>memory/recall.py</code></p>
   <p>Look for the security boundary: an active fact comes only from text a human
   typed or from an <code>ErrorRecord</code> the harness computed. Everything else,
   including the model's own <code>remember</code> calls, stays pending until you
@@ -563,7 +562,7 @@ flowchart LR
 
 <article class="stop planned" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py">
   <h4><span class="n">21</span>MCP</h4>
-  <p class="files"><span class="ms">M8</span> <code>tools/mcp/client.py</code> <code>tools/mcp/schema.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M8 · planned</span> <code>tools/mcp/client.py</code> <code>tools/mcp/schema.py</code></p>
   <p>MCP tools are one more tool source: they go through the same
   <code>execute()</code> as the built-ins (stop 6). Their results are untrusted, and
   <code>decide()</code> ignores whatever a server says about its own tools. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m8--mcp">Roadmap: M8</a></p>
@@ -571,7 +570,7 @@ flowchart LR
 
 <article class="stop planned" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/providers/fallback.py">
   <h4><span class="n">22</span>Subagents, routing rules and fallback</h4>
-  <p class="files"><span class="ms">M9</span> <code>tools/builtin/task.py</code> <code>agents/spawn.py</code> <code>providers/fallback.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M9 · planned</span> <code>tools/builtin/task.py</code> <code>agents/spawn.py</code> <code>providers/fallback.py</code></p>
   <p>A subagent is not a second engine. The <code>task</code> tool calls the same
   <code>run_turn</code> (stop 1) with a fresh transcript and a narrower policy.
   Consecutive <code>task</code> calls fan out concurrently. Fallback goes sideways
@@ -580,7 +579,7 @@ flowchart LR
 
 <article class="stop planned" id="s23" data-files="src/edgar/extensions/manifest.py src/edgar/extensions/hooks.py src/edgar/sandbox/base.py">
   <h4><span class="n">23</span>Extensions, hooks, plugins, embedding</h4>
-  <p class="files"><span class="ms">M10</span> <code>extensions/manifest.py</code> <code>extensions/hooks.py</code> <code>sandbox/base.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M10 · planned</span> <code>extensions/manifest.py</code> <code>extensions/hooks.py</code> <code>sandbox/base.py</code></p>
   <p>An extension is a folder of files: tools, skills, agents and hooks. A hook can
   observe or veto, never allow. Its veto sits in the pipeline's <code>pre_tool</code>
   stage, just before the permission check, and a failing hook denies. Python is a
@@ -589,14 +588,14 @@ flowchart LR
 
 <article class="stop planned" id="s24" data-files="src/edgar/config/init.py src/edgar/config/doctor.py">
   <h4><span class="n">24</span>Init and doctor</h4>
-  <p class="files"><span class="ms">M11</span> <code>config/init.py</code> <code>config/doctor.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M11 · planned</span> <code>config/init.py</code> <code>config/doctor.py</code></p>
   <p>Scaffolding a project and checking an environment. Skim it: it is surface, like
   stage 5. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m11--init-doctor-docs--v10-release">Roadmap: M11</a></p>
 </article>
 
 <!-- ─────────────────────────────── Part III ─────────────────────────────── -->
 
-<h2 class="part" id="v2"><span class="numeral">III.</span> v2 <span class="badge planned">Planned, M12 to M17</span></h2>
+<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v2</h2><span class="ak-pill ak-pill-warn">Planned, M12 to M17</span></div>
 <p class="part-intro">It learns, and runs unattended: learning, the controller,
 escalation, the capability broker and scheduling. At most 11,000 lines of code in
 all. v2 is removable. Nothing in Core or v1 imports it, and CI deletes the v2
@@ -618,7 +617,7 @@ flowchart LR
 
 <article class="stop planned" id="s25" data-files="src/edgar/learning/learner.py src/edgar/learning/error_facts.py src/edgar/learning/experience.py">
   <h4><span class="n">25</span>Learning foundations</h4>
-  <p class="files"><span class="ms">M12</span> <code>learning/learner.py</code> <code>learning/error_facts.py</code> <code>learning/experience.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M12 · planned</span> <code>learning/learner.py</code> <code>learning/error_facts.py</code> <code>learning/experience.py</code></p>
   <p>Learning from what you type and from what breaks. Nothing on this path reads
   tool output, error text or fetched content, and that is enforced by what each
   function accepts, not by filtering. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m12--learning-foundations">Roadmap: M12</a></p>
@@ -626,7 +625,7 @@ flowchart LR
 
 <article class="stop planned" id="s26" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/apply.py">
   <h4><span class="n">26</span>The controller</h4>
-  <p class="files"><span class="ms">M13</span> <code>controller/triggers.py</code> <code>controller/proposals.py</code> <code>controller/apply.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M13 · planned</span> <code>controller/triggers.py</code> <code>controller/proposals.py</code> <code>controller/apply.py</code></p>
   <p>Self-management that cannot hurt you. The triggers are pure checks, actions come
   from a whitelist of eight, and every change is dry-run by default, logged and
   revertible. The controller can only tighten policy. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m13--controller">Roadmap: M13</a></p>
@@ -634,7 +633,7 @@ flowchart LR
 
 <article class="stop planned" id="s27" data-files="src/edgar/learning/synthesis.py src/edgar/learning/curator.py">
   <h4><span class="n">27</span>Skill synthesis</h4>
-  <p class="files"><span class="ms">M14</span> <code>learning/synthesis.py</code> <code>learning/curator.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M14 · planned</span> <code>learning/synthesis.py</code> <code>learning/curator.py</code></p>
   <p>Only verified procedures become skills. The synthesiser sees the outline of a
   run, never tool output. It writes only into <code>.edgar/skills/learned/</code>,
   and only after a passing check. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m14--skill-synthesis">Roadmap: M14</a></p>
@@ -642,7 +641,7 @@ flowchart LR
 
 <article class="stop planned" id="s28" data-files="src/edgar/providers/escalation.py">
   <h4><span class="n">28</span>Escalation</h4>
-  <p class="files"><span class="ms">M15</span> <code>providers/escalation.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M15 · planned</span> <code>providers/escalation.py</code></p>
   <p>A weak model that fails gets help from a stronger one, visibly: upward only,
   capped and announced. Compare it with routing (stop 14) and fallback (stop 22).
   Keeping the three apart is the point. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m15--escalation-and-route-suggest">Roadmap: M15</a></p>
@@ -650,7 +649,7 @@ flowchart LR
 
 <article class="stop planned" id="s29" data-files="src/edgar/broker/authorize.py src/edgar/broker/ticket.py src/edgar/broker/receipt.py">
   <h4><span class="n">29</span>The capability broker</h4>
-  <p class="files"><span class="ms">M17</span> <code>broker/authorize.py</code> <code>broker/ticket.py</code> <code>broker/receipt.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M17 · planned</span> <code>broker/authorize.py</code> <code>broker/ticket.py</code> <code>broker/receipt.py</code></p>
   <p>Every tool call answers to what the human actually asked for. A typed request
   becomes a ticket with caveats. A subagent can only narrow it. A pure
   <code>authorize()</code> vetoes calls in the <code>pre_tool</code> stage, and
@@ -659,13 +658,13 @@ flowchart LR
 
 <article class="stop planned" id="s30" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/install.py">
   <h4><span class="n">30</span>Scheduling</h4>
-  <p class="files"><span class="ms">M16</span> <code>schedule/due.py</code> <code>schedule/tick.py</code> <code>schedule/install.py</code></p>
+  <p class="files"><span class="ak-pill ak-pill-warn">M16 · planned</span> <code>schedule/due.py</code> <code>schedule/tick.py</code> <code>schedule/install.py</code></p>
   <p>Unattended runs that cannot run away. Working out what is due is a pure function
   tested with a frozen clock. A run the harness schedules for itself never holds
   more authority than the run that created it. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m16--scheduling--v20-release">Roadmap: M16</a></p>
 </article>
 
-<footer>
+<footer class="ak-footer">
   <p><strong>Where next:</strong> the <a href="https://github.com/vespassassina/edgar/blob/main/docs/BLUEPRINT.md">Blueprint</a>
   for the full module map and interfaces, and the <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/README.md">ADRs</a>
   for why things are the way they are.</p>
@@ -681,13 +680,17 @@ flowchart LR
 
 </main>
 </div>
+</div>
 
 <script>
   // Progress, kept in this browser only: a "read" box on each built stop, and the clock.
+  // Keys start with "edgar-tour:" because every page on github.io shares one storage.
   (function () {
     var store = {
-      get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-      set: function (k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+      get: function (k) { try { return localStorage.getItem("edgar-tour:" + k); } catch (e) { return null; } },
+      set: function (k, v) {
+        try { v === null ? localStorage.removeItem("edgar-tour:" + k) : localStorage.setItem("edgar-tour:" + k, v); } catch (e) {}
+      }
     };
 
     // 1. A "read" box on every built stop; the contents list shows a tick and a count.
@@ -701,62 +704,113 @@ flowchart LR
       box.className = "done";
       box.innerHTML = '<input type="checkbox"> read';
       var input = box.querySelector("input");
-      input.checked = store.get("tour:read:" + el.id) === "1";
+      input.checked = store.get("read:" + el.id) === "1";
       input.addEventListener("change", function () {
-        store.set("tour:read:" + el.id, input.checked ? "1" : null);
+        store.set("read:" + el.id, input.checked ? "1" : null);
         refresh();
       });
       el.appendChild(box);
     });
 
+    // 2. Refresh the ticks in the contents, each part's count, and the stages done.
     function refresh() {
       Object.keys(parts).forEach(function (name) {
         var built = parts[name].filter(function (el) { return !el.classList.contains("planned"); });
-        var read = built.filter(function (el) { return store.get("tour:read:" + el.id) === "1"; });
+        var read = built.filter(function (el) { return store.get("read:" + el.id) === "1"; });
         built.forEach(function (el) {
-          var item = document.querySelector('nav.toc a[href="#' + el.id + '"]');
+          var item = document.querySelector('.ak-toc a[href="#' + el.id + '"]');
           if (item) item.parentElement.classList.toggle("read", read.indexOf(el) >= 0);
         });
         var count = document.querySelector('[data-count="' + name + '"]');
         if (count) count.textContent = built.length ? read.length + " / " + built.length : "planned";
       });
+      // A stage is done when every stop between its heading and the next one is read.
+      document.querySelectorAll(".ak-stepper .ak-step").forEach(function (step, i) {
+        var heading = document.getElementById("stage-" + (i + 1));
+        var stops = [];
+        for (var el = heading.nextElementSibling; el && !el.matches("h3, .part-head"); el = el.nextElementSibling) {
+          if (el.matches("article.stop")) stops.push(el);
+        }
+        var done = stops.length && stops.every(function (el) { return store.get("read:" + el.id) === "1"; });
+        step.classList.toggle("ak-done", Boolean(done));
+      });
     }
     refresh();
 
-    // 2. The clock: the start time is stored, so it survives closing the tab.
+    // 3. The clock: the start time is stored, so it survives closing the tab.
     var out = document.getElementById("clock-time");
     var start = document.getElementById("clock-start");
     var reset = document.getElementById("clock-reset");
     function show() {
-      var began = Number(store.get("tour:clock:start"));
-      var ended = Number(store.get("tour:clock:end")) || Date.now();
+      var began = Number(store.get("clock:start"));
+      var ended = Number(store.get("clock:end")) || Date.now();
       var s = began ? Math.floor((ended - began) / 1000) : 0;
       var pad = function (n) { return String(n).padStart(2, "0"); };
       out.textContent = Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
-      var running = began && !store.get("tour:clock:end");
+      var running = began && !store.get("clock:end");
       start.textContent = running ? "Stop" : began ? "Finished" : "Start the clock";
       start.disabled = Boolean(began && !running);
       reset.hidden = !began;
     }
     start.addEventListener("click", function () {
-      if (!store.get("tour:clock:start")) store.set("tour:clock:start", String(Date.now()));
-      else store.set("tour:clock:end", String(Date.now()));
+      if (!store.get("clock:start")) store.set("clock:start", String(Date.now()));
+      else store.set("clock:end", String(Date.now()));
       show();
     });
     reset.addEventListener("click", function () {
-      store.set("tour:clock:start", null);
-      store.set("tour:clock:end", null);
+      store.set("clock:start", null);
+      store.set("clock:end", null);
       show();
     });
     show();
     setInterval(show, 1000);
   })();
 </script>
-<script type="module">
-  // Diagrams are written as Mermaid text above, so they read as plain text without this.
-  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
-  const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral", flowchart: { htmlLabels: true, nodeSpacing: 28, rankSpacing: 36, padding: 10 } });
+<!-- Diagrams are Mermaid text above, readable as plain text if this never loads.
+     The classic (UMD) build, so the page also works opened as a local file. -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+  // Colour the diagrams from the artifactkit theme, so they follow its tokens.
+  (function () {
+    if (!window.mermaid) return;
+    // 1. Read the theme's three base colours.
+    var css = getComputedStyle(document.documentElement);
+    var bg = css.getPropertyValue("--t-bg").trim();
+    var ink = css.getPropertyValue("--t-ink").trim();
+    var accent = css.getPropertyValue("--t-accent").trim();
+    // 2. Mix them the way the theme does: a share of one colour over another.
+    function mix(top, share, ground) {
+      var a = parseInt(top.slice(1), 16), b = parseInt(ground.slice(1), 16);
+      var out = [16, 8, 0].map(function (shift) {
+        var x = (a >> shift) & 255, y = (b >> shift) & 255;
+        return Math.round(x * share + y * (1 - share)).toString(16).padStart(2, "0");
+      });
+      return "#" + out.join("");
+    }
+    // 3. Draw.
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        darkMode: true,
+        background: bg,
+        fontFamily: css.getPropertyValue("--t-font").trim(),
+        fontSize: "14px",
+        primaryColor: mix(ink, 0.08, bg),
+        primaryTextColor: ink,
+        primaryBorderColor: mix(accent, 0.7, bg),
+        secondaryColor: mix(accent, 0.18, bg),
+        tertiaryColor: mix(ink, 0.04, bg),
+        lineColor: mix(ink, 0.5, bg),
+        textColor: ink,
+        clusterBkg: mix(ink, 0.03, bg),
+        clusterBorder: mix(ink, 0.24, bg),
+        edgeLabelBackground: bg,
+        nodeTextColor: ink
+      },
+      flowchart: { htmlLabels: true, nodeSpacing: 28, rankSpacing: 36, padding: 10 }
+    });
+  })();
 </script>
 </body>
 </html>

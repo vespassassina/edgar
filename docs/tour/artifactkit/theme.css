@@ -1,0 +1,104 @@
+/* artifactkit — theme.css
+   Tokens and cascade layers. MIT. No third-party code.
+
+   Layer order is declared once, here. Anything an author writes outside a
+   layer beats every layer, so overrides win without !important.
+*/
+@layer ak.tokens, ak.base, ak.components, ak.utilities;
+
+@layer ak.tokens {
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   THEME — EDIT THESE. Everything else derives from them.
+   Changing --t-bg, --t-ink and --t-accent rethemes the entire artifact.
+   Agents: rewrite only inside the machine-readable markers below.
+
+     Warm      --t-bg:#FDF4E3;  --t-accent:#8A4B2A;
+     Cool grey --t-bg:#EFF1F3;  --t-accent:#1F4E79;
+     Denser    --t-density:.85; --t-size:14px;
+     Dark      --t-bg:#14141A;  --t-ink:#E8E6E0;  --t-accent:#6AA9D8;
+               --t-lift-amt:7%;        <- the only extra knob a dark ground needs
+   ═══════════════════════════════════════════════════════════════════════════ */
+/*!ak-theme-start*/
+/* edgar's tour: a dark, desaturated midnight blue. Only this block differs from
+   artifactkit's own theme.css (vendored from github.com/vespassassina/artifactkit, MIT). */
+:root{
+  /* — colour ————————————————————————————————————————————————————— */
+  --t-bg:       #121826;   /* page ground. midnight blue, desaturated */
+  --t-ink:      #DDE3EC;   /* body text. cool off-white, never pure #FFF */
+  --t-accent:   #8FB0D6;   /* primary accent. dusty steel blue */
+  --t-accent-2: #8DBBB0;   /* secondary accent. muted sea green */
+  --t-pos:      #86BC98;   /* positive / built */
+  --t-neg:      #D99595;   /* negative */
+  --t-warn:     #D4B478;   /* caution / planned */
+
+  /* a dark ground: a small lift reads as elevation */
+  --t-lift:     #FFFFFF;
+  --t-lift-amt: 5%;
+
+  /* — chart series. restrained, legible on the dark ground —————————— */
+  --t-s1:#8FB0D6; --t-s2:#8DBBB0; --t-s3:#D4B478;
+  --t-s4:#B49CC4; --t-s5:#86BC98; --t-s6:#D99595;
+
+  /* — type. system stack only. no webfonts, no network ———————————— */
+  --t-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text",
+            "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --t-mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  --t-size: 16px;
+  --t-heading-weight: 650;
+
+  /* — shape & rhythm ———————————————————————————————————————————— */
+  --t-density: 1;      /* multiplies every spacing step */
+  --t-radius: 4px;
+  --t-maxw: 1180px;
+  color-scheme: dark;
+}
+/*!ak-theme-end*/
+/* ═══ Everything below is derived. Do not hand-edit. ════════════════════════ */
+
+:root{
+  /* Neutrals are mixes of ground and ink. Because --t-ink flips on a dark
+     theme, fills and rules invert automatically — only the lift needs a knob. */
+  --ak-bg: var(--t-bg);
+  --ak-surface:     color-mix(in srgb, var(--t-lift) var(--t-lift-amt), var(--t-bg));
+  --ak-fill:        color-mix(in srgb, var(--t-ink)  4%, var(--t-bg));
+  --ak-fill-2:      color-mix(in srgb, var(--t-ink)  7%, var(--t-bg));
+  --ak-rule:        color-mix(in srgb, var(--t-ink) 13%, var(--t-bg));
+  --ak-rule-mid:    color-mix(in srgb, var(--t-ink) 24%, var(--t-bg));
+  --ak-rule-strong: var(--t-ink);
+
+  --ak-ink:       var(--t-ink);
+  --ak-ink-muted: color-mix(in srgb, var(--t-bg) 31%, var(--t-ink));
+  --ak-ink-soft:  color-mix(in srgb, var(--t-bg) 50%, var(--t-ink));
+
+  --ak-accent:      var(--t-accent);
+  --ak-accent-2:    var(--t-accent-2);
+  --ak-accent-wash: color-mix(in srgb, var(--t-accent) 10%, var(--t-bg));
+  /* text on an accent fill: pulls toward the ground, so it flips with the theme */
+  --ak-accent-fg:   color-mix(in srgb, var(--t-bg) 92%, var(--t-accent));
+
+  --ak-pos: var(--t-pos); --ak-neg: var(--t-neg); --ak-warn: var(--t-warn);
+  --ak-pos-wash:  color-mix(in srgb, var(--t-pos)  10%, var(--t-bg));
+  --ak-neg-wash:  color-mix(in srgb, var(--t-neg)  10%, var(--t-bg));
+  --ak-warn-wash: color-mix(in srgb, var(--t-warn) 10%, var(--t-bg));
+
+  --ak-c1:var(--t-s1); --ak-c2:var(--t-s2); --ak-c3:var(--t-s3);
+  --ak-c4:var(--t-s4); --ak-c5:var(--t-s5); --ak-c6:var(--t-s6);
+
+  --ak-sans: var(--t-font);
+  --ak-mono: var(--t-mono);
+
+  --ak-s1:calc(4px  * var(--t-density));
+  --ak-s2:calc(8px  * var(--t-density));
+  --ak-s3:calc(12px * var(--t-density));
+  --ak-s4:calc(16px * var(--t-density));
+  --ak-s5:calc(24px * var(--t-density));
+  --ak-s6:calc(32px * var(--t-density));
+  --ak-s7:calc(48px * var(--t-density));
+  --ak-s8:calc(64px * var(--t-density));
+
+  --ak-radius: var(--t-radius);
+  --ak-maxw:   var(--t-maxw);
+}
+
+}/* @layer ak.tokens */

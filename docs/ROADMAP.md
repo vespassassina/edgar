@@ -363,7 +363,7 @@ contract kit; a failing `pre_tool` hook denies; and startup time is unchanged.
 - `edgar sessions compact ID` [CTX-10]
 - `edgar context show` with per-section token counts [CTX-2] (moved from M5,
   [ADR-0038](adr/0038-context-and-sessions-as-built.md))
-- ~~`docs/TOUR.md`~~ done early as [A Tour of the Harness](tour/index.html),
+- ~~`docs/TOUR.md`~~ done early as [A Tour of the Harness](https://vespassassina.github.io/edgar/),
   published to GitHub Pages ([ADR-0040](adr/0040-written-to-be-read.md)); M11 checks
   it covers all of v1
 - `docs/COOKBOOK.md` — piping, command and HTTP tools, subagents, skills,

@@ -287,7 +287,7 @@ edgar/
 ```
 
 Files marked ★ are the ones a reader should open first.
-[A Tour of the Harness](tour/index.html) walks them in order.
+[A Tour of the Harness](https://vespassassina.github.io/edgar/) walks them in order.
 
 ## 3. Core data model
 
@@ -1958,6 +1958,6 @@ written to stdout.
 10. `agents/spawn.py` (v1) — subagents as a re-entrant loop
 11. `controller/` and `learning/` (v2) — self-management and learning with guardrails
 
-[A Tour of the Harness](tour/index.html) (`docs/tour/`, published at
-<https://vespassassina.github.io/edgar/>) narrates this path with a diagram at each
+[A Tour of the Harness](https://vespassassina.github.io/edgar/) (source in `docs/tour/`)
+narrates this path with a diagram at each
 turn, one part per tier.

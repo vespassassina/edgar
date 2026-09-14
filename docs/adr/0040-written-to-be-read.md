@@ -90,8 +90,20 @@ the repository's About box.
 - Comments can go stale in a way code cannot. Numbered steps are checked against
   the tour's turn diagram; everything else relies on review, and on the rule that
   comments change in the same commit as the code.
-- The tour page loads Mermaid from jsDelivr, pinned to an exact version. Without
-  the network the diagrams show as their source text, which is still readable.
+- The tour page loads Mermaid from jsDelivr, pinned to an exact version, as the
+  classic (UMD) build so the page also works opened as a local file. Without the
+  network the diagrams show as their source text, which is still readable. A label
+  that opens with "1. " is read by Mermaid as a Markdown list and cannot be drawn,
+  so the steps are written "1 · ", and a test checks for it.
+- **Amended the same day:** the page is styled with the maintainer's own kit,
+  [artifactkit](https://github.com/vespassassina/artifactkit) (MIT), on a dark,
+  desaturated midnight-blue theme. Its three stylesheets are vendored in
+  `docs/tour/artifactkit/`, unchanged except the theme block, and linked rather than
+  inlined, so the page's source stays short enough to read and edit by hand.
+  artifactkit's `validate.mjs` is written for single files you email, so it reports
+  the linked stylesheets, the Mermaid script and the raw `localStorage` keys as
+  errors. For a page hosted on Pages they are expected: the keys are prefixed with
+  `edgar-tour:` by hand, since every github.io page shares one storage.
 - A new milestone that adds a module turns its planned stop into a built one, in
   the same commit. The test forces this.
 
