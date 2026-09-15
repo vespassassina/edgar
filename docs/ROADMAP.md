@@ -333,11 +333,14 @@ of code.*
 - Fresh context, summary return, transcript persisted [SUB-3, SUB-4]
 - Policy narrowing and taint propagation [PERM-8], budget inheritance [SUB-7, BUD-4]
 - Multi-row status bar [SUB-9]
-- Routing rules and `edgar route explain` [ROUTE-2..4, ROUTE-6, ROUTE-9]
+- Routing rules [ROUTE-2..4, ROUTE-6]
 - `providers/fallback.py`, with reasoning off after a family switch [ROUTE-7, ROUTE-10, PRV-13]
-- `edgar agents list|validate`, example agents in `examples/`
-- Plan mode (`/plan`, `/go`, `--plan`) and the `todo` tool, pinned as working
-  state [CLI-20, TOOL-14, CTX-18], moved from M5 ([ADR-0037](adr/0037-core-fits-in-5000.md))
+- Example agents in `examples/`
+
+Plan mode and the `todo` tool [CLI-20, TOOL-14, CTX-18], `edgar route explain`
+[ROUTE-9] and `edgar agents list|validate` moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)). Plan mode's
+second move — ADR-0037 took it from M5 to M9 — and the reading is that it is not
+part of v1; `--mode read-only` is what 1.0 has instead.
 
 **Done when:** three subagents on three different providers run in parallel, each
 within its own allowlist and budget, with cost attributed per agent and their
@@ -374,7 +377,7 @@ agents, plan mode and the `todo` tool. v1 is at 7,398 of 8,000 lines of code.*
 
 **Goal:** the tinkerer packages and shares; other programs build on edgar.
 
-- `extensions/manifest.py`, `discovery.py`, `edgar ext list|validate|add` [EXT-1..3, EXT-8]
+- `extensions/manifest.py`, `discovery.py`, `edgar ext list` [EXT-1, EXT-2, EXT-3 in part, EXT-8]
 - `extensions/hooks.py` — events, veto-only `pre_tool`, fail closed [EXT-4..7]
 - Provider plugins through `edgar.providers` entry points [PRV-14]
 - `shell.sandbox` keeps its `none | bwrap | seatbelt | container` type; only
@@ -383,7 +386,6 @@ agents, plan mode and the `todo` tool. v1 is at 7,398 of 8,000 lines of code.*
   ([ADR-0050](adr/0050-trim-should-items-from-v1.md))
 - Deterministic skill activation, description lint [SKL-17]
 - A skill's `verify` command as a verification source, authorised like activation [SKL-1, VER-1, ADR-0041]
-- `edgar.testing.contract` — the contract kit for plugin authors
 - `edgar.run()` embedding API [EXT-9]. Design it for the caller described in
   [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md): one program owning many
   sessions across many project directories, starting turns nobody is watching, and
@@ -416,13 +418,10 @@ dead-ends, with Enter the right answer at every step.
   blanks; it is the only thing that writes config, and it still refuses to edit a
   file that already exists ([ADR-0034](adr/0034-model-picker.md))
 - `edgar` with nothing configured offers to run that setup instead of erroring
-- `edgar doctor` — credentials, connectivity, MCP, extensions, trust, DB integrity,
-  cloud-synced directory warning; `--network` lists every reachable host [CFG-5,
-  PRV-15]. No sandbox recommendation in v1: only the `none` backend exists
-  ([ADR-0050](adr/0050-trim-should-items-from-v1.md))
-- `config show --resolved` with grant origins [CFG-2]
-- `edgar context show` with per-section token counts [CTX-2] (moved from M5,
-  [ADR-0038](adr/0038-context-and-sessions-as-built.md))
+- `edgar doctor` — credentials, connectivity and the cloud-synced directory
+  warning [CFG-5, PRV-15]. Its MCP, extension, trust, tick and DB-integrity checks
+  and `--network` move to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); no sandbox recommendation either, since
+  only the `none` backend exists ([ADR-0050](adr/0050-trim-should-items-from-v1.md))
 - ~~`docs/TOUR.md`~~ done early as [A Tour of the Harness](https://vespassassina.github.io/edgar/),
   published to GitHub Pages ([ADR-0040](adr/0040-written-to-be-read.md)); M11 checks
   it covers all of v1
@@ -437,6 +436,11 @@ dead-ends, with Enter the right answer at every step.
 `edgar sessions compact ID` [CTX-10] moved to v2
 ([ADR-0050](adr/0050-trim-should-items-from-v1.md)): `/compact` inside the REPL
 (already Core) is unaffected.
+
+`config show --resolved` [CFG-2] and `edgar context show` [CTX-2] also moved to
+v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) — the second move for `context show`, which ADR-0038 brought here
+from M5. Config still carries provenance internally; what is missing is the
+command that prints it.
 
 **Done when:** the v1.0 success criteria in PRD §11 are met, the formats in EXT-10
 are documented as stable, and `src/` is under 8,000 LOC.

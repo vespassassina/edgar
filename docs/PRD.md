@@ -174,22 +174,22 @@ first lands.
 
 | Area | Core | v1.0 | v2.0 |
 |---|---|---|---|
-| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | `/scope` and `--scope` (CAP-4) |
-| Providers | 1–13, 15–17, 20 | 14, 18, 19 | — |
-| Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
+| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 22, 29; the rest of 25; rest of 14 (`/save /history /fork /remember /memory /skills /agents /tools /init /browser`) | 20 (`/plan /go --plan`) and `/plan`, `/go` in 14 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); `/scope` and `--scope` (CAP-4) |
+| Providers | 1–13, 15–17, 20 | 14 (the `edgar.providers` entry point), 18, 19 | 14's `edgar.testing.contract` kit ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) |
+| Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | 14 (`todo`) ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); `schedule_self` |
 | Permissions | 1–14 | — | 15 |
-| Context | 1, 3–9, 11–17, 19 | 2, 18 | 10 |
+| Context | 1, 3–9, 11–17, 19 | — | 2, 10, 18 ([ADR-0053](adr/0053-what-1-0-actually-ships.md) moves 2 and 18) |
 | Subagents | — | 1–10 | 11 |
 | Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16, 18 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
 | Controller | — | — | 1–13 |
-| Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
+| Routing | 1 (static roles) | 2–4, 6, 7, 10 | 5, 8, 9 (`route explain`, [ADR-0053](adr/0053-what-1-0-actually-ships.md)), 11, 12 |
 | Scheduling | — | — | 1–12 |
 | Broker | — | — | 1–10 |
 | Budget | 1, 2 (turn and session), 3, 5, 6 (`/cost`) | 2 (daily), 4, 6 (`edgar cost`) | — |
-| Config | 1–3, 6–8 | 4, 5 | — |
+| Config | 1–3, 6–8 | 4; 5 for credentials, connectivity and the cloud-synced directory warning | 2 (`config show --resolved`); 5's MCP, extension, trust, tick and DB-integrity checks and `--network` ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) |
 | Verification | 1–7 (sources arrive with their features) | VER-1's skill source, with SKL-1's `verify` ([ADR-0041](adr/0041-skills-as-built.md)) | — |
-| Extensions | 11 (the ports rule holds from M0) | 1–10 | — |
+| Extensions | 11 (the ports rule holds from M0) | 1, 2, 3 (`ext list` only), 4–10 | 3's `ext validate` and `ext add` ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) |
 | Non-functional | 1–3, 6, 9, 13, 14 | 4, 5, 7, 8, 10, 11 | 12 |
 
 ### 5.2 Explicit non-goals
@@ -418,7 +418,7 @@ Requirements are numbered for traceability. Each milestone in
 | CLI-17 | `--verify CMD` declares the verification command for this run, overriding every other source (§7.14) | Must |
 | CLI-18 | `--events` writes the event stream to stdout as JSON Lines, one event per line, for programs embedding edgar; mutually exclusive with `--json` | Must |
 | CLI-19 | `edgar trust [--yes]` records trust for the current project's executable config; `--no-project-exec` runs with that config disabled (PERM-13) | Must |
-| CLI-20 | Plan mode: `/plan` in the REPL or `--plan` with `-p` runs in `read-only` mode and writes the plan to `sessions/<id>/plan.md`; `/go` returns to the previous mode with the plan pinned (CTX-18, [ADR-0025](adr/0025-working-state.md)) | Must |
+| CLI-20 | Plan mode: `/plan` in the REPL or `--plan` with `-p` runs in `read-only` mode and writes the plan to `sessions/<id>/plan.md`; `/go` returns to the previous mode with the plan pinned (CTX-18, [ADR-0025](adr/0025-working-state.md)). Moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)): `--mode read-only` is what 1.0 has | Must |
 | CLI-21 | `--show-thinking` and `/thinking` render reasoning deltas where the provider exposes them, and say so where it does not; `--json` and `--events` include reasoning when requested | Must |
 | CLI-22 | Session forks: `/fork` in the REPL and `edgar --fork ID[@TURN]` start a new session whose JSONL begins with a `fork` record naming the parent and turn; the parent's messages are replayed, not copied | Must |
 | CLI-23 | Terminal-native output: no alternate screen; output stays in the terminal's own scrollback and is selectable; the status line is the only redrawn element; `edgar -c -p "…"` continues the last session from the shell so prompts interleave with ordinary commands | Must |
@@ -447,7 +447,7 @@ Requirements are numbered for traceability. Each milestone in
 | PRV-11 | Adding a provider requires at most one new module plus one registry entry, and for an OpenAI-compatible server only a config block (PRV-12) | Must |
 | PRV-12 | User-defined providers: a `[providers.NAME]` block with `kind = "openai-compatible"`, `base_url`, optional `api_key_env` and any quirk overrides makes `NAME/model` resolvable. Unknown quirks default conservatively and are capability-probed on first use ([ADR-0020](adr/0020-provider-portability.md)) | Must |
 | PRV-13 | `ThinkingBlock` carries its `origin` (adapter family and model). Adapters serialise only same-family reasoning and drop the rest with one `ReasoningDropped` event; a mid-turn switch to another family runs with reasoning off until the next user turn, announced | Must |
-| PRV-14 | Provider plugins register through the `edgar.providers` entry point, read only when a model string names an unknown provider; the contract suite ships as `edgar.testing.contract` for plugin authors | Must |
+| PRV-14 | Provider plugins register through the `edgar.providers` entry point, read only when a model string names an unknown provider; the contract suite ships as `edgar.testing.contract` for plugin authors, which moves to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); the entry point itself is 1.0 | Must |
 | PRV-15 | **No implicit models, hosts or telemetry.** Every request goes to a model named in config or on the command line; auxiliary roles (compactor, controller, condenser) default to the main model; edgar contacts no host except those in config and those reached by an allowed tool call; no telemetry, update checks or remote configuration. `edgar doctor --network` lists every host the config can reach ([ADR-0023](adr/0023-no-hidden-behaviour.md)) | Must |
 | PRV-16 | Tool-call repair: when a model emits a malformed tool call (JSON in a code fence, trailing text, a single JSON object in plain text where the provider has no native tool format), the adapter applies a fixed, deterministic syntactic repair; anything it cannot repair returns to the model as a validation error (TOOL-2). Repairs are counted in usage and events | Must |
 | PRV-18 | `edgar login PROVIDER` and `edgar logout PROVIDER`: OAuth 2.0 with PKCE (or device code) for providers that issue an API key through OAuth, starting with OpenRouter. The host is printed before the browser opens; the key goes to the OS keyring (CFG-6) and is redacted like any secret; without the `keyring` extra the key is printed once and not stored. Never used to sign in with a subscription, except PRV-19 ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)) | Should |
@@ -472,7 +472,7 @@ Requirements are numbered for traceability. Each milestone in
 | TOOL-11 | `shell` runs `shell.program`: on Windows, Git Bash when found, then PowerShell 7, then Windows PowerShell (`cmd.exe` only when configured); elsewhere `$SHELL` if POSIX-compatible, otherwise `/bin/sh`. The tool description names the shell | Must |
 | TOOL-12 | Tool calls from one model response execute in order. Consecutive `task` calls form one fan-out group and run concurrently (SUB-5). Permission prompts from any agent go through one queue and are asked one at a time, labelled with the agent | Must |
 | TOOL-13 | Results from network-sourced tools (`fetch`, HTTP tools, MCP tools) are marked untrusted and set the session taint (PERM-11) | Must |
-| TOOL-14 | `todo` built-in: one call replaces the whole list of `{text, status}` items with status `pending`, `in_progress` or `done`; emits `TodoUpdated`; the list is pinned working state (CTX-18) | Must |
+| TOOL-14 | `todo` built-in: one call replaces the whole list of `{text, status}` items with status `pending`, `in_progress` or `done`; emits `TodoUpdated`; the list is pinned working state (CTX-18). Moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | Must |
 | TOOL-15 | Deferred tool schemas: when the schemas of all exposed tools exceed `tools.schema_budget` tokens (default 4,000), MCP and extension tools are listed by name and one line, and their schemas are loaded on demand through a `tool_search` meta-tool. Built-ins are never deferred | Must |
 
 ### 7.4 Permissions
@@ -503,7 +503,7 @@ Rationale for CTX-3 to CTX-14 in [ADR-0016](adr/0016-context-pipeline.md).
 | ID | Requirement | Priority |
 |---|---|---|
 | CTX-1 | Deterministic prompt assembly, most stable first: system prompt → personality (CTX-19) → tool schemas → instruction files → pinned facts → skill index → *(cache breakpoint)* → rolling summary → transcript → working state (CTX-18) → current turn. Everything above the breakpoint is fixed for the session | Must |
-| CTX-2 | `edgar context show` prints the assembled prompt with per-section token counts | Must |
+| CTX-2 | `edgar context show` prints the assembled prompt with per-section token counts. Moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | Must |
 | CTX-3 | Autocompact, on by default (`context.autocompact`): runs before any request, including mid-turn between units, once the prompt crosses `context.compact_at` of the usable window (default 0.70), and compacts down to `context.compact_to` (default 0.50) | Must |
 | CTX-4 | **Invariant:** every assistant message containing tool calls is immediately followed by exactly one tool message whose result ids equal the call ids, one-to-one. Thinking blocks in the turn in progress are never altered. Checked before every request in debug builds | Must |
 | CTX-5 | Never compacted: system prompt, instruction files, pinned facts, skill index, the first user message, and the unit in progress. The last `context.keep_last_turns` turns (default 4) are exempt from S1 and S2 but not from S3 | Must |
@@ -519,7 +519,7 @@ Rationale for CTX-3 to CTX-14 in [ADR-0016](adr/0016-context-pipeline.md).
 | CTX-15 | `instructions.files` (default `["AGENTS.md"]`) lists the instruction files read at project then user scope; users may add `CLAUDE.md` or others. All are control files (PERM-12) | Must |
 | CTX-16 | The base system prompt ships as `prompts/system.md` (and `prompts/compact.md`), shown by `edgar prompt show`, replaceable by `.edgar/prompts/system.md` (a control file). It carries no style opinions; changes to shipped prompts are listed in the changelog | Must |
 | CTX-17 | **Byte-stable prefix.** Nothing above the cache breakpoint changes within a session; the date, time and other volatile values go in the current turn. A test asserts the serialised prefix is byte-identical across requests until a compaction | Must |
-| CTX-18 | **Working state** — the plan (CLI-20) and the todo list (TOOL-14) — is rendered in one block just above the current turn: below the cache breakpoint, outside the compactable transcript, recorded in the JSONL and restored by `--resume` | Must |
+| CTX-18 | **Working state** — the plan (CLI-20) and the todo list (TOOL-14) — is rendered in one block just above the current turn: below the cache breakpoint, outside the compactable transcript, recorded in the JSONL and restored by `--resume`. Moved to v2 with its two producers ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | Must |
 | CTX-19 | **Personality** ([ADR-0030](adr/0030-personality-file.md)): `.edgar/personality.md`, or else `~/.edgar/personality.md`, sets tone and style. It is placed right after the system prompt, above the cache breakpoint, read once at session start, shown by `edgar prompt show` with its source and token count, and warned about over 500 tokens. It is a control file; edgar ships none; it cannot affect permissions | Must |
 
 ### 7.6 Subagents
@@ -632,7 +632,7 @@ fallback responds to unavailability.
 | ROUTE-6 | Capability validation at selection time, not mid-turn: routing a tool-requiring task to a tool-incapable model is a hard error with a clear message | Must |
 | ROUTE-7 | Fallback on provider unavailability (auth failure, sustained 5xx, exhausted backoff); targets must declare capabilities **at least equal** to the original. A target in a different adapter family runs with reasoning off for the rest of the turn (PRV-13) | Must |
 | ROUTE-8 | Controller `switch_model` may only select from the escalation chain or a routing rule target, never an arbitrary model string | Must |
-| ROUTE-9 | `edgar route explain` prints the selected model, matched rule and reason for a given context | Must |
+| ROUTE-9 | `edgar route explain` prints the selected model, matched rule and reason for a given context. Moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); routing itself ships in 1.0 | Must |
 | ROUTE-10 | Every escalation and fallback emits an event and is surfaced in the status bar; never silent | Must |
 | ROUTE-11 | Budget-aware downgrade: a cap that would abort may instead route cheaper first, with a visible warning | Should |
 | ROUTE-12 | `edgar route suggest` analyses experience telemetry and prints candidate rules with evidence. **Never writes config** | Should |
@@ -670,10 +670,10 @@ fallback responds to unavailability.
 | ID | Requirement | Priority |
 |---|---|---|
 | CFG-1 | Layered: defaults < `~/.edgar/config.toml` < `./.edgar/config.toml` < env < CLI flags | Must |
-| CFG-2 | `edgar config show --resolved` prints the effective config with the origin of every value | Must |
+| CFG-2 | `edgar config show --resolved` prints the effective config with the origin of every value. Moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | Must |
 | CFG-3 | Schema-validated with actionable error messages naming the file, key and expected type | Must |
 | CFG-4 | `edgar init` (and `/init` in the REPL) scaffolds project config, `AGENTS.md` stub and `.gitignore` fragment from templates, creating files and never overwriting existing ones | Must |
-| CFG-5 | `edgar doctor` checks credentials, connectivity, MCP servers, extensions and their required commands, project trust, tick installation, DB integrity, and warns when `.edgar/` sits in a cloud-synced directory (iCloud Drive, OneDrive, Dropbox, Google Drive) | Must |
+| CFG-5 | `edgar doctor` checks credentials, connectivity, MCP servers, extensions and their required commands, project trust, tick installation, DB integrity, and warns when `.edgar/` sits in a cloud-synced directory (iCloud Drive, OneDrive, Dropbox, Google Drive). In 1.0 it checks credentials, connectivity and the cloud-synced directory only; the rest, and `--network`, move to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | Must |
 | CFG-6 | Secrets read from env, from the OS keyring with the optional `keyring` extra, or from a command the user names in user config (`api_key_command`, PRV-20); never written to a config file. A config naming a keyring secret without the extra fails with a hint | Must |
 | CFG-7 | Config files are hand-authored; no automated component rewrites them. The controller may propose diffs | Must |
 | CFG-8 | Config and instruction files are read once at session start. Changes take effect in the next session, and the REPL says so when a control file is edited mid-session | Must |
@@ -704,7 +704,7 @@ event; an **extension** is a folder bundling any of them.
 |---|---|---|
 | EXT-1 | An extension is a folder with `extension.toml` (`name`, `version`, `description`, optional `requires = { edgar, commands }`) and any of `tools/`, `skills/`, `agents/`, `hooks.toml`, `mcp.toml` | Must |
 | EXT-2 | Discovered at `./.edgar/extensions/` and `~/.edgar/extensions/`; enabled by presence, disabled by `extensions.disabled`; project extensions are executable project config (PERM-13) | Must |
-| EXT-3 | `edgar ext list`, `ext validate` (manifest schema, required commands on PATH) and `ext add PATH\|GIT_URL`, which copies the folder in and records source and commit in the manifest. No index, search or update service. In v1, copies skills unaudited; SKL-18 lands in v2 and `ext add` starts running it first ([ADR-0050](adr/0050-trim-should-items-from-v1.md)) | Must |
+| EXT-3 | `edgar ext list`, `ext validate` (manifest schema, required commands on PATH) and `ext add PATH\|GIT_URL`, which copies the folder in and records source and commit in the manifest. No index, search or update service. 1.0 ships `ext list` only; `ext validate` and `ext add` move to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)), so installing an extension is copying a folder in. When `ext add` lands it copies skills unaudited until SKL-18 ([ADR-0050](adr/0050-trim-should-items-from-v1.md)) | Must |
 | EXT-4 | Hooks declared as `[[hooks]]` with `event`, optional `match`, `command` (argv list) and `timeout_s`, in config or an extension's `hooks.toml` | Must |
 | EXT-5 | Hook events: `session_start`, `pre_tool`, `post_tool`, `turn_end`, `verify_finished`, `session_end`. The hook receives the event as JSON on stdin | Must |
 | EXT-6 | A `pre_tool` hook may only veto: exit 2 denies with stderr as the reason returned to the model; any other failure or timeout also denies (fail closed). Hooks cannot modify arguments or allow what policy denies | Must |

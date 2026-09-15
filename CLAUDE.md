@@ -42,9 +42,16 @@ multi-row status bar [SUB-9], `edgar route explain`, `edgar agents list|validate
 example agents, plan mode and the `todo` tool are not. The
 budget test measures v1, 7,398 of 8,000 — 602 lines of code for the rest of M9,
 all of M10 and all of M11, so read [ADR-0050](docs/adr/0050-trim-should-items-from-v1.md)
-before planning anything and expect a second trim. ADR-0037 and ADR-0038 moved
+before planning anything, and then
+[ADR-0053](docs/adr/0053-what-1-0-actually-ships.md), which is that second trim:
+plan mode and the `todo` tool, `edgar route explain`, `edgar agents list|validate`,
+`ext validate` and `ext add`, the `edgar.testing.contract` kit, `config show
+--resolved`, `edgar context show` and most of `edgar doctor` are **not in 1.0**.
+Do not build them; the extension *formats* still freeze, which is what 1.0 is.
+ADR-0037 and ADR-0038 had moved
 plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
-`edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
+`edgar context show` and the daily cap to v1 so Core fits in 5,000 lines; ADR-0053
+has since moved plan mode, `todo` and `context show` on to v2. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
 for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
 OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server, with a key

@@ -672,9 +672,10 @@ flowchart LR
   <p class="files"><span class="ak-pill ak-pill-warn">M10 · planned</span> <code>extensions/manifest.py</code> <code>extensions/hooks.py</code> <code>sandbox/base.py</code></p>
   <p>An extension is a folder of files: tools, skills, agents and hooks. A hook can
   observe or veto, never allow. Its veto sits in the pipeline's <code>pre_tool</code>
-  stage, just before the permission check, and a failing hook denies. Before
-  <code>ext add</code> copies a folder in, edgar audits its skills: fixed rules decide,
-  and a model, if asked, only advises. Python is a plugin surface only for providers. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
+  stage, just before the permission check, and a failing hook denies. Python is a
+  plugin surface only for providers. Installing an extension in 1.0 is copying a
+  folder into <code>.edgar/extensions/</code>: <code>ext add</code>, and the skill
+  audit it would run first, arrive in v2. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
 </article>
 
 <article class="stop planned" id="s24" data-files="src/edgar/config/init.py src/edgar/config/doctor.py">

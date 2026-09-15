@@ -64,6 +64,7 @@ that did not need an ADR.
 | [0050](0050-trim-should-items-from-v1.md) | Move v1's `(Should)` items to v2 before building M9–M11: worktree-isolated subagents, sandbox backends beyond `none`, `edgar skills audit`, out-of-REPL session compaction | Accepted · moves SUB-11, PERM-15, SKL-18, CTX-10 to v2 |
 | [0051](0051-controlling-edgar-from-elsewhere.md) | Controlling edgar from a phone or a remote terminal: a separate project embeds it, and the proxy relays or blocks but never answers | Accepted · constrains `edgar.run()`, amends ADR-0048 decision 1, "Never" list unchanged |
 | [0052](0052-media-input-in-v2.md) | Media input in v2: one `ImageBlock` and nothing else, every other format converted by a tool at the boundary | Accepted · amends PRD §5.3 and §5.1 |
+| [0053](0053-what-1-0-actually-ships.md) | What 1.0 actually ships: cut the commands that read a format, never the format itself | Accepted · moves CLI-20, TOOL-14, CTX-18, CTX-2, CFG-2, ROUTE-9 and parts of CFG-5, EXT-3 and PRV-14 to v2 |
 
 ## Writing a new ADR
 

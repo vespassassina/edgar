@@ -80,6 +80,24 @@ Carried forward until done. Newest first.
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
+- **Seven more things 1.0 will not have**, cut by
+  [ADR-0053](adr/0053-what-1-0-actually-ships.md) because the work left was about
+  1,190 lines of code against 602 available: plan mode and the `todo` tool
+  (CLI-20, TOOL-14, CTX-18 — its second move, so treat it as "not part of v1"
+  rather than unlucky; `--mode read-only` is what 1.0 has), `edgar doctor` beyond
+  credentials, connectivity and the cloud-synced warning (CFG-5's other clauses
+  and `--network`), `edgar ext validate` and `ext add` (EXT-3 in part — installing
+  an extension is copying a folder in), the `edgar.testing.contract` kit (PRV-14's
+  last clause), `edgar route explain` (ROUTE-9), `edgar agents list|validate`, and
+  `config show --resolved` (CFG-2) with `edgar context show` (CTX-2). The
+  extension *formats* still freeze at 1.0, which is the point of the tier. Each
+  can arrive in v2 additively.
+- **A simplification pass is owed before the remaining v1 work**, per ADR-0053
+  decision 9 and the standing rule to simplify before moving features. `cli/`
+  (1,864), `tools/` (1,340) and `providers/` (1,286) are the largest packages and
+  grew most incrementally; commit `944efde` shaved 116 lines once before without
+  losing a feature. Nothing cut above gets reinstated on an expected saving —
+  measure first.
 - **Size watch.** The budget test measures v1: 7,398 of 8,000 lines of code,
   602 left for the rest of M9 plus M10 and M11. Core's own files stayed at 5,000;
   `core/loop.py` itself sits at 199 of its own 200-line cap, 1 line of slack —
@@ -116,9 +134,30 @@ Carried forward until done. Newest first.
   list|validate`, example agents, plan mode and the `todo` tool are all unbuilt.
 
 **Decided**
-- Nothing yet. The arithmetic worth deciding on is in the open items: 602 lines of
-  code for the rest of M9, all of M10 and all of M11, against ADR-0050's estimate
-  of 1,144 for the same three milestones one week ago.
+- [ADR-0053](adr/0053-what-1-0-actually-ships.md): what 1.0 actually ships. The
+  work left measured about 1,190 lines of code against 602 available, so nine
+  cuts, chosen on one principle — **a format freezes by being implemented and
+  documented, not by shipping every command that inspects it**, so cut the
+  commands that read a format and never the format. Out: plan mode and `todo`
+  (CLI-20, TOOL-14, CTX-18), most of `edgar doctor` (CFG-5), `ext validate` and
+  `ext add` (EXT-3 in part), the contract kit (PRV-14's last clause), `route
+  explain` (ROUTE-9), `agents list|validate`, `config show --resolved` (CFG-2),
+  `context show` (CTX-2), plus a simplification pass before the rest of the work
+  rather than after it. In and unchanged: the manifest and discovery, `ext list`,
+  hooks entire including the fail-closed `pre_tool` veto, `edgar.run()`, the
+  format freeze, provider plugins' entry point, skill activation and lint, a
+  skill's `verify`, subagents entire including SUB-9, routing and fallback, and
+  `edgar init`.
+- Raising the cap to 9,000 was not reopened. ADR-0050 had left it as the last
+  resort; the maintainer's standing rule is to simplify first and never raise a
+  budget, and cheaper levers existed.
+- The contested call was plan mode against hooks, since after the other eight cuts
+  one of the two had to go. The maintainer chose to cut plan mode: hooks are part
+  of the format freeze and cannot arrive additively in the same way.
+
+**Pending**
+- The rest of M9 under the new scope: SUB-9's multi-row status bar and example
+  agents, then an M9 as-built ADR.
 
 ## 2026-09-15 · Consecutive subagents fan out
 
