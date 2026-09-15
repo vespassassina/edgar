@@ -5,6 +5,36 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## Pick up here
+
+The next three pieces of work, in order, as of 2026-09-15 (`0cb9e40`). Read
+[ADR-0053](adr/0053-what-1-0-actually-ships.md) before any of them: it says what
+1.0 no longer ships, and building a cut item by mistake is the easiest way to
+waste the remaining budget.
+
+1. **The simplification pass**, owed by ADR-0053 decision 9 and by the standing
+   rule to simplify before moving features. Targets, largest first: `cli/` (1,864
+   lines of code), `tools/` (1,340), `providers/` (1,286) — the three that grew
+   most incrementally. Precedent: commit `944efde` shaved 116 without losing a
+   feature. The number it yields is the real headroom for M10 and M11, so measure
+   with `just loc` and record it; do not reinstate anything ADR-0053 cut on the
+   strength of an expected saving. `core/loop.py` is at 199 of its own 200-line
+   cap, so anything needing room there extracts a collaborator first, the way
+   `execute_many()` and `next_provider()` did.
+2. **Close M9.** What is left under the new scope is the multi-row status bar for
+   concurrent subagents [SUB-9] — without it two subagents show as one interleaved
+   stream — and example agents in `examples/`. Then an M9 as-built ADR (the
+   pattern every milestone follows: 0045/0046 for M7, 0047/0048 for M8) and the
+   status table moves to Done. One open question to settle there: whether `Guard`'s
+   asking lock really serialises prompts one at a time under real concurrency, which
+   the fan-out tests did not prove.
+3. **M10**, scoped by ADR-0053: the extension manifest and discovery, `ext list`
+   only, hooks entire, provider plugin entry points, deterministic skill activation
+   and the description lint, a skill's `verify`, `edgar.run()` and the remaining
+   slash commands. `edgar.run()` should be designed for the caller in
+   [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md) — one program owning
+   many sessions across many project directories, starting turns nobody is watching.
+
 ## Open items
 
 Carried forward until done. Newest first.
