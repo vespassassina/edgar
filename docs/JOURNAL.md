@@ -138,6 +138,64 @@ Carried forward until done. Newest first.
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
 
+## 2026-09-15 · Wrapping OAuth CLIs instead of writing them
+
+**Asked**
+- Another example tool, this time one using OAuth. That grew into six
+  services (Gmail, Google Calendar, Google Docs, Dropbox, OneDrive,
+  iCloud Drive, then web search added), first framed as MCP servers
+  documented inside edgar's own Cookbook, then corrected mid-conversation
+  to standalone CLIs living outside edgar entirely, wrapped later as plain
+  command tools — the same pattern `gh_issue.toml` already uses for `gh`.
+
+**Done**
+- Dropped iCloud Drive: it has no third-party OAuth API at all, and the
+  Drive folder itself is already covered by edgar's filesystem tools and
+  `edgar doctor`'s CFG-5 warning.
+- Started building five standalone CLIs from scratch (one project folder
+  each, in `~/Documents/Software/`) before checking whether the problem
+  was already solved. Caught mid-build: "check if these cli exist already
+  ... if something exists just get the repo, compile and build the tool
+  around the argv." Killed the five in-flight builder agents (gmail-cli,
+  gcal-cli, gdocs-cli, dropbox-cli, onedrive-cli) once mature alternatives
+  turned up, leaving their scaffolding as a few empty `pyproject.toml`
+  stubs under those folders' names — nothing committed, nothing kept.
+- Verified two real tools instead of writing five: `rclone` (Homebrew,
+  v1.75.1) already has maintained OAuth2 for Dropbox and OneDrive;
+  [`gws`](https://github.com/googleworkspace/cli) (npm, v0.22.5, 31k
+  stars, actively pushed) already covers Gmail, Calendar and Docs under
+  one Google Cloud OAuth grant, generated straight from Google's Discovery
+  Service. Both installed and run.
+- The sixth service, web search, had no existing equivalent (checked) —
+  built `websearch-cli` from scratch at
+  `~/Documents/Software/websearch-cli`, wrapping the Brave Search API
+  (no OAuth, one API key), verified against Brave's live docs, 5/5 tests
+  passing, installed on PATH.
+- Added five example command tools wrapping the two adopted CLIs:
+  `examples/tools/dropbox_ls.toml`, `onedrive_ls.toml` (both `rclone`),
+  `gmail_search.toml`, `gcal_events.toml`, `gdocs_get.toml` (all `gws`).
+  Each is one argv template, `read_only = true`, no code beyond the
+  existing command-tool grammar. Updated `examples/README.md`,
+  `tests/unit/test_skills.py`'s tool-name list, `docs/COOKBOOK.md` (a
+  paragraph on wrapping an OAuth CLI instead of writing one, under "Give
+  the agent a CLI") and `CHANGELOG.md`.
+
+**Decided**
+- Check for a maintained CLI before writing an OAuth client, every time —
+  restated here because it was missed once this session before being
+  caught. Wrapping an existing CLI's argv is strictly less code than
+  reimplementing its auth flow, and edgar's command-tool format was
+  already built for exactly this (`gh_issue.toml`).
+- `websearch-cli`, `rclone` and `gws` all live outside this repo and are
+  not edgar's to maintain; the example tools above are edgar's only
+  footprint, and they break if the wrapped CLI's own command line changes,
+  same as `gh_issue.toml` already does for `gh`.
+
+**Next:** none of the five wrapper tools has been run against a real
+signed-in `rclone` remote or `gws` account yet — that needs the user's own
+`rclone config` and `gws auth setup`, both OAuth grants neither this
+session nor edgar should run unattended.
+
 ## 2026-09-15 · M11 begins: init and doctor
 
 **Asked**

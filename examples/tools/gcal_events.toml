@@ -1,0 +1,14 @@
+# A command tool wrapping gws (https://github.com/googleworkspace/cli): the
+# same tool as gmail_search.toml, a different API. `gws auth setup` signs in
+# once, outside edgar, and covers every Workspace service with one OAuth
+# grant. `params` is the JSON gws's own docs show for
+# `calendar.events.list`, e.g. {"calendarId":"primary","maxResults":10}.
+# Needs `gws` on PATH.
+name = "gcal_events"
+description = "List Google Calendar events via gws. params is the JSON gws calendar events list --params takes."
+argv = ["gws", "calendar", "events", "list", "--params", "{params}"]
+read_only = true
+[input]
+type = "object"
+required = ["params"]
+properties.params = { type = "string" }

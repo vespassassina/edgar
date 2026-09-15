@@ -1,0 +1,12 @@
+# A command tool wrapping rclone (https://rclone.org): the same tool as
+# dropbox_ls.toml, a different remote. `rclone config` creates the `onedrive`
+# remote once, outside edgar, with its own OAuth2 sign-in. Needs `rclone` on
+# PATH.
+name = "onedrive_ls"
+description = "List a OneDrive folder via rclone. Pass an empty path for the root."
+argv = ["rclone", "lsjson", "onedrive:{path}"]
+read_only = true
+[input]
+type = "object"
+required = ["path"]
+properties.path = { type = "string" }

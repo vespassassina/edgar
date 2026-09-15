@@ -124,6 +124,20 @@ edgar tools describe gh_issue
 nothing, so it is allowed without asking, like `read`. Leave it out for anything
 that writes.
 
+An OAuth-authenticated service is still a command tool, not MCP, if a
+maintained CLI for it already exists: wrap that CLI's own argv rather than
+writing a client. `edgar` never runs the sign-in step —
+[`examples/tools/dropbox_ls.toml`](../examples/tools/dropbox_ls.toml) and
+[`onedrive_ls.toml`](../examples/tools/onedrive_ls.toml) wrap `rclone`, whose
+`rclone config` does Dropbox's and OneDrive's OAuth once, outside edgar;
+[`gmail_search.toml`](../examples/tools/gmail_search.toml),
+[`gcal_events.toml`](../examples/tools/gcal_events.toml) and
+[`gdocs_get.toml`](../examples/tools/gdocs_get.toml) wrap
+[`gws`](https://github.com/googleworkspace/cli) the same way, one `gws auth
+setup` covering all three Workspace APIs. Each file is still just an argv
+template with `{slot}`s — the underlying CLI's own command line is the
+contract, so there is nothing to maintain when that CLI adds a feature.
+
 ## Give the agent an API
 
 An HTTP tool is a request template with its host fixed. Arguments fill only the

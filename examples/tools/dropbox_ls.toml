@@ -1,0 +1,13 @@
+# A command tool wrapping rclone (https://rclone.org), rather than a
+# hand-written Dropbox OAuth client: rclone already has a maintained OAuth2
+# flow for Dropbox, so the tool is one argv template, and the sign-in step
+# happens once, outside edgar, with `rclone config` (creates a `dropbox`
+# remote in ~/.config/rclone/rclone.conf). Needs `rclone` on PATH.
+name = "dropbox_ls"
+description = "List a Dropbox folder via rclone. Pass an empty path for the root."
+argv = ["rclone", "lsjson", "dropbox:{path}"]
+read_only = true
+[input]
+type = "object"
+required = ["path"]
+properties.path = { type = "string" }

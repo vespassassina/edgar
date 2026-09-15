@@ -74,6 +74,12 @@ extension formats freeze.
   local log at the end of every turn.
 - An example HTTP tool that needs no API key, `examples/tools/weather.toml`:
   copy it into `.edgar/tools/` for current weather by city from wttr.in.
+- Five example command tools for OAuth-authenticated services, wrapping a
+  maintained third-party CLI instead of a hand-written client:
+  `examples/tools/dropbox_ls.toml` and `onedrive_ls.toml` wrap `rclone`;
+  `gmail_search.toml`, `gcal_events.toml` and `gdocs_get.toml` wrap
+  [`gws`](https://github.com/googleworkspace/cli). Sign-in happens once,
+  outside edgar, with `rclone config` and `gws auth setup`.
 
 ### Changed
 - A `[[route]]` rule with a key edgar does not recognise is now a config error

@@ -215,7 +215,16 @@ def test_tools_list_leaves_out_an_untrusted_projects_tools(
 
 def test_the_example_tools_load() -> None:
     tools = load([(EXAMPLES / "tools", "project")])
-    assert sorted(t.schema.name for t in tools) == ["gh_issue", "service_status", "weather"]
+    assert sorted(t.schema.name for t in tools) == [
+        "dropbox_ls",
+        "gcal_events",
+        "gdocs_get",
+        "gh_issue",
+        "gmail_search",
+        "onedrive_ls",
+        "service_status",
+        "weather",
+    ]
     for path in (EXAMPLES / "tools").glob("*.toml"):
         tomllib.loads(path.read_text(encoding="utf-8"))
 

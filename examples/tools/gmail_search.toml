@@ -1,0 +1,15 @@
+# A command tool wrapping gws (https://github.com/googleworkspace/cli)
+# instead of a hand-written Gmail OAuth client: gws already speaks every
+# Workspace API, generated from Google's own Discovery Service, so the tool
+# is one argv template. `gws auth setup` signs in once, outside edgar. The
+# model fills `params` as the same JSON object gws's own docs show for
+# `gmail.users.messages.list`, e.g. {"userId":"me","q":"is:unread"}. Needs
+# `gws` on PATH.
+name = "gmail_search"
+description = "Search Gmail messages via gws. params is the JSON gws gmail users messages list --params takes."
+argv = ["gws", "gmail", "users", "messages", "list", "--params", "{params}"]
+read_only = true
+[input]
+type = "object"
+required = ["params"]
+properties.params = { type = "string" }

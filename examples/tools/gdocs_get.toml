@@ -1,0 +1,13 @@
+# A command tool wrapping gws (https://github.com/googleworkspace/cli): the
+# same tool as gmail_search.toml and gcal_events.toml, a third API under the
+# one OAuth grant `gws auth setup` creates. `params` is the JSON gws's own
+# docs show for `docs.documents.get`, e.g. {"documentId":"..."}. Needs `gws`
+# on PATH.
+name = "gdocs_get"
+description = "Read a Google Doc via gws. params is the JSON gws docs documents get --params takes."
+argv = ["gws", "docs", "documents", "get", "--params", "{params}"]
+read_only = true
+[input]
+type = "object"
+required = ["params"]
+properties.params = { type = "string" }
