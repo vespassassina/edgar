@@ -96,6 +96,30 @@ Carried forward until done. Newest first.
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
 
+## 2026-09-15 · Docs check after M9's first two thirds
+
+**Asked**
+- Check the docs after another session had been working in this repository, then
+  pick up the next milestone.
+
+**Done**
+- Read the tree as landed at `05f3594`. `just check` is green: ruff, mypy
+  `--strict` and 646 tests. The trace held — `ROADMAP.md`'s M9 section carries two
+  dated notes, `CHANGELOG.md` describes subagents and their fan-out, the tour's
+  stop 22 names `execute_many()`, the `agents/` size row is in the table, and the
+  size watch carries today's real numbers.
+- `CLAUDE.md`'s "Current state" was the one stale paragraph: it still said "M9 is
+  next" and quoted 6,809 of 8,000. Rewritten to say what M9 has and has not
+  built, and to quote 7,398 with the 602 lines of code left called out.
+- Confirmed `ROADMAP.md`'s status table is right to say M9 is in progress: the
+  multi-row status bar [SUB-9], `edgar route explain`, `edgar agents
+  list|validate`, example agents, plan mode and the `todo` tool are all unbuilt.
+
+**Decided**
+- Nothing yet. The arithmetic worth deciding on is in the open items: 602 lines of
+  code for the rest of M9, all of M10 and all of M11, against ADR-0050's estimate
+  of 1,144 for the same three milestones one week ago.
+
 ## 2026-09-15 · Consecutive subagents fan out
 
 **Asked**

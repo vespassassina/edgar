@@ -33,8 +33,16 @@ Streamable HTTP, started only when a tool is called, deferred schemas through
 `tool_search`, `edgar mcp list|test` and `/browser` (`tools/mcp/`, ADR-0047); and
 signing in (`auth/`, ADR-0048): `edgar login PROVIDER` and `edgar mcp login NAME`,
 OAuth 2.1 with PKCE on a loopback port, tokens in the OS keyring through the
-optional `keyring` extra, and a turn that never opens a browser. M9 is next. The
-budget test measures v1, 6,809 of 8,000. ADR-0037 and ADR-0038 moved
+optional `keyring` extra, and a turn that never opens a browser. M9 is **in
+progress**: subagents (`agents/`, the `task` tool re-entering the loop with a fresh
+session, a narrowed policy and an inherited budget), consecutive `task` calls
+fanning out through `tools/execute.py`'s `execute_many()` [TOOL-12], declarative
+routing rules and sideways fallback (`providers/fallback.py`) are built; the
+multi-row status bar [SUB-9], `edgar route explain`, `edgar agents list|validate`,
+example agents, plan mode and the `todo` tool are not. The
+budget test measures v1, 7,398 of 8,000 — 602 lines of code for the rest of M9,
+all of M10 and all of M11, so read [ADR-0050](docs/adr/0050-trim-should-items-from-v1.md)
+before planning anything and expect a second trim. ADR-0037 and ADR-0038 moved
 plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
 `edgar context show` and the daily cap to v1 so Core fits in 5,000 lines. `edgar` opens an
 interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
