@@ -35,7 +35,8 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
 | M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
 | M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
-| M11–M17 | Planned | 1.0, 2.0 |
+| M11 Init, doctor, docs | In progress — init, doctor done | 1.0 |
+| M12–M17 | Planned | 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -428,12 +429,13 @@ The first ten minutes today: `edgar models`, get bounced because no key is set,
 `edgar login PROVIDER`, `edgar models` again. It should be one path that never
 dead-ends, with Enter the right answer at every step.
 
-- `edgar init` and `/init` — templates, credential detection, no secrets on disk [CFG-4, CFG-6].
-  It writes a working, commented `config.toml` with the choices already made, never
-  blanks; it is the only thing that writes config, and it still refuses to edit a
-  file that already exists ([ADR-0034](adr/0034-model-picker.md))
-- `edgar` with nothing configured offers to run that setup instead of erroring
-- `edgar doctor` — credentials, connectivity and the cloud-synced directory
+- ~~`edgar init` and `/init`~~ done — templates, credential detection, no secrets
+  on disk [CFG-4, CFG-6]. It writes a working, commented `config.toml` with the
+  choices already made, never blanks; it is the only thing that writes config,
+  and it still refuses to edit a file that already exists
+  ([ADR-0034](adr/0034-model-picker.md))
+- ~~`edgar` with nothing configured offers to run that setup instead of erroring~~ done
+- ~~`edgar doctor`~~ done — credentials, connectivity and the cloud-synced directory
   warning [CFG-5, PRV-15]. Its MCP, extension, trust, tick and DB-integrity checks
   and `--network` move to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); no sandbox recommendation either, since
   only the `none` backend exists ([ADR-0050](adr/0050-trim-should-items-from-v1.md))
@@ -459,6 +461,12 @@ command that prints it.
 
 **Done when:** the v1.0 success criteria in PRD §11 are met, the formats in EXT-10
 are documented as stable, and `src/` is under 8,000 LOC.
+
+*2026-09-15: `edgar init`/`/init` and `edgar doctor` are done. Adding them briefly
+pushed v1 over budget (8,041/8,000); closed by moving explanatory docstring prose
+into free `#` comments across six files, no behaviour change. v1 is at exactly
+8,000 of 8,000 lines of code — no headroom left for anything that isn't a `.py`
+file. Still open: the docs trio, examples in CI, and release automation.*
 
 ---
 

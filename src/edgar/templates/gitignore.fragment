@@ -1,0 +1,5 @@
+# edgar: generated state, not source. Everything else under .edgar/ (config.toml,
+# AGENTS.md, tools/, skills/, agents/, extensions/, prompts/, personality.md) is
+# hand-authored and belongs in version control.
+.edgar/sessions/
+.edgar/edgar.db

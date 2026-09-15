@@ -1,0 +1,45 @@
+# edgar project config, written by `edgar init`.
+#
+# Every key below is optional and shows edgar's own default: uncomment only what
+# you want to change. Layering is defaults < ~/.edgar/config.toml <
+# ./.edgar/config.toml < EDGAR_* env < CLI flags (CFG-1); this file is read once
+# per session, so a change here takes effect the next time edgar starts (CFG-8).
+# Full reference: docs/PRD.md §7.13, or `docs/COOKBOOK.md` for worked examples.
+
+[model]
+# default = "provider/model"     # e.g. "anthropic/claude-opus-4-5"; `edgar models` picks one
+# compactor = "provider/model"   # auxiliary roles default to [model] default, never silently
+# controller = "provider/model"  # to a different host (no hidden behaviour)
+# condenser = "provider/model"
+
+[permissions]
+# mode = "ask"                   # read-only | ask | auto | yolo
+# write_paths = ["./**"]         # glob patterns `write`/`edit` may touch
+# shell_allow = []                # commands the shell tool may run outright
+# shell_deny = []                 # commands it always asks about, even in auto
+
+[verify]
+# command = "just test"          # what "done" means here; failure output goes back
+#                                 # to the model, capped attempts (VER-1)
+
+[budget]
+# turn_cost_cap = 1.0
+# session_cost_cap = 5.0
+# daily_cost_cap = 20.0
+
+[instructions]
+# files = ["AGENTS.md"]          # read into every session's context (CTX-15)
+
+[shell]
+# program = "auto"               # or an explicit path
+
+# A server that speaks an OpenAI-compatible API, or Anthropic's own:
+# [providers.NAME]
+# kind = "openai-compatible"
+# base_url = "https://example.com/v1"
+# api_key_env = "EXAMPLE_API_KEY"   # the variable holding the key, never the key itself (CFG-6)
+
+# An MCP server, started only once a tool from it is actually called:
+# [mcp.NAME]
+# command = "npx"
+# args = ["-y", "@example/mcp-server"]

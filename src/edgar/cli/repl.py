@@ -1,12 +1,11 @@
-"""The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].
+"""The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27]."""
 
-`Shell` is the REPL without a terminal: what each typed line does. Tests drive it
-directly. `interact()` connects it to prompt_toolkit, which keeps a prompt at the
-bottom of the screen while a turn runs, so input is never blocked: plain text
-queues, `/steer` reaches the turn at its next safe point, `/btw` asks on the side.
-The status line is the prompt's bottom toolbar; everything else prints above the
-prompt and stays in the terminal's scrollback.
-"""
+# `Shell` is the REPL without a terminal: what each typed line does. Tests drive it
+# directly. `interact()` connects it to prompt_toolkit, which keeps a prompt at the
+# bottom of the screen while a turn runs, so input is never blocked: plain text
+# queues, `/steer` reaches the turn at its next safe point, `/btw` asks on the side.
+# The status line is the prompt's bottom toolbar; everything else prints above the
+# prompt and stays in the terminal's scrollback.
 
 from __future__ import annotations
 
@@ -278,10 +277,10 @@ async def interact(
         bus.subscribe(renderer)
         bus.subscribe(status)
         if config.model.default is None:
-            from edgar.cli.models import pick
+            from edgar.cli import init  # nothing configured: offer setup, not an error [CFG-4]
 
-            printer.block("No model configured yet. Pick one:")
-            chosen = await pick(config, env, ask, printer.block)
+            printer.block("Nothing configured yet. Let's fix that:")
+            chosen = await init.run(root, config, ask, printer.block)
             if chosen is None:
                 return 3
             s.config = replace(config, model=replace(config.model, default=chosen))

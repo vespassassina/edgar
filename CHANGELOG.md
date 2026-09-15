@@ -54,6 +54,14 @@ extension formats freeze.
 - Three more slash commands: `/agents` lists the subagents this session's
   `task` tool can run, `/skills` lists the skills it can load, `/tools` lists
   every tool available.
+- `edgar init` and `/init`: scaffolds a project's `AGENTS.md`, a `.gitignore`
+  fragment for `.edgar/`'s generated state, and a commented `config.toml`
+  with a model already picked when there is a terminal to ask. Never
+  overwrites a file that is already there. Starting `edgar` in a project
+  with nothing configured now offers to run this instead of erroring.
+- `edgar doctor`: checks each provider's credentials and connectivity, and
+  warns when the project or home directory sits in an iCloud Drive, OneDrive,
+  Dropbox or Google Drive folder, where SQLite wants extra care.
 
 ### Changed
 - A `[[route]]` rule with a key edgar does not recognise is now a config error

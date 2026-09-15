@@ -1,8 +1,7 @@
-"""Slash commands [CLI-14, CLI-22, CLI-25, CLI-27, CLI-28].
+"""Slash commands [CLI-14, CLI-22, CLI-25, CLI-27, CLI-28]."""
 
-Each command is a small function over the `Shell`. Commands whose machinery lands
-in a later milestone say which one, rather than pretending to work.
-"""
+# Each command is a small function over the `Shell`. Commands whose machinery lands
+# in a later milestone say which one, rather than pretending to work.
 
 # The session commands all end the same way: a JSONL file on disk is replayed and
 # the shell opens it (_switch). /load names one, /fork writes a one-line file that
@@ -41,7 +40,7 @@ Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
 # Commands still owed, and when; plan mode moved to v2 in ADR-0053.
-LATER = {"M11": "/init", "v2": "/plan /go"}
+LATER = {"v2": "/plan /go"}
 
 
 def command(names: str, help: str) -> Callable[[Command], Command]:
@@ -421,6 +420,15 @@ async def _tools(shell: Shell, arg: str) -> None:
         for t in shell.rt.tools.schemas()
     ]
     shell.say("\n".join(["tools:", *rows]))
+
+
+@command("/init", "scaffold this project's config, AGENTS.md and .gitignore [CFG-4]")
+async def _init(shell: Shell, arg: str) -> None:
+    from edgar.cli import init
+
+    chosen = await init.run(shell.setup.root, shell.config, shell.ask, shell.say)
+    if chosen is not None and shell.config.model.default is None:
+        shell.switch(chosen)
 
 
 @command("/memory", "what is remembered; `edgar memory` edits, reviews and undoes")

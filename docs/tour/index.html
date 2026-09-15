@@ -137,7 +137,7 @@
     <li><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
     <li><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
     <li><a href="#s23"><span class="n">23</span>Extensions, hooks, plugins, embedding (M10)</a></li>
-    <li class="planned"><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
+    <li><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v2">III. v2</a><span class="count" data-count="v2"></span></p>
   <ol class="ak-nav">
@@ -572,7 +572,7 @@ issue</a>.</p>
 
 <!-- ─────────────────────────────── Part II ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">M7 and M8 built, M9 to M11 planned</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">M7 to M11 built; M11's docs and release automation planned</span></div>
 <p class="part-intro">Extensible, and it remembers: memory, MCP, subagents,
 extensions and hooks. At most 8,000 lines of code for Core plus v1. Nothing in v1
 changes the shape of the turn: each piece plugs into a seam you have already
@@ -719,11 +719,27 @@ flowchart LR
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
 </article>
 
-<article class="stop planned" id="s24" data-files="src/edgar/config/init.py src/edgar/config/doctor.py">
+<article class="stop" id="s24" data-files="src/edgar/cli/init.py src/edgar/cli/doctor.py src/edgar/templates/config.toml">
   <h4><span class="n">24</span>Init and doctor</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M11 · planned</span> <code>config/init.py</code> <code>config/doctor.py</code></p>
-  <p>Scaffolding a project and checking an environment. Skim it: it is surface, like
-  stage 5. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m11--init-doctor-docs--v10-release">Roadmap: M11</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/init.py"><code>cli/init.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/doctor.py"><code>cli/doctor.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/config.toml"><code>templates/config.toml</code></a></p>
+  <p class="look">Look for: <code>run</code> <code>_scaffold</code> <code>_gitignore</code> <code>command</code> <code>_connectivity</code></p>
+  <p><code>edgar init</code> and <code>/init</code> [CFG-4] scaffold a project's
+  <code>AGENTS.md</code>, a <code>.gitignore</code> fragment for <code>.edgar/</code>'s
+  generated state, and a working, commented <code>config.toml</code> — from three
+  plain files under <code>templates/</code>, not Python, so they cost nothing
+  against the LOC budget the same way <code>prompts/*.md</code> already does not.
+  Every write checks existence first and leaves the file alone if it is already
+  there (ADR-0034's rule, extended here); <code>init.run()</code> is shared code,
+  called both from the CLI and from <code>cli/repl.py</code>'s "nothing configured"
+  startup path, so a fresh checkout gets scaffolding, not just a model picker.
+  <code>edgar doctor</code> [CFG-5] checks each provider's credentials (reusing
+  <code>cli/models.py</code>'s <code>describe()</code>) and connectivity, and warns
+  when a directory sits inside iCloud Drive, OneDrive, Dropbox or Google Drive —
+  a plain substring match on the resolved path, which cannot catch macOS's silent
+  Desktop &amp; Documents sync; that gap is named in a comment rather than hidden.
+  Its MCP, extension, trust, tick and DB-integrity checks, and <code>--network</code>,
+  moved to v2 (ADR-0053).
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m11--init-doctor-docs--v10-release">Roadmap: M11</a></p>
 </article>
 
 <!-- ─────────────────────────────── Part III ─────────────────────────────── -->

@@ -1,11 +1,10 @@
-"""`edgar models list` and the model picker.
+"""`edgar models list` and the model picker."""
 
-`list` prints the model each role resolves to, and every provider with its
-endpoint and key variable, without contacting anything, so where prompts go is a
-question the config answers [PRV-15]. `edgar models` and `/model` pick a model
-interactively [CLI-30, ADR-0034].
-"""
-
+# `list` prints the model each role resolves to, and every provider with its
+# endpoint and key variable, without contacting anything, so where prompts go is
+# a question the config answers [PRV-15]. `edgar models` and `/model` pick a
+# model interactively [CLI-30, ADR-0034].
+#
 # `edgar models list`:  for each role, the model it resolves to; then each provider,
 #                       its endpoint, and whether its key variable is set
 # `edgar models`:       pick a provider; offer to sign in if it has no key and can
@@ -43,11 +42,11 @@ def list_models(cwd: Path, env: Mapping[str, str] | None = None) -> int:
             out.write(f"{role:<11} {chosen.model:<36} {chosen.reason}\n")
     out.write("\n")
     for name in sorted({*BUILTIN, *config.providers} - {"fake"}):
-        out.write(f"{name:<11} {_describe(name, config, env)}\n")
+        out.write(f"{name:<11} {describe(name, config, env)}\n")
     return 0
 
 
-def _describe(name: str, config: Config, env: Mapping[str, str]) -> str:
+def describe(name: str, config: Config, env: Mapping[str, str]) -> str:
     try:
         q = quirks_for(name, config.providers.get(name))
     except ConfigError as exc:
@@ -82,7 +81,7 @@ async def pick(
     provider that hands one out, it offers the browser sign-in instead."""
     env = os.environ if env is None else env
     names = sorted({*BUILTIN, *config.providers} - {"fake"})
-    say("\n".join(f"{i:>3}. {n:<11} {_describe(n, config, env)}" for i, n in enumerate(names, 1)))
+    say("\n".join(f"{i:>3}. {n:<11} {describe(n, config, env)}" for i, n in enumerate(names, 1)))
     name = _choose(await ask("provider (number or name, empty to cancel): "), names)
     if name is None:
         return None

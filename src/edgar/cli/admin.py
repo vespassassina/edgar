@@ -1,11 +1,9 @@
-"""The subcommands that look at a project rather than run a turn: `edgar trust`
-and `edgar permissions list|revoke`, what a human decided, shown and changed by a
-human [PERM-6, PERM-13, CLI-19]; `edgar sessions list|show|rm` [CLI-11]; `edgar
-cost`, the spend of the last seven days [BUD-6]; `edgar mcp list|test NAME`, which
-starts the MCP servers a session would use and prints what each offers [TOOL-7]."""
+"""The subcommands that look at a project rather than run a turn."""
 
-# `edgar tools list|describe` and `edgar skills list|validate` show what a session
-# here would get [SKL-7].
+# `edgar trust`, `edgar permissions list|revoke` [PERM-6, PERM-13, CLI-19];
+# `edgar sessions list|show|rm` [CLI-11]; `edgar cost` [BUD-6]; `edgar mcp
+# list|test NAME` [TOOL-7]; `edgar tools list|describe` and `edgar skills
+# list|validate` [SKL-7]; `edgar init` [CFG-4]; `edgar doctor` [CFG-5].
 #
 # Each subcommand is one branch of command(): read what is on disk, print it, and
 # return the exit code. None of them contacts a model. Only `trust`, `revoke` and
@@ -35,7 +33,8 @@ from edgar.tools.builtin.task import TaskTool
 from edgar.tools.mcp.client import FAILURES, Server, close
 from edgar.tools.mcp.schema import hints
 
-USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
+USAGE = """usage: edgar init | edgar doctor
+       edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
        edgar mcp list | test NAME | login NAME | logout NAME
@@ -44,6 +43,14 @@ USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissio
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
     home = home or Path.home()
+    if argv == ["init"]:
+        from edgar.cli.init import command as init_command
+
+        return init_command(cwd, home)
+    if argv == ["doctor"]:
+        from edgar.cli.doctor import command as doctor_command
+
+        return doctor_command(cwd, home)
     if argv == ["cost"]:
         return _cost(cwd, home)
     if argv[0] == "mcp" and len(argv) in (2, 3):

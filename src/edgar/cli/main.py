@@ -16,6 +16,8 @@ from edgar.core.errors import EdgarError
 
 # The subcommands that look at a project rather than run a turn (cli/admin.py).
 ADMIN = {
+    "init",
+    "doctor",
     "trust",
     "permissions",
     "sessions",
@@ -33,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="edgar",
         description="The agent harness you can read in an afternoon.",
-        epilog="Other commands: edgar models [list], edgar trust, "
+        epilog="Other commands: edgar init, edgar doctor, edgar models [list], edgar trust, "
         "edgar permissions list|revoke ID, edgar prompt show, "
         "edgar sessions list|show ID|rm ID, edgar tools list|describe NAME, "
         "edgar skills list|validate, edgar memory list|add|edit|review|forget ID|undo, "

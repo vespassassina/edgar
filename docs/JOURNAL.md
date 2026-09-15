@@ -7,17 +7,20 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 ## Pick up here
 
-The next piece of work, as of 2026-09-15, now that M10 is done (this session):
+The next piece of work, as of 2026-09-15, now that `edgar init` and `edgar
+doctor` are done (this session):
 
-1. **M11**, the last v1 milestone and the 1.0 release: `edgar init`, `edgar
-   doctor`, docs. Read the M11 section of [ROADMAP.md](ROADMAP.md) first, and
-   note the budget: only 82 lines of code left in v1's 8,000-line tier as of
-   this session, so anything that does not fit needs a simplification pass
-   first, not a raised budget ([ADR-0050](adr/0050-trim-should-items-from-v1.md)
-   is the precedent for how that trim gets decided). ADR-0053 already cut plan
-   mode, the `todo` tool, `edgar route explain`, `edgar agents list|validate`,
-   `ext validate`, `ext add`, the `edgar.testing.contract` kit, `config show
-   --resolved` and `edgar context show` from 1.0 — do not build any of them.
+1. **M11 continues**: `docs/COOKBOOK.md`, `docs/EXTENDING.md`,
+   `docs/DEPENDENCIES.md`; `examples/` executed in CI with a docs-coverage
+   test [NFR-10]; release automation (PyPI, PyApp binaries per platform,
+   Docker image). None of these cost LOC budget — v1 sits exactly at
+   8,000/8,000, so any further `.py` growth needs a matching cut, following
+   the pattern used this session (move docstring prose into free `#`
+   comments; ADR-0050 is the precedent for a deeper simplification pass).
+   ADR-0053 already cut plan mode, the `todo` tool, `edgar route explain`,
+   `edgar agents list|validate`, `ext validate`, `ext add`, the
+   `edgar.testing.contract` kit, `config show --resolved` and `edgar context
+   show` from 1.0 — do not build any of them.
 
 ## Open items
 
@@ -125,6 +128,65 @@ Carried forward until done. Newest first.
   is set, or Ollama if it answers; it needs a few lines of code Core does not have.
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-15 · M11 begins: init and doctor
+
+**Asked**
+- "Next milestone" — the same standing instruction, picked up once M10 closed.
+
+**Done**
+- `edgar init` and `/init` [CFG-4]: scaffolds a project's `AGENTS.md`,
+  `.gitignore` fragment and `config.toml` from three new template files under
+  `src/edgar/templates/` (non-`.py`, so they cost nothing against the LOC
+  budget, the same trick `prompts/*.md` already uses). Every write checks
+  existence first and leaves the file alone if it is already there
+  ([ADR-0034](adr/0034-model-picker.md)'s rule, extended to the new files);
+  `config.toml` never ships blank, since a model is picked the same way
+  `edgar models` does whenever there is a terminal to ask. Wired into
+  `cli/main.py`'s `ADMIN` dispatch, `cli/admin.py`'s USAGE, the new `/init`
+  slash command, and `cli/repl.py`'s "nothing configured" startup path, which
+  now calls `init.run()` instead of only picking a model — so a totally
+  fresh checkout gets `AGENTS.md` and `.gitignore` too, not just a model.
+- `edgar doctor` [CFG-5]: credentials (reusing `cli/models.py`'s `describe()`,
+  renamed from `_describe` so both call it), connectivity, and a cloud-sync
+  warning for the project and home directories. Detection is a substring
+  match on the resolved path — confirmed empirically on this machine that
+  macOS's silent Desktop & Documents iCloud sync leaves `~/Documents`
+  indistinguishable from an ordinary folder, so it cannot be caught this way;
+  the gap is named in a comment rather than hidden, and OneDrive, Dropbox,
+  Google Drive and deliberately-placed iCloud Drive files are still caught.
+  MCP, extension, trust, tick and DB-integrity checks, and `--network`, stay
+  cut per [ADR-0053](adr/0053-what-1-0-actually-ships.md).
+- Adding both commands pushed v1 to 8,041/8,000 — 41 lines over. Closed the
+  gap by moving explanatory prose out of module docstrings (which cost full
+  LOC) and into `#` comments (free) across `doctor.py`, `init.py`,
+  `admin.py`, `repl.py`, `models.py` and `slash.py`, with no behaviour
+  change. v1 now sits at exactly 8,000/8,000.
+- `just check` is clean: 667 tests, ruff and mypy clean. Verified `edgar
+  init` and `edgar doctor` by hand against a scratch directory through the
+  real `main()` CLI path: scaffolding, idempotent re-runs, credential and
+  connectivity output, and the cloud-sync warning against a
+  `Mobile Documents/com~apple~CloudDocs` path all behaved as expected.
+- An early manual test accidentally ran `edgar init` against this repo
+  itself instead of the scratch directory, appending to `.gitignore` and
+  writing `.edgar/config.toml`. Caught immediately: `config.toml` was newly
+  created (nothing existing was overwritten) so it was deleted, and the
+  `.gitignore` append was reverted by hand. `git status` confirmed the repo
+  was back to only the intended M11 changes.
+- The local git installation stopped working mid-session (`git`: unresolved
+  Xcode licence). Not an edgar problem; the maintainer accepted the licence
+  (`sudo xcodebuild -license`) and git resumed working.
+
+**Decided**
+- Docstring prose over a couple of lines that is not part of a function's
+  actual contract belongs in a `#` comment, not a docstring, whenever the
+  LOC budget is tight — same rule as `core/loop.py`'s pseudocode-comment
+  style, applied here for budget rather than readability, though it serves
+  both.
+
+**Next:** the rest of M11 — `docs/COOKBOOK.md`, `docs/EXTENDING.md`,
+`docs/DEPENDENCIES.md`, `examples/` in CI with a docs-coverage test, and
+release automation.
 
 ## 2026-09-15 · Closing M10
 
