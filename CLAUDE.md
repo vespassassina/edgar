@@ -33,14 +33,17 @@ Streamable HTTP, started only when a tool is called, deferred schemas through
 `tool_search`, `edgar mcp list|test` and `/browser` (`tools/mcp/`, ADR-0047); and
 signing in (`auth/`, ADR-0048): `edgar login PROVIDER` and `edgar mcp login NAME`,
 OAuth 2.1 with PKCE on a loopback port, tokens in the OS keyring through the
-optional `keyring` extra, and a turn that never opens a browser. M9 is **in
-progress**: subagents (`agents/`, the `task` tool re-entering the loop with a fresh
+optional `keyring` extra, and a turn that never opens a browser. M9 is **done**
+(ADR-0054): subagents (`agents/`, the `task` tool re-entering the loop with a fresh
 session, a narrowed policy and an inherited budget), consecutive `task` calls
 fanning out through `tools/execute.py`'s `execute_many()` [TOOL-12], declarative
-routing rules and sideways fallback (`providers/fallback.py`) are built; the
-multi-row status bar [SUB-9], `edgar route explain`, `edgar agents list|validate`,
-example agents, plan mode and the `todo` tool are not. The
-budget test measures v1, 7,292 of 8,000 after a simplification pass — 708 lines of code for the rest of M9,
+routing rules and sideways fallback (`providers/fallback.py`), the multi-row
+status bar for concurrent subagents [SUB-9], an example agent
+(`examples/agents/code-reviewer.md`), and a model with no tool support refused
+where it is chosen rather than mid-turn [ROUTE-6]. `edgar route explain` and
+`edgar agents list|validate` are cut from 1.0 (ADR-0053), not planned work left
+undone. The
+budget test measures v1, 7,374 of 8,000 after closing M9 — 626 lines of code for
 all of M10 and all of M11, so read [ADR-0050](docs/adr/0050-trim-should-items-from-v1.md)
 before planning anything, and then
 [ADR-0053](docs/adr/0053-what-1-0-actually-ships.md), which is that second trim:

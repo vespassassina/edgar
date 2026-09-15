@@ -237,7 +237,7 @@ async def interact(
     history.parent.mkdir(parents=True, exist_ok=True)
     prompt: PromptSession[str] = PromptSession(
         history=FileHistory(str(history)),
-        bottom_toolbar=lambda: " " + status.line(),
+        bottom_toolbar=lambda: "\n".join(" " + row for row in status.rows()),
         refresh_interval=0.1,
         color_depth=None if color else ColorDepth.MONOCHROME,
     )

@@ -43,7 +43,13 @@ from edgar.permissions.guard import Asker, Guard
 from edgar.permissions.policy import Deny, Policy
 from edgar.providers.fallback import chain_from_config
 from edgar.providers.registry import resolve, split
-from edgar.providers.routing import RoutingContext, Selection, routes_from_config, select_model
+from edgar.providers.routing import (
+    RoutingContext,
+    Selection,
+    check_capabilities,
+    routes_from_config,
+    select_model,
+)
 from edgar.skills.discovery import Found, discover
 from edgar.storage.db import Store
 from edgar.storage.transcript import control_changes, find, replay, start
@@ -260,6 +266,10 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
     rules = routes_from_config(config.later)  # [[route]] rules, ahead of role binding [ROUTE-2]
     selection = choice or select_model(RoutingContext(), config.model, rules)
     provider, provider_model = resolve(selection.model, config, env=s.env)
+    # A model with no tool support caught here, not partway through a turn [ROUTE-6].
+    check_capabilities(
+        selection, tools_required=bool(s.tools.names()), has_tools=provider.capabilities.tools
+    )
     block = config.providers.get(split(selection.model)[0])
     setting = block.prompt_profile if block and block.prompt_profile else config.prompt.profile
     profile = choose_profile(setting, provider.capabilities.max_context)

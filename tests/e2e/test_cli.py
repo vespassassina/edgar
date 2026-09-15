@@ -162,3 +162,24 @@ def test_j9_the_example_tools_from_the_docs(
     assert "changelog" in edgar("skills", "list").stdout
     assert edgar("skills", "validate").returncode == 0
     assert edgar(*run).returncode == 0
+
+
+def test_j10_the_example_agent_from_the_docs(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # J10: once `.edgar/agents/code-reviewer.md` exists, `edgar tools list` shows
+    # `task` on its own, exactly as examples/README.md claims [ROUTE-*, ADR-0053].
+    examples = Path(__file__).resolve().parents[2] / "examples"
+    (tmp_project / ".edgar" / "agents").mkdir(parents=True)
+    shutil.copy(
+        examples / "agents" / "code-reviewer.md",
+        tmp_project / ".edgar" / "agents" / "code-reviewer.md",
+    )
+    listed = subprocess.run(
+        [*edgar_argv, "tools", "list"],
+        capture_output=True,
+        text=True,
+        env=subprocess_env,
+        cwd=tmp_project,
+    )
+    assert listed.returncode == 0 and "task " in listed.stdout

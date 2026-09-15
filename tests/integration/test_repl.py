@@ -37,6 +37,7 @@ from edgar.core.message import ToolResultBlock
 from edgar.core.session import Session
 from edgar.core.units import pairing_violations
 from edgar.permissions.guard import Answer
+from edgar.providers.base import Capabilities
 from edgar.storage.transcript import find, replay, start
 
 
@@ -234,6 +235,30 @@ def test_btw_answers_on_the_side_and_leaves_the_transcript_alone(tmp_project: Pa
     assert answer.answer == "a side answer"
     assert "── btw ──\na side answer" in r.text
     assert r.provider.requests[1][-1].text == "what does this regex do?"
+
+
+def test_model_switch_refuses_a_model_with_no_tool_support(
+    tmp_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # [ROUTE-6]: a hard error at selection, not a confusing mid-turn failure.
+    class NoTools:
+        capabilities = Capabilities(
+            tools=False,
+            parallel_tool_calls=False,
+            streaming=True,
+            reasoning=False,
+            prompt_caching=False,
+            max_context=1000,
+            max_output=100,
+        )
+
+    monkeypatch.setattr("edgar.cli.setup.resolve", lambda *a, **k: (NoTools(), "test"))
+
+    async def scenario(r: Rig) -> None:
+        await r.type("/model nowhere/no-tools")
+
+    r = play(tmp_project, scenario)
+    assert "no tool support" in r.text
 
 
 def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:

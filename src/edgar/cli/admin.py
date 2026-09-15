@@ -20,13 +20,18 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
+from edgar.agents.discovery import discover as discover_agents
+from edgar.agents.spawn import subagents_config
 from edgar.cli import trust
 from edgar.cli.setup import spending, toolset
 from edgar.config.load import load
 from edgar.context.tokens import message_text
 from edgar.core.errors import UsageError
+from edgar.permissions.guard import Guard
+from edgar.permissions.policy import Policy
 from edgar.storage.db import Store
 from edgar.storage.transcript import conversation, find, forks, listing
+from edgar.tools.builtin.task import TaskTool
 from edgar.tools.mcp.client import FAILURES, Server, close
 from edgar.tools.mcp.schema import hints
 
@@ -194,11 +199,20 @@ async def _ask(found: list[Server]) -> int:
 
 
 def _tools(argv: list[str], cwd: Path, home: Path) -> int:
-    # What a session here would get: project tools only once the project is trusted.
+    # What a session here would get: project tools only once the project is trusted,
+    # and `task` only when there is an agent file to run, exactly as `setup()` decides.
     config = load(cwd, home=home)
     trusted = trust.trusted(cwd, config, home)
     tools, found, _ = toolset(cwd, home, config, project_exec=trusted)
-    for line in [*tools.warnings, *found.warnings, *found.problems]:
+    agents = discover_agents(cwd, home)
+    if agents.agents:
+        policy = Policy(mode=config.permissions.mode, cwd=cwd, home=home.resolve())
+        guard = Guard(policy, store=Store(cwd / ".edgar" / "edgar.db"))
+        limits = subagents_config(config.later)
+        tools.add([TaskTool(agents.agents, tools, guard, config, None, limits)])
+    problems = [*tools.warnings, *found.warnings, *found.problems]
+    problems += [*agents.warnings, *agents.problems]
+    for line in problems:
         print(f"warning: {line}", file=sys.stderr)
     if argv[1:] == ["list"] and argv[0] == "tools":
         for t in tools.schemas():

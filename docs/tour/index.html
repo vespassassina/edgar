@@ -532,11 +532,17 @@ flowchart TD
 <!-- Stage 5 -->
 <h3 class="stage" id="stage-5">Stage 5. The surface <small>skim, 15 minutes</small></h3>
 
-<article class="stop" id="s18" data-files="src/edgar/cli/repl.py src/edgar/cli/slash.py src/edgar/cli/oneshot.py src/edgar/cli/render.py src/edgar/config/load.py">
+<article class="stop" id="s18" data-files="src/edgar/cli/repl.py src/edgar/cli/slash.py src/edgar/cli/oneshot.py src/edgar/cli/render.py src/edgar/cli/setup.py src/edgar/cli/statusbar.py src/edgar/config/load.py">
   <h4><span class="n">18</span>The surface</h4>
-  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/repl.py"><code>cli/repl.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/slash.py"><code>cli/slash.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/oneshot.py"><code>cli/oneshot.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/render.py"><code>cli/render.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/config/load.py"><code>config/load.py</code></a></p>
-  <p class="look">Look for: <code>Shell</code> <code>dispatch</code> <code>run_prompt</code> <code>Renderer</code></p>
-  <p>This is where the size goes. Skim it; do not study it.</p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/repl.py"><code>cli/repl.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/slash.py"><code>cli/slash.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/oneshot.py"><code>cli/oneshot.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/render.py"><code>cli/render.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/setup.py"><code>cli/setup.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/statusbar.py"><code>cli/statusbar.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/config/load.py"><code>config/load.py</code></a></p>
+  <p class="look">Look for: <code>Shell</code> <code>dispatch</code> <code>run_prompt</code> <code>Renderer</code> <code>Status</code></p>
+  <p>This is where the size goes. Skim it; do not study it. One thing worth
+  noticing: <code>Status</code> rebuilds itself from nothing but the event stream,
+  same as the renderer, and since every event carries <code>depth</code> and
+  <code>agent_id</code>, a concurrently running subagent (stop 22) gets its own row
+  under the main one rather than interleaving into it (SUB-9). <code>runtime()</code>
+  here is also where a model with no tool support is refused before the first
+  prompt is sent, not on its first tool call (ROUTE-6, stop 22).</p>
 </article>
 
 <!-- Stage 6 -->
@@ -665,8 +671,12 @@ flowchart LR
   <code>asyncio.Semaphore</code> sized from the <code>task</code> tool's own
   <code>SpawnLimits.max_parallel</code>; results still come back in call order
   regardless of which subagent finishes first, so the loop's bookkeeping never
-  races. Still planned: a multi-row status bar for concurrent subagents and
-  <code>edgar agents list|validate</code>.
+  races. Before <code>spawn()</code> resolves a model it calls
+  <code>check_capabilities()</code> (stop 14): a model with no tool support is a
+  <code>ToolResult(error="validation")</code> the parent model reads, not a
+  confusing failure on its first tool call (ROUTE-6). The status bar's own row per
+  running subagent is stop 18; <code>edgar agents list|validate</code> is cut from
+  1.0 (ADR-0053), not planned work still owed.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
 </article>
 

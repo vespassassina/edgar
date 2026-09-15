@@ -22,13 +22,18 @@ from typing import Any, cast
 
 from edgar.agents.definition import AgentDefinition
 from edgar.config.schema import BudgetSection, Config, Mode
-from edgar.core.errors import ConfigError
+from edgar.core.errors import ConfigError, EdgarError
 from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Guard
 from edgar.providers.fallback import chain_from_config
 from edgar.providers.registry import resolve
-from edgar.providers.routing import RoutingContext, routes_from_config, select_model
+from edgar.providers.routing import (
+    RoutingContext,
+    check_capabilities,
+    routes_from_config,
+    select_model,
+)
 from edgar.storage.transcript import start
 from edgar.tools.base import ToolContext, ToolResult
 from edgar.tools.registry import ToolRegistry
@@ -102,6 +107,12 @@ async def spawn(
         (name, *resolve(name, config, env=env)) for name in chain_from_config(config.later)
     )
     tools = registry if not agent.tools else _subset(registry, agent.tools)
+    try:  # a model with no tool support caught here, not mid-turn [ROUTE-6]
+        check_capabilities(
+            selection, tools_required=bool(tools.names()), has_tools=provider.capabilities.tools
+        )
+    except EdgarError as exc:
+        return ToolResult(str(exc), error="validation")
     session = start(
         Session(
             cwd=ctx.cwd,

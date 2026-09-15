@@ -69,6 +69,29 @@ def test_the_status_line_is_built_from_events() -> None:
     assert status.line() == "fake/test · 1.6k tok · cost unknown · 1 queued"
 
 
+def test_concurrent_subagents_get_their_own_row_until_they_finish() -> None:  # [SUB-9]
+    now = [100.0]
+    status = Status("fake/test", clock=lambda: now[0])
+    status(TurnStarted(turn_id="t", model="fake/test"))
+    assert status.rows() == [status.line()]  # nothing running below yet
+    status(TurnStarted(turn_id="a", model="x", agent_id="helper-1", depth=1))
+    status(TurnStarted(turn_id="b", model="x", agent_id="helper-2", depth=1))
+    status(ToolStarted(id="1", tool="write", agent_id="helper-1", depth=1))
+    rows = status.rows()
+    assert len(rows) == 3  # the main row, plus one per subagent
+    assert "helper-1: write" in rows[1] and "helper-2: thinking" in rows[2]
+    status(
+        TurnFinished(
+            turn_id="a", usage=Usage(), cost=None, reason="completed", agent_id="helper-1", depth=1
+        )
+    )
+    rows = status.rows()
+    assert len(rows) == 2
+    assert "helper-1" not in rows[1] and "helper-2" in rows[1]
+    # A subagent's own events never touch the main row.
+    assert status.line() == rows[0]
+
+
 def test_an_event_line_is_json_with_its_name() -> None:
     line = json.loads(event_line(RequestFinished(usage=Usage(3, 4), cost=0.5, cached=0)))
     assert line["event"] == "RequestFinished" and line["usage"]["output_tokens"] == 4

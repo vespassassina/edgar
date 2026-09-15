@@ -23,6 +23,16 @@ extension formats freeze.
   together, bounded by `[subagents] max_parallel`; everything else still runs
   one call at a time, and results come back in the order they were asked for,
   not the order they finish.
+- Each subagent running now gets its own row under the main status line, so
+  two or more running together never interleave into one confusing stream; a
+  row appears when its `task` call starts and disappears once it finishes.
+- An example agent, `examples/agents/code-reviewer.md`: copy it into
+  `.edgar/agents/` and the `task` tool can hand it a diff or a file to review
+  read-only, with no `write`, `edit` or shell access.
+- A model with no tool support is now refused where it is chosen — a subagent
+  asking for one gets a plain tool error back; the main session choosing one
+  with `/model` or at startup gets a config error — instead of failing
+  confusingly the first time a turn tries to call a tool.
 
 ### Changed
 - A `[[route]]` rule with a key edgar does not recognise is now a config error

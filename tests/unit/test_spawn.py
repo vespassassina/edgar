@@ -16,6 +16,7 @@ from edgar.config.schema import Config, ModelSection
 from edgar.core.errors import ConfigError
 from edgar.core.events import TurnStarted
 from edgar.permissions.guard import Guard
+from edgar.providers.base import Capabilities
 from edgar.storage.transcript import sessions_dir
 from edgar.tools.base import ToolContext, ToolResult, build_context
 from edgar.tools.builtin.task import TaskTool
@@ -165,6 +166,31 @@ def test_spawn_turns_a_provider_failure_into_a_tool_error(tmp_project: Path) -> 
     )
     assert result.error == "internal"
     assert "helper" in result.text and "failed" in result.text
+
+
+# spawn(): a model with no tool support is refused at selection [ROUTE-6]
+
+
+def test_spawn_refuses_a_model_with_no_tool_support(
+    tmp_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class NoTools:
+        capabilities = Capabilities(
+            tools=False,
+            parallel_tool_calls=False,
+            streaming=True,
+            reasoning=False,
+            prompt_caching=False,
+            max_context=1000,
+            max_output=100,
+        )
+
+    monkeypatch.setattr("edgar.agents.spawn.resolve", lambda *a, **k: (NoTools(), "test"))
+    ctx = build_context(new_session(tmp_project), runtime(scripted()))
+    config = Config(model=ModelSection(default="fake/test"))
+    result = _run_spawn(_agent(), "hi", ctx=ctx, config=config, guard=guard(tmp_project))
+    assert result.error == "validation"
+    assert "no tool support" in result.text
 
 
 # spawn(): budget exhaustion is flagged, not hidden [SUB-7]

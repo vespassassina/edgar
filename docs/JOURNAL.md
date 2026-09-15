@@ -7,29 +7,17 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 ## Pick up here
 
-The next two pieces of work, in order, as of 2026-09-15, after the simplification
-pass (which left 708 lines of code for them). Read
-[ADR-0053](adr/0053-what-1-0-actually-ships.md) before any of them: it says what
-1.0 no longer ships, and building a cut item by mistake is the easiest way to
-waste the remaining budget.
+The next piece of work, as of 2026-09-15, now that M9 is done (this session):
 
-1. **Close M9.** What is left under the new scope is the multi-row status bar for
-   concurrent subagents [SUB-9] — without it two subagents show as one interleaved
-   stream — and example agents in `examples/`. Then an M9 as-built ADR (the
-   pattern every milestone follows: 0045/0046 for M7, 0047/0048 for M8) and the
-   status table moves to Done. One open question to settle there: whether `Guard`'s
-   asking lock really serialises prompts one at a time under real concurrency, which
-   the fan-out tests did not prove. And one gap the simplification pass found:
-   `check_capabilities` [ROUTE-6] is tested but never called from product code —
-   `agents/spawn.py` computes `tools_required` and nobody checks it, and
-   `cli/setup.py`'s `runtime()` never checks the main model either. Wire it in
-   both places, with the failure going back to the model as a tool error.
-2. **M10**, scoped by ADR-0053: the extension manifest and discovery, `ext list`
+1. **M10**, scoped by ADR-0053: the extension manifest and discovery, `ext list`
    only, hooks entire, provider plugin entry points, deterministic skill activation
    and the description lint, a skill's `verify`, `edgar.run()` and the remaining
    slash commands. `edgar.run()` should be designed for the caller in
    [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md) — one program owning
    many sessions across many project directories, starting turns nobody is watching.
+   Read [ADR-0053](adr/0053-what-1-0-actually-ships.md) first: it says what 1.0 no
+   longer ships, and building a cut item by mistake is the easiest way to waste the
+   remaining budget (626 lines of code left in v1's tier as of this session).
 
 ## Open items
 
@@ -139,6 +127,67 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-15 · Closing M9
+
+**Asked**
+- Commit and close M9; then amend docs, update the tour guide, commit and push
+  everything — the whole project must be aligned and clean.
+
+**Done**
+- [SUB-9] The multi-row status bar: `Status` now dispatches any event with
+  `depth > 0` to a per-`agent_id` row (phase, tool count, start time), dropped on
+  that agent's `TurnFinished`. `rows()` returns the main line plus one row per
+  subagent running now; `line()` is unchanged so no existing caller moved. The
+  REPL's bottom toolbar joins `rows()` with newlines; `-p`'s `StderrLine` tracks
+  how many rows it drew last time and redraws the block with `\x1b[{n}A`,
+  `\r\x1b[2K` and a trailing `\x1b[J`, so a block that shrinks (a subagent
+  finishing) never leaves a stale row on screen.
+- [ROUTE-6] `check_capabilities` wired into both places that resolve a model
+  before starting a turn: `agents/spawn.py`'s `spawn()` (a subagent's mismatch
+  becomes `ToolResult(error="validation")`, readable and recoverable by the
+  calling model) and `cli/setup.py`'s `runtime()` (the main session's mismatch
+  raises `ConfigError`, caught by the same top-level handler that already
+  catches every other startup error). Both paths were unit- and
+  integration-tested with a fake provider whose `capabilities.tools = False`,
+  since no built-in provider ever sets that flag itself.
+- Example agents: `examples/agents/code-reviewer.md`, a `read-only`-mode
+  subagent restricted to `read`, `ls`, `glob`, `grep` that reviews and reports
+  without editing anything. `examples/README.md` documents it.
+- A gap the README's claim exposed: `cli/admin.py`'s `_tools()` (behind `edgar
+  tools list`) never discovered `.edgar/agents/*.md` or added a `TaskTool`,
+  unlike `cli/setup.py`'s `setup()` — so a real session and the listing command
+  disagreed about whether `task` exists. Fixed to match `setup()`: discover
+  agents, build a `Guard` the same way (no `asker`, since listing runs nothing),
+  and add `TaskTool` when there is at least one agent. A new e2e test
+  (`test_j10_the_example_agent_from_the_docs`) copies the example agent into a
+  project and asserts `edgar tools list` shows `task`.
+- A Cookbook recipe, "Hand work to a subagent", added alongside the others that
+  a test loads from `examples/`.
+- [ADR-0054](adr/0054-m9-subagents-as-built.md): M9 as built, closing the
+  milestone; settles the open question about `Guard`'s asking lock (an
+  `asyncio.Lock` serialises coroutines within one event loop unconditionally, so
+  the fan-out tests not exercising it under "real concurrency" was never a gap —
+  there is no thread or process boundary for a subagent's prompt to cross).
+- ROADMAP's status table: M9 moved to Done. CLAUDE.md's "Current state"
+  paragraph and the tour (`docs/tour/index.html`) reread and updated for the
+  status bar, the ROUTE-6 wiring and the example agent.
+- `src/` is now **7,374 of 8,000 lines of code** (92%); `just check` passes, 651
+  tests.
+
+**Decided**
+- `check_capabilities` failures return a `ToolResult` from a subagent but
+  propagate as `ConfigError` from the main session — deliberately different,
+  because a subagent asking for the wrong model is a recoverable mistake the
+  parent model reads and can retry past, while the main session choosing wrong
+  is a config-class error that should stop the run with a clear message rather
+  than fail confusingly on the first tool call.
+- `edgar agents list` stays cut ([ADR-0053](adr/0053-what-1-0-actually-ships.md));
+  fixing `_tools()` is `edgar tools list` telling the truth about an existing
+  command, not new scope.
+
+**Pending**
+- Nothing carried forward from this entry; M10 is next (see "Pick up here").
 
 ## 2026-09-15 · The simplification pass
 

@@ -130,6 +130,23 @@ other command.
 Put a skill in `~/.edgar/skills/` to have it in every project. A project's skill
 replaces a user one with the same name, and edgar says so when it starts.
 
+## Hand work to a subagent
+
+An agent is one flat markdown file: frontmatter naming its tools and mode, then
+its system prompt. It runs in a fresh session with a narrowed policy — it can
+never ask for anything wider than the mode the calling session is in [PERM-8].
+
+```bash
+mkdir -p .edgar/agents
+cp examples/agents/code-reviewer.md .edgar/agents/
+edgar tools list        # `task` appears once an agent file exists
+```
+
+There is no `edgar agents list` (cut from 1.0, [ADR-0053](adr/0053-what-1-0-actually-ships.md)).
+Ask the model to use `task` with `code-reviewer` and a description of what to
+review; it runs with its own budget and reports back, unable to edit anything
+since `code-reviewer.md` grants only `read`, `ls`, `glob` and `grep`.
+
 ## Make "done" mean your tests pass
 
 ```bash

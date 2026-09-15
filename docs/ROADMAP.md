@@ -33,7 +33,7 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)) | 0.1.0 |
 | M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 0.1.0 |
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
-| M9 Subagents, routing rules and fallback | In progress | 1.0 |
+| M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
 | M10–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
