@@ -51,6 +51,11 @@ edgar                           # the REPL, in the directory you are in
 No API key? Install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, and run
 `edgar --model ollama/qwen3:8b`: everything stays on your machine.
 
+No `uv`, or no Python at all? Every [release](https://github.com/vespassassina/edgar/releases)
+also carries a self-installing binary per platform (Linux, macOS, Windows), and
+`docker run --rm -it -v "$PWD":/work ghcr.io/vespassassina/edgar:latest` runs the
+same thing from a prebuilt image.
+
 Then give it your own tools and know-how, without Python. Copy a command tool, an
 HTTP tool or a skill from [`examples/`](examples/) into `.edgar/`, and check what
 edgar sees with `edgar tools list` and `edgar skills list`. The

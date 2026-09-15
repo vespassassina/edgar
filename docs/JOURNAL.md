@@ -7,20 +7,29 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 ## Pick up here
 
-The next piece of work, as of 2026-09-15, now that `edgar init` and `edgar
-doctor` are done (this session):
+M11 and v1.0 are code-complete as of 2026-09-15 ([ADR-0056](adr/0056-m11-as-built.md)).
+What is left is not code:
 
-1. **M11 continues**: `docs/COOKBOOK.md`, `docs/EXTENDING.md`,
-   `docs/DEPENDENCIES.md`; `examples/` executed in CI with a docs-coverage
-   test [NFR-10]; release automation (PyPI, PyApp binaries per platform,
-   Docker image). None of these cost LOC budget — v1 sits exactly at
-   8,000/8,000, so any further `.py` growth needs a matching cut, following
-   the pattern used this session (move docstring prose into free `#`
-   comments; ADR-0050 is the precedent for a deeper simplification pass).
-   ADR-0053 already cut plan mode, the `todo` tool, `edgar route explain`,
-   `edgar agents list|validate`, `ext validate`, `ext add`, the
-   `edgar.testing.contract` kit, `config show --resolved` and `edgar context
-   show` from 1.0 — do not build any of them.
+1. **PRD §11's two human-verification criteria for v1.0 are still open**: "a
+   developer unfamiliar with the codebase can add a provider in under an
+   hour using only `docs/`, verified by trying it on someone", and "a
+   non-Python user can add a custom tool, a subagent, a skill and an
+   extension without opening `src/`". `docs/EXTENDING.md` is written for
+   exactly this, but nothing in this session can substitute for an actual
+   outside person doing it. Find someone and time them.
+2. **The release workflow's two new jobs (`pyapp`, `docker` in
+   `.github/workflows/release.yml`) have never run.** They parse and their
+   pinned actions resolve to real commits, but the first real tagged release
+   is the actual test. Watch it; fix forward with its own ADR entry if
+   something in PyApp's or Docker's build step does not hold up.
+
+v1 sits exactly at 8,000/8,000 `src/` lines of code — any new `.py` growth,
+in v1 or by mistake in v2 work that leaks into v1 packages, needs a matching
+cut. ADR-0053 already cut plan mode, the `todo` tool, `edgar route explain`,
+`edgar agents list|validate`, `ext validate`, `ext add`, the
+`edgar.testing.contract` kit, `config show --resolved` and `edgar context
+show` from 1.0 — do not build any of them. The next real work is v2 (M12
+onward), per `docs/ROADMAP.md`.
 
 ## Open items
 
@@ -187,6 +196,70 @@ Carried forward until done. Newest first.
 **Next:** the rest of M11 — `docs/COOKBOOK.md`, `docs/EXTENDING.md`,
 `docs/DEPENDENCIES.md`, `examples/` in CI with a docs-coverage test, and
 release automation.
+
+## 2026-09-15 · Finishing M11: docs, examples, docs-coverage, release automation
+
+**Asked**
+- "Finish M11" — the rest of what the previous entry's Next left open.
+
+**Done**
+- `docs/EXTENDING.md` (new): five sections, a tool, a subagent, a skill, an
+  extension, a provider, each grounded in the source that actually implements
+  it (`tools/custom.py`, `agents/discovery.py`, `skills/discovery.py`,
+  `extensions/manifest.py`+`hooks.py`, `providers/registry.py`).
+- `docs/DEPENDENCIES.md` (new): every dependency with its measured
+  `python -X importtime` cost, the optional `keyring` extra, NFR-5's slot
+  accounting (5 of 8 used), and a named mismatch — ADR-0019 lists `rich` as
+  required; it is never imported anywhere in `src/`, replaced by
+  `cli/render.py`'s own renderer. Documented reality, flagged the ADR, did
+  not silently edit either.
+- `examples/extensions/audit-log/`: a manifest plus one `turn_end` hook that
+  appends a line to a local log — the "an extension" example COOKBOOK.md's
+  new recipe and `examples/README.md`'s table both point at.
+  `hooks.toml` ships a human-readable `["python", "log_event.py"]` with a
+  comment naming the cross-platform trap; the one test that runs it
+  substitutes `sys.executable`, the same fix `test_five_mcp_servers_cost_a_run_nothing`
+  already uses for its own generated config.
+- `docs/COOKBOOK.md`: an extensions-and-hooks recipe, plus three recipes the
+  new docs-coverage test (below) found missing entirely —
+  "Start a new project" (`init`/`doctor`), "See what a session has done, and
+  undo it" (`permissions list`/`revoke`), "Sign in without an API key"
+  (`login`/`logout`).
+- `tests/e2e/test_cli.py::test_j11_the_example_extension_from_the_docs`: the
+  extension's manifest and hooks parse through `edgar ext list`, and
+  `log_event.py` runs standalone against a synthetic event on stdin — the
+  part of the hook path a fired-and-forgotten `asyncio` task [EXT-6, EXT-7]
+  makes awkward to assert on end-to-end.
+- `tests/unit/test_docs_coverage.py` [NFR-10]: reads the CLI subcommand
+  surface from `admin.USAGE` and the config-key surface from `Config`'s
+  fields plus its v1 `LATER` keys, and checks each against the docs a
+  first-week user would open — `test_tour.py`'s "read the hooks from the
+  code" approach, applied to documentation instead of the tour page. Running
+  it the first time is what found the three missing Cookbook recipes above
+  and two config keys (`[prompt]`, `[[route]]`) that PRD.md only ever
+  described in prose, never wrote as the literal table name; fixed both
+  (PRV-17, ROUTE-2 now name the syntax).
+- Release automation: a root `Dockerfile` (`pip install`s the exact PyPI
+  release, `ENTRYPOINT ["edgar"]`) and two new jobs in
+  `.github/workflows/release.yml` — `pyapp` (PyApp binaries for
+  Linux/macOS/Windows, matrix build, attached to the GitHub release) and
+  `docker` (pushes to `ghcr.io/vespassassina/edgar`, tagged with the release
+  version and `latest`). Both ride the existing `on: release: types:
+  [published]` trigger. Actions pinned to commit SHAs resolved with `gh api`,
+  matching the existing job's convention; YAML parses; neither job has run
+  for real yet since that needs an actual tagged release.
+- `just check` (670 tests, ruff, mypy) and `just loc` (exactly 8,000/8,000,
+  unchanged — nothing here touches `src/`) both green.
+
+**Decided**
+- ADR-0056: the four judgment calls above (the ADR-0019 mismatch, the
+  hook's cross-platform command, what NFR-10 actually checks and against
+  which docs, and shipping release automation this session cannot run).
+
+**Next:** nothing left in M11 that is code. Two things need a human: PRD
+§11's "verified by trying it on someone" for `docs/EXTENDING.md`, and
+watching the first real tagged release exercise `pyapp`/`docker`. After
+that, v1.0 is fully shippable and the next milestone is M12, v2's first.
 
 ## 2026-09-15 · Closing M10
 

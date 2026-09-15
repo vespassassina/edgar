@@ -4,6 +4,47 @@ Short recipes for things people do with edgar in their first week. Each one work
 as written in Core (0.x). The files they copy are in [`examples/`](../examples/),
 and a test loads every one of them, so a recipe cannot quietly go stale.
 
+## Start a new project
+
+```bash
+cd your-project
+edgar init          # or /init from inside the REPL
+edgar doctor
+```
+
+`edgar init` scaffolds `.edgar/config.toml`, an `AGENTS.md` stub and a
+`.gitignore` fragment, all sensibly commented, and never overwrites a file
+that is already there [CFG-4]. `edgar doctor` checks credentials and
+connectivity for every provider your config names, and warns when the
+project (or your home directory) sits inside a cloud-synced folder — iCloud
+Drive, OneDrive, Dropbox, Google Drive — since SQLite there wants care
+[CFG-5].
+
+## See what a session has done, and undo it
+
+```bash
+edgar permissions list
+edgar permissions revoke 12
+```
+
+A grant recorded once (an "always allow" answer to a permission prompt)
+lives in `.edgar/edgar.db`, not in a config file, so no automated component
+can ever widen it [PERM-6, ADR-0021]. `revoke ID` deletes one grant by the
+id `list` printed; the next matching call asks again.
+
+## Sign in without an API key
+
+```bash
+edgar login anthropic     # opens a browser, OAuth 2.1 with PKCE on a loopback port
+edgar logout anthropic    # forgets it
+```
+
+The token lives in the OS keyring, never in a config file [CFG-6, PRV-18]; a
+turn itself never opens a browser, only this command does. Only providers
+that issue keys this way accept `login` — for everything else, an
+environment variable or `api_key_command` (see "Sign in with your cloud
+identity" below) is how a key or token reaches edgar.
+
 ## Run on a local model, for free
 
 ```bash
@@ -147,6 +188,35 @@ Ask the model to use `task` with `code-reviewer` and a description of what to
 review; it runs with its own budget and reports back, unable to edit anything
 since `code-reviewer.md` grants only `read`, `ls`, `glob` and `grep`.
 
+## Bundle tools, skills and agents into an extension
+
+An extension is a folder behind one manifest, so a team can share a whole
+setup — tools, skills, agents, and hooks that observe or veto a turn — as one
+`cp -r` or one git submodule, instead of copying files one at a time.
+
+```bash
+mkdir -p .edgar/extensions
+cp -r examples/extensions/audit-log .edgar/extensions/
+edgar trust
+edgar ext list
+```
+
+```toml
+# .edgar/extensions/audit-log/hooks.toml
+[[hooks]]
+event = "turn_end"                 # observation only: cannot block or change anything
+command = ["python", "log_event.py"]
+```
+
+Every event but `pre_tool` is fire-and-forget: its exit code and output are
+never read, so a broken hook here changes nothing about the session it
+watches. A `pre_tool` hook is the one that can say no — exit 2 denies the
+call with stderr as the reason shown to the model, and it fails closed on
+any other error or a timeout, never open. There is no `edgar ext validate` or
+`edgar ext add` in 1.0 ([ADR-0053](adr/0053-what-1-0-actually-ships.md));
+`edgar ext list`'s warnings are the check. [`EXTENDING.md`](EXTENDING.md)
+has the full manifest and hook grammar.
+
 ## Make "done" mean your tests pass
 
 ```bash
@@ -187,6 +257,9 @@ The container's own network and filesystem limits hold even against a model
 talked into something by injected text; the permission engine's mode, taint and
 hard-layer checks (PERM-1..16) still run inside it, on top. Neither replaces the
 other — [ADR-0021](adr/0021-humans-widen-machines-tighten.md) is the reasoning.
+
+The repo's own [`Dockerfile`](../Dockerfile) is this same shape, published per
+release to `ghcr.io/vespassassina/edgar` so `docker pull` replaces the build.
 
 ## Pick up where you left off
 

@@ -9,6 +9,7 @@ until you copy it.
 | [`tools/service_status.toml`](tools/service_status.toml) | An HTTP tool: fixed host, token from the environment | `.edgar/tools/` |
 | [`skills/changelog/`](skills/changelog/) | A skill: instructions plus a template file beside them | `.edgar/skills/` |
 | [`agents/code-reviewer.md`](agents/code-reviewer.md) | A subagent: one flat file, `read-only` mode, four tools | `.edgar/agents/` |
+| [`extensions/audit-log/`](extensions/audit-log/) | An extension: a manifest plus one observation-only hook | `.edgar/extensions/` |
 
 Project folders (`.edgar/…`) apply to one project; the same folders under
 `~/.edgar/` apply everywhere. A project's tools run only after `edgar trust`; a

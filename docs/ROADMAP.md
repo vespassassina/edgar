@@ -35,7 +35,7 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
 | M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
 | M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
-| M11 Init, doctor, docs | In progress — init, doctor done | 1.0 |
+| M11 Init, doctor, docs | Done ([ADR-0056](adr/0056-m11-as-built.md)) — pending outside verification | 1.0 |
 | M12–M17 | Planned | 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -442,13 +442,27 @@ dead-ends, with Enter the right answer at every step.
 - ~~`docs/TOUR.md`~~ done early as [A Tour of the Harness](https://vespassassina.github.io/edgar/),
   published to GitHub Pages ([ADR-0040](adr/0040-written-to-be-read.md)); M11 checks
   it covers all of v1
-- `docs/COOKBOOK.md` — piping, command and HTTP tools, subagents, skills,
-  extensions, hooks, a devcontainer for untrusted work
-- `docs/EXTENDING.md` — add a provider, a tool, an agent, a skill, an extension
-- `docs/DEPENDENCIES.md` — every dependency with its import cost [NFR-5]
-- `examples/` executed in CI; docs-coverage test [NFR-10]
-- Release automation: PyPI, PyApp binaries per platform, Docker image
-- **Verification: hand the docs to someone and time them adding a provider**
+- ~~`docs/COOKBOOK.md`~~ done — piping, command and HTTP tools, subagents,
+  skills, extensions, hooks, a devcontainer for untrusted work, plus recipes
+  for `init`/`doctor`, permission grants and `login`/`logout` found missing by
+  the docs-coverage test below
+- ~~`docs/EXTENDING.md`~~ done — a tool, a subagent, a skill, an extension, a
+  provider, each grounded in the source that actually implements it
+- ~~`docs/DEPENDENCIES.md`~~ done — every dependency with its measured import
+  cost [NFR-5]; names ADR-0019's `rich` mismatch rather than hiding it
+- ~~`examples/` executed in CI; docs-coverage test~~ done — [NFR-10]: an example
+  extension exercised by `tests/e2e/test_cli.py::test_j11_…`, and
+  `tests/unit/test_docs_coverage.py` checks every `edgar.cli.admin.USAGE`
+  subcommand and every v1 `Config` section against the docs a first-week user
+  would open. ADR-0056 has the design decisions
+- ~~Release automation: PyPI, PyApp binaries per platform, Docker image~~ done —
+  PyPI trusted publishing already shipped; `pyapp` and `docker` jobs added to
+  `.github/workflows/release.yml`, unverified by an actual release run (ADR-0056)
+- **Still open: hand the docs to someone and time them adding a provider.**
+  PRD §11's "verified by trying it on someone" and the non-Python-user
+  criterion need an actual outside person; nothing here can substitute for
+  that, so v1.0's two human-verification criteria stay open until someone
+  does it
 
 `edgar sessions compact ID` [CTX-10] moved to v2
 ([ADR-0050](adr/0050-trim-should-items-from-v1.md)): `/compact` inside the REPL
@@ -466,7 +480,14 @@ are documented as stable, and `src/` is under 8,000 LOC.
 pushed v1 over budget (8,041/8,000); closed by moving explanatory docstring prose
 into free `#` comments across six files, no behaviour change. v1 is at exactly
 8,000 of 8,000 lines of code — no headroom left for anything that isn't a `.py`
-file. Still open: the docs trio, examples in CI, and release automation.*
+file.*
+
+*2026-09-15, later the same session: the docs trio, the example extension, the
+docs-coverage test [NFR-10] and release automation are all done
+([ADR-0056](adr/0056-m11-as-built.md)). `src/` is untouched, still exactly
+8,000/8,000. M11 and v1.0 are code-complete; the two success criteria in PRD §11
+that need an actual outside person trying the docs are still open, and stay open
+until someone does that.*
 
 ---
 

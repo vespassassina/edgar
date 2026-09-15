@@ -1,0 +1,7 @@
+.venv
+.venv.nosync
+.git
+.edgar
+__pycache__
+*.pyc
+dist

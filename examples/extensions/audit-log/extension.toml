@@ -1,0 +1,6 @@
+# An extension: a folder bundling a hook (or tools, skills, agents) behind one
+# manifest. Copy to .edgar/extensions/ (this project) or ~/.edgar/extensions/
+# (everywhere), then run `edgar trust` and `edgar ext list`.
+name = "audit-log"
+version = "0.1.0"
+description = "Appends one line per turn to a local audit log."

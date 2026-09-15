@@ -4,6 +4,12 @@ name: release
 # every file carries a build attestation [NFR-14]. Runs only for a published GitHub
 # release. Before the first one, register this repository, this workflow file and
 # the "pypi" environment as a trusted publisher for `edgar-harness` on pypi.org.
+#
+# ADR-0001's Secondary and Tertiary tiers ride the same trigger: `pyapp` attaches
+# one self-installing binary per platform to the release (each one `pip install`s
+# this same PyPI release the first time it runs, so it needs no wheel of its own
+# and no ordering against `publish`); `docker` builds and pushes the Dockerfile's
+# image, pinned to this release's version, to ghcr.io.
 
 on:
   release:
@@ -42,3 +48,73 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           attestations: true
+
+  pyapp:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: edgar-linux-x86_64
+          - os: macos-latest
+            asset: edgar-macos-arm64
+          - os: windows-latest
+            asset: edgar-windows-x86_64.exe
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash # git-bash on the windows runner, so the version-strip below is one script
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # v1, stable
+        with:
+          toolchain: stable
+      - name: build the PyApp binary for this platform
+        env:
+          PYAPP_PROJECT_NAME: edgar-harness
+          PYAPP_EXEC_SPEC: edgar.cli.main:main
+          PYAPP_PYTHON_VERSION: "3.12"
+        run: |
+          export PYAPP_PROJECT_VERSION="${GITHUB_REF_NAME#v}"
+          cargo install pyapp --force --root pyapp-out
+      - name: rename to this platform's asset name
+        run: |
+          mkdir -p dist-bin
+          src=pyapp-out/bin/pyapp
+          [ "${{ runner.os }}" = "Windows" ] && src="$src.exe"
+          cp "$src" "dist-bin/${{ matrix.asset }}"
+      - name: attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "dist-bin/${{ matrix.asset }}"
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: true
+          build-args: VERSION=${{ env.VERSION }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:latest

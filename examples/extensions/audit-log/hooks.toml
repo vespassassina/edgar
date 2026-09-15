@@ -1,0 +1,7 @@
+# `turn_end` is observation only: fired and forgotten, so a broken or slow
+# logger can never block or change a turn [EXT-6, EXT-7]. Swap in `python3` if
+# your platform has no bare `python` on PATH.
+[[hooks]]
+event = "turn_end"
+command = ["python", "log_event.py"]
+timeout_s = 5

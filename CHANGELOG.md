@@ -62,6 +62,16 @@ extension formats freeze.
 - `edgar doctor`: checks each provider's credentials and connectivity, and
   warns when the project or home directory sits in an iCloud Drive, OneDrive,
   Dropbox or Google Drive folder, where SQLite wants extra care.
+- Two more ways to get edgar onto a machine, alongside `uv tool install` and
+  `uvx`: every GitHub release now attaches a self-installing binary per
+  platform (Linux, macOS, Windows), and `ghcr.io/vespassassina/edgar` carries
+  a prebuilt Docker image, both built from the same PyPI release.
+- `docs/EXTENDING.md` (add a provider, a tool, a subagent, a skill, an
+  extension) and `docs/DEPENDENCIES.md` (every dependency, with its measured
+  import cost) join the Cookbook as the project's onboarding docs.
+- An example extension, `examples/extensions/audit-log/`: copy it into
+  `.edgar/extensions/` for a manifest plus one hook that appends a line to a
+  local log at the end of every turn.
 
 ### Changed
 - A `[[route]]` rule with a key edgar does not recognise is now a config error

@@ -183,3 +183,41 @@ def test_j10_the_example_agent_from_the_docs(
         cwd=tmp_project,
     )
     assert listed.returncode == 0 and "task " in listed.stdout
+
+
+def test_j11_the_example_extension_from_the_docs(
+    edgar_argv: list[str], subprocess_env: dict[str, str], tmp_project: Path
+) -> None:
+    # J11: `examples/extensions/audit-log/` copied in as COOKBOOK.md's recipe
+    # says, its manifest and hooks.toml both parse, and its own hook script runs
+    # standalone [EXT-1, EXT-2]. `hooks.toml` ships a bare "python" for a human
+    # reader; substitute sys.executable here so CI holds on platforms with no
+    # bare `python` on PATH (the same fix test_five_mcp_servers_cost_a_run_nothing
+    # applies to its own generated config).
+    examples = Path(__file__).resolve().parents[2] / "examples"
+    dest = tmp_project / ".edgar" / "extensions" / "audit-log"
+    shutil.copytree(examples / "extensions" / "audit-log", dest)
+    hooks_toml = dest / "hooks.toml"
+    hooks_toml.write_text(
+        hooks_toml.read_text(encoding="utf-8").replace('"python"', json.dumps(sys.executable)),
+        encoding="utf-8",
+    )
+
+    listed = subprocess.run(
+        [*edgar_argv, "ext", "list"],
+        capture_output=True,
+        text=True,
+        env=subprocess_env,
+        cwd=tmp_project,
+    )
+    assert listed.returncode == 0 and "audit-log" in listed.stdout
+
+    script = subprocess.run(
+        [sys.executable, "log_event.py"],
+        input=json.dumps({"name": "TurnFinished", "tool": ""}),
+        capture_output=True,
+        text=True,
+        cwd=dest,
+    )
+    assert script.returncode == 0, script.stderr
+    assert (dest / "audit.log").read_text(encoding="utf-8") == "TurnFinished \n"
