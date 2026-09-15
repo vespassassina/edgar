@@ -86,6 +86,7 @@ class Runtime:
     budget: BudgetSection = field(default_factory=BudgetSection)  # cost caps [BUD-2]
     compactor: tuple[Provider, str] | None = None  # None: the main model writes summaries
     fallback: tuple[tuple[str, Provider, str], ...] = ()  # (name, provider, its model) [ROUTE-7]
+    hooks: tuple[object, ...] = ()  # `[[hooks]]` rules; opaque here, typed in tools/base.py [EXT-4]
 
 
 @dataclass(frozen=True, slots=True)

@@ -247,6 +247,7 @@ class ToolStarted(Event):
 class ToolFinished(Event):
     # tools/execute.py, when the call returns, fails or times out.
     id: str
+    tool: str
     ok: bool
     duration_ms: int
     truncated: bool
@@ -324,3 +325,27 @@ class FactSaved(Event):
     # cli/repl.py and cli/slash.py, when a fact goes active.
     fact_id: int
     provenance: str
+
+
+# extensions and hooks [EXT-5]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SessionStarted(Event):
+    # cli/setup.py's begin(), once per session; drives a `session_start` hook.
+    session_id: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SessionEnded(Event):
+    # cli/setup.py's finish(); drives a `session_end` hook.
+    session_id: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class HookRan(Event):
+    # extensions/hooks.py, once per hook command that actually ran.
+    event: str
+    command: str
+    ok: bool
+    vetoed: bool

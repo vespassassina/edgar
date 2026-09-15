@@ -18,7 +18,7 @@ from typing import Literal
 
 from edgar.cli import trust
 from edgar.cli.render import event_line
-from edgar.cli.setup import authorise_verify, begin, daily, finish, prepare, setup
+from edgar.cli.setup import authorise_verify, begin, daily, finish, prepare, setup, verify_for_turn
 from edgar.cli.statusbar import Status, StderrLine, terminal_ready
 from edgar.core.errors import ConfigError
 from edgar.core.events import (
@@ -32,6 +32,7 @@ from edgar.core.events import (
 )
 from edgar.core.loop import Runtime, TurnResult, run_turn
 from edgar.core.session import Session
+from edgar.skills.activate import bodies, matching
 from edgar.tools.mcp.client import Server, close
 
 Output = Literal["text", "json", "events"]
@@ -86,12 +87,14 @@ def run_prompt(
     session, rt = begin(s, bus, resume)
     if session.log is not None:
         bus.subscribe(session.log.event)  # the audit trail and the turn's cost [PERM-10]
+    stdin = [attached] if attached else []
+    hits = matching(s.skills, prompt, ())  # no prior round to read touched paths from
+    rt = verify_for_turn(s, rt, hits)
     try:
-        result = asyncio.run(
-            _run(session, prompt, daily(s, rt), [attached] if attached else [], status, s.servers)
-        )
+        turn = daily(s, rt)
+        result = asyncio.run(_run(session, prompt, turn, stdin + bodies(hits), status, s.servers))
     finally:
-        finish(s, session)
+        finish(s, session, bus)
     codes = {"verification_failed": 9, "budget_exceeded": 6}
     code = codes.get(result.reason, 5 if s.guard.prompt_denials else 0)
 

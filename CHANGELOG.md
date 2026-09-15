@@ -33,6 +33,27 @@ extension formats freeze.
   asking for one gets a plain tool error back; the main session choosing one
   with `/model` or at startup gets a config error — instead of failing
   confusingly the first time a turn tries to call a tool.
+- Extensions: a folder under `.edgar/extensions/` bundling tools, skills,
+  agents and one `hooks.toml`, found the same way skills and agents already
+  are. `edgar ext list` shows what is discovered. A hook can observe or veto,
+  never allow — every kind fires as an event, and `pre_tool` alone runs just
+  before the permission check; a hook that errors, times out or exits
+  non-zero denies the call rather than letting it through.
+- Provider plugins: a third-party package can register a provider through the
+  `edgar.providers` entry point; nothing is imported unless a session actually
+  names it.
+- Skills can now activate on their own: a keyword the user typed or a path the
+  last round touched loads a matching skill straight into the turn, with no
+  need for the model to call the `skill` tool first. A skill's own `verify:`
+  command now also takes its place in the verify precedence chain, below
+  `--verify` and an agent's own frontmatter.
+- `edgar.run()`: an async Python function to embed edgar in another program —
+  build a session and run one turn the same way the CLI does, with your own
+  event subscribers and your own function to answer permission prompts.
+  `import edgar` stays as light as `import edgar.cli.main`.
+- Three more slash commands: `/agents` lists the subagents this session's
+  `task` tool can run, `/skills` lists the skills it can load, `/tools` lists
+  every tool available.
 
 ### Changed
 - A `[[route]]` rule with a key edgar does not recognise is now a config error

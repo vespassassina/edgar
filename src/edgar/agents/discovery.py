@@ -29,19 +29,25 @@ def discover(root: Path, home: Path) -> Found:
     found = Found()
     scopes = [(home / ".edgar" / "agents", "user"), (root / ".edgar" / "agents", "project")]
     for folder, origin in scopes:
-        for path in sorted(folder.glob("*.md")) if folder.is_dir() else []:
-            try:
-                agent = _read(path, origin)
-            except (OSError, UnicodeDecodeError, ValueError) as exc:
-                found.problems.append(f"{path}: {exc}")
-                continue
-            old = found.agents.get(agent.name)
-            if old is not None:
-                found.warnings.append(
-                    f"the {origin} agent {agent.name!r} replaces the {old.origin} one"
-                )
-            found.agents[agent.name] = agent
+        scan(folder, origin, found)
     return found
+
+
+def scan(folder: Path, origin: str, found: Found) -> None:
+    """One scope's agents, folded into `found`; reused for an extension's own
+    `agents/` folder (EXT-8), which scans after every unbundled scope."""
+    for path in sorted(folder.glob("*.md")) if folder.is_dir() else []:
+        try:
+            agent = _read(path, origin)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            found.problems.append(f"{path}: {exc}")
+            continue
+        old = found.agents.get(agent.name)
+        if old is not None:
+            found.warnings.append(
+                f"the {origin} agent {agent.name!r} replaces the {old.origin} one"
+            )
+        found.agents[agent.name] = agent
 
 
 def _read(path: Path, origin: str) -> AgentDefinition:

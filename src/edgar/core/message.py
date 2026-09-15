@@ -33,7 +33,7 @@ Role = Literal["system", "user", "assistant", "tool"]
 # this, never the error text itself [MEM-22].
 ErrorKind = Literal[
     "validation",  # the arguments did not match the tool's schema
-    "permission_denied",  # the permission engine or the user said no
+    "permission_denied",  # the permission engine, the user, or a pre_tool hook said no
     "timeout",
     "not_found",  # no tool by that name
     "nonzero_exit",  # a command ran and failed

@@ -12,10 +12,17 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+from edgar.core.errors import PermissionDenied
 from edgar.core.events import EventBus, VerifyFinished, VerifyStarted
-from edgar.tools.builtin.shell import run_argv, shell_argv
+from edgar.permissions.policy import Deny
+from edgar.tools.builtin.shell import Shell, run_argv, shell_argv
 from edgar.tools.spill import spill
+
+if TYPE_CHECKING:
+    from edgar.core.session import Session
+    from edgar.permissions.guard import Guard
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +30,25 @@ class Check:
     command: str
     max_attempts: int = 2
     program: str = "auto"  # [shell] program
+
+
+async def authorise(check: Check, guard: Guard, session: Session, bus: EventBus) -> None:
+    """The verify command is a shell call, decided before the turn starts, so a run
+    that would need a prompt at the end fails now [VER-4]."""
+    decision = await guard.check(
+        Shell(check.program).schema,
+        {"command": check.command},
+        cwd=session.cwd,
+        mode=session.mode,
+        tainted=session.tainted,
+        call_id="verify",
+        bus=bus,
+    )
+    if isinstance(decision, Deny):
+        raise PermissionDenied(
+            f"the verify command `{check.command}` is not allowed: {decision.reason}",
+            hint='allow it with [permissions] shell_allow = ["…"], or run with --mode ask',
+        )
 
 
 async def verify(

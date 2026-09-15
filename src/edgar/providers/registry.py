@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from importlib import import_module
+from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any, cast
 
 from edgar.config.schema import Config
@@ -61,13 +62,17 @@ def resolve(
             raise ConfigError(f"[providers.{name}] kind = {block.kind!r} does not match {name}")
         module = KINDS[block.kind]
     if module is None:
-        known = ", ".join(sorted({*BUILTIN, *config.providers}))
-        raise ConfigError(
-            f"unknown provider {name!r} in model {model_string!r}",
-            hint=f"known: {known}. For another server, add a [providers.{name}] block "
-            'with kind = "openai-compatible" and base_url',
-        )
-    adapter = import_module(module)  # the one place an adapter is imported [PRV-4]
+        adapter = _plugin(name)  # an installed package may register the name [PRV-14]
+        if adapter is None:
+            known = ", ".join(sorted({*BUILTIN, *config.providers}))
+            raise ConfigError(
+                f"unknown provider {name!r} in model {model_string!r}",
+                hint=f"known: {known}. For another server, add a [providers.{name}] block "
+                'with kind = "openai-compatible" and base_url, or install a package that '
+                'registers an "edgar.providers" entry point named it',
+            )
+    else:
+        adapter = import_module(module)  # the one place a built-in adapter is imported [PRV-4]
     if module == BUILTIN["fake"]:
         return cast(Provider, adapter.make()), model
 
@@ -79,3 +84,13 @@ def resolve(
         name, quirks, api_key=key, prices=prices(config.pricing), transport=transport, **options
     )
     return cast(Provider, provider), model
+
+
+def _plugin(name: str) -> Any | None:
+    """The `edgar.providers` entry point named `name`, tried only once nothing
+    built-in or configured claims it: a package's own module, already loaded
+    [PRV-14]."""
+    for ep in entry_points(group="edgar.providers"):
+        if ep.name == name:
+            return ep.load()
+    return None

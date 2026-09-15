@@ -15,7 +15,18 @@ from edgar.core.errors import EdgarError
 # in (NFR-1, ADR-0012). The run paths are imported inside main().
 
 # The subcommands that look at a project rather than run a turn (cli/admin.py).
-ADMIN = {"trust", "permissions", "sessions", "tools", "skills", "cost", "mcp", "login", "logout"}
+ADMIN = {
+    "trust",
+    "permissions",
+    "sessions",
+    "tools",
+    "skills",
+    "cost",
+    "mcp",
+    "ext",
+    "login",
+    "logout",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:

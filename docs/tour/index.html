@@ -136,7 +136,7 @@
     <li><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
     <li><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
     <li><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
-    <li class="planned"><a href="#s23"><span class="n">23</span>Extensions, hooks (M10)</a></li>
+    <li><a href="#s23"><span class="n">23</span>Extensions, hooks, plugins, embedding (M10)</a></li>
     <li class="planned"><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v2">III. v2</a><span class="count" data-count="v2"></span></p>
@@ -204,14 +204,15 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,300</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,200</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
-    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~60</td><td>Finding skills, and reading only their frontmatter</td></tr>
+    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~130</td><td>Finding skills, reading only their frontmatter, and deterministic activation (v1)</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~200</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,850</td><td>The REPL, one-shot runs, rendering, setup: routing rules and fallback wired in (v1)</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,000</td><td>The REPL, one-shot runs, rendering, setup: routing rules and fallback wired in (v1)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
-    <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~220</td><td>A subagent's definition, finding them, and spawning one (v1)</td></tr>
+    <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~240</td><td>A subagent's definition, finding them, and spawning one (v1)</td></tr>
+    <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~230</td><td>An extension folder's manifest, discovery, and observe-or-veto hooks (v1)</td></tr>
   </tbody>
 </table>
 </div>
@@ -680,15 +681,42 @@ flowchart LR
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
 </article>
 
-<article class="stop planned" id="s23" data-files="src/edgar/extensions/manifest.py src/edgar/extensions/hooks.py src/edgar/sandbox/base.py">
+<article class="stop" id="s23" data-files="src/edgar/extensions/discovery.py src/edgar/extensions/hooks.py src/edgar/skills/activate.py src/edgar/__init__.py">
   <h4><span class="n">23</span>Extensions, hooks, plugins, embedding</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M10 · planned</span> <code>extensions/manifest.py</code> <code>extensions/hooks.py</code> <code>sandbox/base.py</code></p>
-  <p>An extension is a folder of files: tools, skills, agents and hooks. A hook can
-  observe or veto, never allow. Its veto sits in the pipeline's <code>pre_tool</code>
-  stage, just before the permission check, and a failing hook denies. Python is a
-  plugin surface only for providers. Installing an extension in 1.0 is copying a
-  folder into <code>.edgar/extensions/</code>: <code>ext add</code>, and the skill
-  audit it would run first, arrive in v2. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/discovery.py"><code>extensions/discovery.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/hooks.py"><code>extensions/hooks.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/activate.py"><code>skills/activate.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__init__.py"><code>__init__.py</code></a></p>
+  <p class="look">Look for: <code>discover</code> <code>Hook</code> <code>veto</code> <code>matching</code> <code>verify_command</code> <code>run</code></p>
+  <p>An extension is a folder of files: tools, skills, agents and one
+  <code>hooks.toml</code> (<code>extensions/discovery.py</code>), found under
+  <code>.edgar/extensions/</code> the same way skills and agents are found under
+  their own folders, and <code>edgar ext list</code> is the whole CLI surface 1.0
+  ships for them — <code>ext validate</code> and <code>ext add</code> moved to v2
+  (ADR-0053). A hook can observe or veto, never allow (EXT-4..7): every kind
+  fires as an event <code>listener()</code> subscribes to the bus for, but
+  <code>pre_tool</code> alone runs through <code>tools/execute.py</code>'s
+  pipeline (stop 6) just before the permission check, and <code>veto()</code>
+  fails closed — a hook that errors, times out or exits non-zero denies the call
+  rather than letting it through. Python is a plugin surface only for providers
+  (ADR-0018): <code>providers/registry.py</code> tries an <code>edgar.providers</code>
+  entry point only once a name is neither built in nor a configured server, so a
+  session that names no third-party provider imports none.</p>
+  <p>Two more things close out v1's own promises. Deterministic skill activation
+  [SKL-17] means the model never has to call the <code>skill</code> tool for a
+  keyword the user typed or a path the last round touched:
+  <code>skills/activate.py</code>'s <code>matching()</code> finds them,
+  <code>bodies()</code> loads them straight into the turn's <code>attached</code>
+  context, and the same matches feed VER-1's precedence chain —
+  <code>verify_command()</code> chains a loaded skill's own <code>verify:</code>
+  command when nothing higher ranked (<code>--verify</code>, then an agent's own
+  frontmatter) claims the turn. <code>edgar.run()</code> (EXT-9, ADR-0051) is the
+  one obligation a program embedding edgar is owed: a thin async wrapper in
+  <code>__init__.py</code> — kept out of the startup path, so a bare
+  <code>import edgar</code> stays as light as <code>edgar.cli.main</code> — that
+  builds a session the same way <code>-p</code> does and calls the very same
+  <code>run_turn()</code> from stop 1, with the event bus and the permission
+  <code>asker</code> the caller supplies, so a supervisor holding a human's
+  attention elsewhere can answer a prompt out of band instead of nobody being
+  there to answer it.
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
 </article>
 
 <article class="stop planned" id="s24" data-files="src/edgar/config/init.py src/edgar/config/doctor.py">

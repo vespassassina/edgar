@@ -184,6 +184,50 @@ def test_p_exits_5_when_a_call_needed_a_prompt(
     assert run_prompt("x", cwd=tmp_project, model="fake/test", mode="ask", env={}, home=home) == 5
 
 
+def _skill(root: Path, name: str, verify: str, keyword: str) -> None:
+    folder = root / ".edgar" / "skills" / name
+    folder.mkdir(parents=True)
+    text = (
+        f"---\nname: {name}\ndescription: Use when testing.\n"
+        f"when: {{keywords: [{keyword}]}}\nverify: {verify}\n---\nDo the thing.\n"
+    )
+    (folder / "SKILL.md").write_text(text, encoding="utf-8")
+
+
+def test_a_loaded_skills_own_verify_runs_with_no_other_source(
+    tmp_project: Path, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:  # [VER-1]
+    _skill(tmp_project, "deploy", "exit 1", "deploy")
+    _with_script(
+        monkeypatch,
+        write("a.py"),
+        ScriptedResponse(text="done"),
+        write("a.py"),
+        ScriptedResponse(text="still done"),
+    )
+    code = run_prompt(
+        "please deploy", cwd=tmp_project, model="fake/test", mode="auto", env={}, home=home
+    )
+    assert code == 9  # the skill's own command ran and kept failing
+
+
+def test_explicit_verify_still_outranks_a_loaded_skills(
+    tmp_project: Path, home: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:  # [VER-1]
+    _skill(tmp_project, "deploy", "exit 1", "deploy")
+    _with_script(monkeypatch, write("a.py"), ScriptedResponse(text="done"))
+    code = run_prompt(
+        "please deploy",
+        cwd=tmp_project,
+        model="fake/test",
+        mode="auto",
+        env={},
+        home=home,
+        verify="exit 0",
+    )
+    assert code == 0
+
+
 def test_a_verify_command_that_would_prompt_fails_before_the_work(
     tmp_project: Path, home: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:  # [VER-4]

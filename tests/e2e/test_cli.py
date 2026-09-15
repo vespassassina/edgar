@@ -112,7 +112,7 @@ def test_piped_stdin_events_and_no_escapes_on_stdout(
     )
     assert out.returncode == 0, out.stderr
     events = [json.loads(line) for line in out.stdout.splitlines()]
-    assert events[-1]["event"] == "TurnFinished" and "\x1b" not in out.stdout
+    assert events[-1]["event"] == "SessionEnded" and "\x1b" not in out.stdout
     texts = "".join(e["text"] for e in events if e["event"] == "TextDelta")
     assert "review this" in texts and "diff --git" in texts
 

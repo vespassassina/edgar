@@ -23,7 +23,17 @@ from pathlib import Path
 from edgar import __version__
 from edgar.cli import trust
 from edgar.cli.render import Printer, Renderer
-from edgar.cli.setup import Setup, authorise_verify, begin, daily, finish, prepare, runtime, setup
+from edgar.cli.setup import (
+    Setup,
+    authorise_verify,
+    begin,
+    daily,
+    finish,
+    prepare,
+    runtime,
+    setup,
+    verify_for_turn,
+)
 from edgar.cli.statusbar import Status
 from edgar.core import aside
 from edgar.core.errors import EdgarError
@@ -32,6 +42,7 @@ from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Answer
 from edgar.providers.routing import Selection
+from edgar.skills.activate import bodies, matching, touched_paths
 from edgar.tools.mcp.client import close
 
 Ask = Callable[[str], Awaitable[str]]
@@ -71,7 +82,7 @@ class Shell:
 
     def open(self, session: Session) -> None:
         """`/new`, `/clear`, `/load`: the current session ends, and stays on disk."""
-        finish(self.setup, self.session)
+        finish(self.setup, self.session, self.rt.bus)
         self.session, self.status.cost, self.status.context = session, session.cost, 0
         if session.model != self.rt.name:
             self.switch(session.model)
@@ -146,8 +157,12 @@ class Shell:
 
     async def _run(self, text: str) -> None:
         try:
-            await authorise_verify(self.rt, self.session)
-            result = await run_turn(self.session, text, daily(self.setup, self.rt))
+            touched = touched_paths(self.session.transcript)
+            hits = matching(self.setup.skills, text, touched)
+            rt = verify_for_turn(self.setup, self.rt, hits)
+            await authorise_verify(rt, self.session)
+            rt = daily(self.setup, rt)
+            result = await run_turn(self.session, text, rt, attached=bodies(hits))
             if result.reason == "verification_failed":  # [VER-5]
                 self.say(
                     f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "
@@ -203,7 +218,7 @@ class Shell:
             task.cancel()
         await asyncio.gather(*running, return_exceptions=True)
         await close(self.setup.servers)  # the MCP servers this session started
-        finish(self.setup, self.session)
+        finish(self.setup, self.session, self.rt.bus)
 
 
 async def interact(

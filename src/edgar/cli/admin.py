@@ -20,7 +20,6 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from edgar.agents.discovery import discover as discover_agents
 from edgar.agents.spawn import subagents_config
 from edgar.cli import trust
 from edgar.cli.setup import spending, toolset
@@ -29,6 +28,7 @@ from edgar.context.tokens import message_text
 from edgar.core.errors import UsageError
 from edgar.permissions.guard import Guard
 from edgar.permissions.policy import Policy
+from edgar.skills.discovery import lint
 from edgar.storage.db import Store
 from edgar.storage.transcript import conversation, find, forks, listing
 from edgar.tools.builtin.task import TaskTool
@@ -39,7 +39,7 @@ USAGE = """usage: edgar trust [--yes] | edgar permissions list | edgar permissio
        edgar sessions list | show ID | rm ID
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
        edgar mcp list | test NAME | login NAME | logout NAME
-       edgar login PROVIDER | edgar logout PROVIDER"""
+       edgar ext list | edgar login PROVIDER | edgar logout PROVIDER"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
@@ -54,6 +54,8 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         return _sessions(argv[1:], cwd)
     if argv[0] in ("tools", "skills") and len(argv) in (2, 3):
         return _tools(argv, cwd, home)
+    if argv == ["ext", "list"]:
+        return _ext(cwd, home)
     if argv[0] == "trust" and set(argv[1:]) <= {"--yes"}:
         config = load(cwd, home=home)
         if not trust.executable(cwd, config):
@@ -162,7 +164,7 @@ def _mcp(argv: list[str], cwd: Path, home: Path) -> int:
 
     config = load(cwd, home=home)
     trusted = trust.trusted(cwd, config, home)
-    _, _, found = toolset(cwd, home, config, project_exec=trusted)
+    _, _, found, _, _ = toolset(cwd, home, config, project_exec=trusted)
     if argv[1] in ("test", "login", "logout") and len(argv) == 3:
         found = [s for s in found if s.name == argv[2]]
         if not found:
@@ -203,15 +205,14 @@ def _tools(argv: list[str], cwd: Path, home: Path) -> int:
     # and `task` only when there is an agent file to run, exactly as `setup()` decides.
     config = load(cwd, home=home)
     trusted = trust.trusted(cwd, config, home)
-    tools, found, _ = toolset(cwd, home, config, project_exec=trusted)
-    agents = discover_agents(cwd, home)
+    tools, found, _, agents, ext = toolset(cwd, home, config, project_exec=trusted)
     if agents.agents:
         policy = Policy(mode=config.permissions.mode, cwd=cwd, home=home.resolve())
         guard = Guard(policy, store=Store(cwd / ".edgar" / "edgar.db"))
         limits = subagents_config(config.later)
         tools.add([TaskTool(agents.agents, tools, guard, config, None, limits)])
     problems = [*tools.warnings, *found.warnings, *found.problems]
-    problems += [*agents.warnings, *agents.problems]
+    problems += [*agents.warnings, *agents.problems, *ext.warnings, *ext.problems]
     for line in problems:
         print(f"warning: {line}", file=sys.stderr)
     if argv[1:] == ["list"] and argv[0] == "tools":
@@ -227,9 +228,27 @@ def _tools(argv: list[str], cwd: Path, home: Path) -> int:
         if not found.skills:
             print("no skills; add one as .edgar/skills/NAME/SKILL.md")
     elif argv[1:] == ["validate"] and argv[0] == "skills":
+        lints = [warn for s in found.skills.values() if (warn := lint(s))]
+        for warn in lints:
+            print(f"warning: {warn}", file=sys.stderr)
         print(f"{len(found.skills)} skills ok, {len(found.problems)} with problems")
         return 1 if found.problems else 0
     else:
         print(USAGE, file=sys.stderr)
         return 2
+    return 0
+
+
+def _ext(cwd: Path, home: Path) -> int:
+    # `edgar ext list`: every extension a session here would load, and what it
+    # brought [EXT-2].
+    config = load(cwd, home=home)
+    trusted = trust.trusted(cwd, config, home)
+    _, _, _, _, ext = toolset(cwd, home, config, project_exec=trusted)
+    for line in [*ext.warnings, *ext.problems]:
+        print(f"warning: {line}", file=sys.stderr)
+    for manifest in ext.extensions.values():
+        print(f"{manifest.name:<24} {manifest.version:<10} {manifest.description}")
+    if not ext.extensions:
+        print("no extensions; add one as .edgar/extensions/NAME/extension.toml")
     return 0

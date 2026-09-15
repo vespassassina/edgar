@@ -32,6 +32,7 @@ def test_read_a_file_with_the_fake_model(
     assert err == ""
     assert recorder.names == [
         "ModelSelected",
+        "SessionStarted",
         "TurnStarted",
         "RequestStarted",
         "RequestFinished",
@@ -43,6 +44,7 @@ def test_read_a_file_with_the_fake_model(
         "TextDelta",
         "RequestFinished",
         "TurnFinished",
+        "SessionEnded",
     ]
 
 
@@ -123,7 +125,7 @@ def test_events_are_json_lines_on_stdout(
     )
     lines = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
     names = [line["event"] for line in lines]
-    assert names[0] == "ModelSelected" and names[-1] == "TurnFinished"
+    assert names[0] == "ModelSelected" and names[-1] == "SessionEnded"
     assert "ToolFinished" in names and all("agent_id" in line for line in lines)
 
 
@@ -152,6 +154,41 @@ def test_stdin_is_attached_context_not_the_prompt(tmp_project: Path, home: Path)
     assert isinstance(prompt, TextBlock) and isinstance(context, TextBlock)
     assert (prompt.text, prompt.attached) == ("review this", False)
     assert context.attached and "<attached>\ndiff --git a/x b/x\n</attached>" in context.text
+
+
+def test_a_typed_keyword_loads_a_skills_body_without_the_model_asking(
+    tmp_project: Path, home: Path
+) -> None:  # [SKL-17]
+    from edgar.providers import fake
+
+    folder = tmp_project / ".edgar" / "skills" / "deploy"
+    folder.mkdir(parents=True)
+    text = (
+        "---\nname: deploy\ndescription: Use when deploying.\n"
+        "when: {keywords: [deploy]}\n---\nRun `just ship`.\n"
+    )
+    (folder / "SKILL.md").write_text(text, encoding="utf-8")
+
+    seen: list[Message] = []
+    original = fake.FakeProvider.stream
+
+    async def spy(self: fake.FakeProvider, messages: Any, *args: Any, **kwargs: Any) -> Any:
+        seen.extend(messages)
+        return await original(self, messages, *args, **kwargs)
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(fake.FakeProvider, "stream", spy)
+        run_prompt(
+            "please deploy this",
+            cwd=tmp_project,
+            model="fake/test",
+            mode="read-only",
+            env={},
+            home=home,
+        )
+    _prompt, context = seen[-1].content
+    assert isinstance(context, TextBlock)
+    assert "skill deploy" in context.text and "Run `just ship`." in context.text
 
 
 def test_the_status_line_never_reaches_stdout(

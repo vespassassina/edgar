@@ -65,6 +65,8 @@ that did not need an ADR.
 | [0051](0051-controlling-edgar-from-elsewhere.md) | Controlling edgar from a phone or a remote terminal: a separate project embeds it, and the proxy relays or blocks but never answers | Accepted · constrains `edgar.run()`, amends ADR-0048 decision 1, "Never" list unchanged |
 | [0052](0052-media-input-in-v2.md) | Media input in v2: one `ImageBlock` and nothing else, every other format converted by a tool at the boundary | Accepted · amends PRD §5.3 and §5.1 |
 | [0053](0053-what-1-0-actually-ships.md) | What 1.0 actually ships: cut the commands that read a format, never the format itself | Accepted · moves CLI-20, TOOL-14, CTX-18, CTX-2, CFG-2, ROUTE-9 and parts of CFG-5, EXT-3 and PRV-14 to v2 |
+| [0054](0054-m9-subagents-as-built.md) | M9 as built: subagents fan out through `execute_many()`, a multi-row status bar, an example agent, and `check_capabilities` wired in | Accepted · completes M9 |
+| [0055](0055-m10-extensions-as-built.md) | M10 as built: a per-turn verify override mirroring the daily cap, verify authorisation moved down to `core/verify.py`, `edgar.run()` with every heavy import deferred, and the last three slash commands | Accepted · completes M10; refines ADR-0006, ADR-0041; implements EXT-9, SKL-17, VER-1 in part, CLI-14 |
 
 ## Writing a new ADR
 

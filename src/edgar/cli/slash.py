@@ -41,7 +41,7 @@ Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
 # Commands still owed, and when; plan mode moved to v2 in ADR-0053.
-LATER = {"M9": "/agents", "M10": "/skills /tools", "M11": "/init", "v2": "/plan /go"}
+LATER = {"M11": "/init", "v2": "/plan /go"}
 
 
 def command(names: str, help: str) -> Callable[[Command], Command]:
@@ -396,6 +396,31 @@ async def _remember(shell: Shell, arg: str) -> None:
     if fact.status == "active":
         shell.rt.bus.emit(FactSaved(fact_id=fact.id, provenance=fact.provenance))
     shell.say(said(fact))
+
+
+@command("/skills", "list skills this session can load [SKL-1, SKL-17]")
+async def _skills(shell: Shell, arg: str) -> None:
+    rows = [f"  {s.name:<20} {s.origin:<16} {s.description}" for s in shell.setup.skills.values()]
+    shell.say("\n".join(["skills:", *rows]) if rows else "no skills; .edgar/skills/NAME/SKILL.md")
+
+
+@command("/agents", "list subagents this session's `task` tool can run [SUB-1]")
+async def _agents(shell: Shell, arg: str) -> None:
+    from edgar.tools.builtin.task import TaskTool
+
+    task = shell.setup.tools.get("task")
+    agents = task.agents if isinstance(task, TaskTool) else {}
+    rows = [f"  {name:<20} {a.description}" for name, a in agents.items()]
+    shell.say("\n".join(["agents:", *rows]) if rows else "no agents; .edgar/agents/NAME.md")
+
+
+@command("/tools", "list tools available this session")
+async def _tools(shell: Shell, arg: str) -> None:
+    rows = [
+        f"  {t.name:<16} {t.kind:<8} {t.origin:<8} {t.description.splitlines()[0]}"
+        for t in shell.rt.tools.schemas()
+    ]
+    shell.say("\n".join(["tools:", *rows]))
 
 
 @command("/memory", "what is remembered; `edgar memory` edits, reviews and undoes")

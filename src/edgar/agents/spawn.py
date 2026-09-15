@@ -25,6 +25,8 @@ from edgar.config.schema import BudgetSection, Config, Mode
 from edgar.core.errors import ConfigError, EdgarError
 from edgar.core.loop import Runtime, run_turn
 from edgar.core.session import Session
+from edgar.core.verify import Check
+from edgar.core.verify import authorise as verify_authorise
 from edgar.permissions.guard import Guard
 from edgar.providers.fallback import chain_from_config
 from edgar.providers.registry import resolve
@@ -122,6 +124,9 @@ async def spawn(
             agent_chain=(*ctx.chain, agent.name),
         )
     )
+    check = None
+    if agent.verify:  # the agent's own frontmatter, ahead of a loaded skill's [VER-1]
+        check = Check(agent.verify, config.verify.max_attempts, config.shell.program)
     rt = Runtime(
         provider=provider,
         model=model,
@@ -131,10 +136,13 @@ async def spawn(
         max_output_tokens=ctx.max_output_tokens,
         name=selection.model,
         guard=guard,
+        verify=check,
         budget=BudgetSection(session_cost_cap=_cap(agent, ctx)),
         fallback=fallback,
     )
     try:
+        if check is not None:  # authorised before the turn starts, like the main session [VER-4]
+            await verify_authorise(check, guard, session, rt.bus)
         result = await run_turn(session, task, rt)
     except Exception as exc:  # a subagent's own failure surfaces as a tool error [SUB-8]
         return ToolResult(

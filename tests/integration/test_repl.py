@@ -293,6 +293,9 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/sessions", "no sessions yet"),
         ("/load NOPE", "none found"),
         ("/compact", "nothing to compact"),
+        ("/skills", "no skills"),
+        ("/agents", "no agents"),
+        ("/tools", "tools:"),
     ],
 )
 def test_commands(tmp_project: Path, line: str, expected: str) -> None:
@@ -300,6 +303,26 @@ def test_commands(tmp_project: Path, line: str, expected: str) -> None:
         await r.type(line)
 
     assert expected in play(tmp_project, scenario).text
+
+
+def test_agents_and_skills_list_what_this_session_loaded(tmp_project: Path) -> None:
+    agents = tmp_project / ".edgar" / "agents"
+    agents.mkdir(parents=True)
+    (agents / "reviewer.md").write_text(
+        "---\nname: reviewer\ndescription: Reviews diffs.\n---\nReview.\n", encoding="utf-8"
+    )
+    skills = tmp_project / ".edgar" / "skills" / "deploy"
+    skills.mkdir(parents=True)
+    (skills / "SKILL.md").write_text(
+        "---\nname: deploy\ndescription: Use when deploying.\n---\nShip it.\n", encoding="utf-8"
+    )
+
+    async def scenario(r: Rig) -> None:
+        await r.type("/agents", "/skills")
+
+    r = play(tmp_project, scenario)
+    assert "reviewer" in r.text and "Reviews diffs." in r.text
+    assert "deploy" in r.text and "Use when deploying." in r.text
 
 
 def texts(n: int) -> list[ScriptedResponse]:

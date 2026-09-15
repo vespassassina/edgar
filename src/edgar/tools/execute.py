@@ -1,6 +1,6 @@
 """Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].
 
-    validate → (pre_tool hooks, v1) → permission → run with timeout → spill
+    validate → pre_tool hooks → permission → run with timeout → spill
 
 Each failure becomes a ToolResultBlock(is_error=True) with an ErrorRecord the
 harness computed, and goes back to the model, which often recovers by trying
@@ -17,6 +17,7 @@ from typing import Any
 
 from edgar.core.events import ToolFinished, ToolProposed, ToolStarted
 from edgar.core.message import ErrorKind, ErrorRecord, TextBlock, ToolResultBlock, ToolUseBlock
+from edgar.extensions.hooks import veto as hooks_veto
 from edgar.permissions.guard import Guard
 from edgar.permissions.policy import Deny
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
@@ -50,6 +51,13 @@ async def execute(
     problem = _validate(tool.schema, call.args)
     if problem is not None:
         return _failed(call, "validation", problem)
+
+    if ctx.hooks:
+        reason = await hooks_veto(
+            ctx.hooks, {"tool": call.name, "args": call.args}, cwd=ctx.cwd, bus=bus
+        )
+        if reason is not None:
+            return _failed(call, "permission_denied", f"denied by hook: {reason}")
 
     described = getattr(tool, "subject", None)  # command and HTTP tools say what they touch
     decision = await guard.check(
@@ -97,6 +105,7 @@ async def execute(
     bus.emit(
         ToolFinished(
             id=call.id,
+            tool=call.name,
             ok=not block.is_error,
             duration_ms=round((time.monotonic() - started) * 1000),
             truncated=block.truncated,

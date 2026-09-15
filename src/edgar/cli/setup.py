@@ -19,10 +19,11 @@ a session."""
 from __future__ import annotations
 
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from edgar.agents.discovery import Found as AgentsFound
 from edgar.agents.discovery import discover as discover_agents
 from edgar.agents.spawn import subagents_config
 from edgar.cli.trust import from_project
@@ -31,16 +32,29 @@ from edgar.config.schema import Config, McpSection
 from edgar.context.builder import PERSONALITY_WARN, Section, notes, pinned, skill_index, system_text
 from edgar.context.prompts import choose_profile, load_prompt, profile_prompt
 from edgar.context.tokens import approx_tokens
-from edgar.core.errors import BudgetExceeded, ConfigError, PermissionDenied, UsageError
-from edgar.core.events import Event, EventBus, ModelSelected, TurnFinished
+from edgar.core.errors import BudgetExceeded, ConfigError, UsageError
+from edgar.core.events import (
+    Event,
+    EventBus,
+    ModelSelected,
+    SessionEnded,
+    SessionStarted,
+    TurnFinished,
+)
 from edgar.core.loop import Runtime
 from edgar.core.session import Session
 from edgar.core.verify import Check
+from edgar.core.verify import authorise as verify_authorise
+from edgar.extensions.discovery import Found as ExtFound
+from edgar.extensions.discovery import disabled_from_config
+from edgar.extensions.discovery import discover as discover_extensions
+from edgar.extensions.hooks import Hook, from_config, from_extension, listener
+from edgar.extensions.manifest import Manifest
 from edgar.memory.retriever import retriever
 from edgar.memory.store import Memory, project_scope
 from edgar.permissions.control import control_files, snapshot
 from edgar.permissions.guard import Asker, Guard
-from edgar.permissions.policy import Deny, Policy
+from edgar.permissions.policy import Policy
 from edgar.providers.fallback import chain_from_config
 from edgar.providers.registry import resolve, split
 from edgar.providers.routing import (
@@ -50,12 +64,12 @@ from edgar.providers.routing import (
     routes_from_config,
     select_model,
 )
-from edgar.skills.discovery import Found, discover
+from edgar.skills.activate import verify_command as skill_verify
+from edgar.skills.discovery import Found, Skill, discover
 from edgar.storage.db import Store
 from edgar.storage.transcript import control_changes, find, replay, start
 from edgar.tools.base import Tool
 from edgar.tools.builtin.memory_tools import Recall, Remember
-from edgar.tools.builtin.shell import Shell
 from edgar.tools.builtin.skill import SkillTool
 from edgar.tools.builtin.task import TaskTool
 from edgar.tools.builtin.tool_search import searchable
@@ -117,6 +131,10 @@ class Setup:
     scope: str  # the project's memory scope
     servers: list[Server]  # the MCP servers this session may use; none is running [TOOL-8]
     browser: Server | None  # what /browser would start, if [browser] names a server
+    extensions: dict[str, Manifest]  # `.edgar/extensions/*` found, by name [EXT-2]
+    hooks: tuple[Hook, ...]  # `[[hooks]]`, config and every found extension's [EXT-4]
+    skills: dict[str, Skill]  # by name, for deterministic activation between turns [SKL-17]
+    explicit_verify: bool  # `--verify` was passed: it outranks a loaded skill's own [VER-1]
 
 
 def setup(
@@ -143,12 +161,15 @@ def setup(
         control=control_files(root, home, config.instructions.files),
     )
     guard = Guard(base, asker=asker, store=Store(root / ".edgar" / "edgar.db"))
-    # 2. Tools, skills and MCP servers; `task` only when there is an agent to run.
-    tools, found, servers_here = toolset(root, home, config, project_exec=project_exec)
-    agents = discover_agents(root, home)
+    # 2. Tools, skills, agents, extensions and MCP servers; `task` only when there
+    #    is an agent to run [EXT-2, EXT-8].
+    tools, found, servers_here, agents, ext = toolset(root, home, config, project_exec=project_exec)
     if agents.agents:
         limits = subagents_config(config.later)
         tools.add([TaskTool(agents.agents, tools, guard, config, env, limits)])
+    hooks = from_config(config.later) + tuple(
+        h for manifest in ext.extensions.values() for h in from_extension(manifest.path)
+    )
     # 3. The verify check; a project's own command runs only once it is trusted.
     skills = list(found.skills.values())
     from_project = config.origins.get("verify.command") == str(project_config(root))
@@ -162,7 +183,15 @@ def setup(
     kept = notes(facts, config.memory.pinned_max, memory.path)
     sections = pinned(root, home, files) + kept + skill_index(skills, root)
     # 5. What the human should hear before the first prompt.
-    warnings = tools.warnings + found.warnings + found.problems + agents.warnings + agents.problems
+    warnings = (
+        tools.warnings
+        + found.warnings
+        + found.problems
+        + agents.warnings
+        + agents.problems
+        + ext.warnings
+        + ext.problems
+    )
     for sec in sections:
         if sec.name == "personality" and approx_tokens(sec.text) > PERSONALITY_WARN:
             warnings.append(f"{sec.source} is ~{approx_tokens(sec.text):,} tokens; keep it short")
@@ -188,6 +217,10 @@ def setup(
         scope,
         servers_here,
         browser,
+        ext.extensions,
+        hooks,
+        found.skills,
+        verify is not None,
     )
 
 
@@ -207,12 +240,15 @@ def open_memory(home: Path, config: Config) -> Memory:
 
 def toolset(
     root: Path, home: Path, config: Config, *, project_exec: bool
-) -> tuple[ToolRegistry, Found, list[Server]]:
-    # The session's tools, the skills found and the MCP servers configured. Skills
-    # are instructions, not code, so they need no trust; the `skill` tool exists only
-    # when there is one to load. Memory's two tools read and propose in this
-    # project's scope and the global one.
-    found = discover(root, home)
+) -> tuple[ToolRegistry, Found, list[Server], AgentsFound, ExtFound]:
+    # The session's tools, the skills and agents found (a plain project's, then
+    # each extension's own, folded in [EXT-8]), and the MCP servers configured.
+    # Skills are instructions, not code, so they need no trust; the `skill` tool
+    # exists only when there is one to load. Memory's two tools read and propose
+    # in this project's scope and the global one.
+    found, agents = discover(root, home), discover_agents(root, home)
+    disabled = disabled_from_config(config.later)
+    ext = discover_extensions(root, home, found, agents, disabled)
     memory, scope = open_memory(home, config), project_scope(root)
     search = retriever(config.memory.retriever, memory, root)
     extra: list[Tool] = [Remember(memory, scope), Recall(search, [scope, "global"])]
@@ -233,31 +269,16 @@ def toolset(
         project_exec=project_exec,
         extra=extra,
         mcp=cached,
+        ext=ext.tools,
         budget=config.tools.schema_budget,
     )
     searchable(registry, [s for s in here if s.tools() is None])
-    return registry, found, here
+    return registry, found, here, agents, ext
 
 
 async def authorise_verify(rt: Runtime, session: Session) -> None:
-    """The verify command is a shell call, decided before the turn starts, so a run
-    that would need a prompt at the end fails now [VER-4]."""
-    if rt.verify is None or rt.guard is None:
-        return
-    decision = await rt.guard.check(
-        Shell(rt.verify.program).schema,
-        {"command": rt.verify.command},
-        cwd=session.cwd,
-        mode=session.mode,
-        tainted=session.tainted,
-        call_id="verify",
-        bus=rt.bus,
-    )
-    if isinstance(decision, Deny):
-        raise PermissionDenied(
-            f"the verify command `{rt.verify.command}` is not allowed: {decision.reason}",
-            hint='allow it with [permissions] shell_allow = ["…"], or run with --mode ask',
-        )
+    if rt.verify is not None and rt.guard is not None:
+        await verify_authorise(rt.verify, rt.guard, session, rt.bus)
 
 
 def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runtime:
@@ -295,6 +316,7 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
         budget=config.budget,
         compactor=resolve(role, config, env=s.env) if role else None,
         fallback=fallback,
+        hooks=s.hooks,
     )
 
 
@@ -303,15 +325,21 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
     latest, one replayed from it [CLI-11]. It keeps its model unless --model names one."""
     mode = s.config.permissions.mode
     bus.subscribe(lambda event: _spend(s.home, event))
+    if s.hooks:
+        bus.subscribe(listener(s.hooks, s.root, bus))
     if resume is None:
         rt = runtime(s, bus)
-        return start(Session(cwd=s.root, model=rt.name, mode=mode)), rt
-    session, _ = replay(find(s.root, resume))
-    flagged = s.config.origins.get("model.default") == "flag --model"
-    rt = runtime(s, bus, choice=None if flagged else Selection(session.model, "resume", "resumed"))
-    if session.model != rt.name:
-        session.record({"type": "model", "model": rt.name})
-    session.mode, session.model = mode, rt.name
+        session = start(Session(cwd=s.root, model=rt.name, mode=mode))
+    else:
+        session, _ = replay(find(s.root, resume))
+        flagged = s.config.origins.get("model.default") == "flag --model"
+        rt = runtime(
+            s, bus, choice=None if flagged else Selection(session.model, "resume", "resumed")
+        )
+        if session.model != rt.name:
+            session.record({"type": "model", "model": rt.name})
+        session.mode, session.model = mode, rt.name
+    bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
     return session, rt
 
 
@@ -343,7 +371,20 @@ def daily(s: Setup, rt: Runtime) -> Runtime:
     return replace(rt, budget=replace(rt.budget, turn_cost_cap=capped))
 
 
-def finish(s: Setup, session: Session) -> None:
+def verify_for_turn(s: Setup, rt: Runtime, activated: Sequence[Skill]) -> Runtime:
+    """VER-1's order: `--verify` already fixed `rt.verify` for the whole session;
+    otherwise a skill loaded into this turn outranks the project's own
+    `verify.command`, which is why this runs again every turn."""
+    if s.explicit_verify:
+        return rt
+    command = skill_verify(activated)
+    if command is None:
+        return rt
+    check = Check(command, s.config.verify.max_attempts, s.config.shell.program)
+    return replace(rt, verify=check)
+
+
+def finish(s: Setup, session: Session, bus: EventBus) -> None:
     """Control files that changed while the session ran go in its record, for the
     next session to warn about: a change a human did not see is a change to review."""
     now = snapshot(s.root, s.home, s.config.instructions.files)
@@ -351,3 +392,4 @@ def finish(s: Setup, session: Session) -> None:
     if changed:
         session.record({"type": "control", "changed": changed})
     s.control = now
+    bus.emit(SessionEnded(session_id=session.id))  # drives a `session_end` hook [EXT-4]

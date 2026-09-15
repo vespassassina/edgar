@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, cast
 
 from edgar.core.events import EventBus
 from edgar.core.message import ErrorKind
@@ -12,6 +12,7 @@ from edgar.core.message import ErrorKind
 if TYPE_CHECKING:
     from edgar.core.loop import Runtime
     from edgar.core.session import Session
+    from edgar.extensions.hooks import Hook
 
 Category = Literal["read", "write", "shell", "network", "memory", "agent"]
 
@@ -66,6 +67,7 @@ class ToolContext:
     depth: int = 0  # 0 is the main loop; the `task` tool checks it against the ceiling [SUB-6]
     chain: tuple[str, ...] = ()  # agent names already running in this call stack [SUB-10]
     budget_remaining: float | None = None  # what is left to inherit [SUB-7]
+    hooks: tuple[Hook, ...] = ()  # `pre_tool` rules that may veto this call [EXT-6]
 
 
 def build_context(session: Session, rt: Runtime) -> ToolContext:
@@ -81,6 +83,7 @@ def build_context(session: Session, rt: Runtime) -> ToolContext:
         depth=session.depth,
         chain=session.agent_chain,
         budget_remaining=remaining,
+        hooks=cast("tuple[Hook, ...]", rt.hooks),
     )
 
 

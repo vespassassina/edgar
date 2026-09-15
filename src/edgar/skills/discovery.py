@@ -34,7 +34,10 @@ class Skill:
     name: str
     description: str  # the one line the model sees until it loads the skill
     path: Path  # the SKILL.md; files beside it are the skill's resources [SKL-5]
-    origin: str  # "user", "project", "user learned" or "project learned"
+    origin: str  # "user", "project", "user learned", "project learned" or "ext:NAME"
+    paths: tuple[str, ...] = ()  # `when.paths`: a touched path loads the body [SKL-17]
+    keywords: tuple[str, ...] = ()  # `when.keywords`: a typed word loads the body
+    verify: str | None = None  # a shell command, one verify source among several [VER-1]
 
 
 @dataclass
@@ -64,7 +67,7 @@ def split(text: str) -> tuple[dict[str, Any], str]:
 
 def discover(root: Path, home: Path) -> Found:
     found = Found()
-    # 1. Scopes, lowest priority first: each later one may replace an earlier one.
+    # Scopes, lowest priority first: each later one may replace an earlier one.
     scopes = [
         (home / ".edgar" / "skills" / "learned", "user learned"),
         (root / ".edgar" / "skills" / "learned", "project learned"),
@@ -72,21 +75,27 @@ def discover(root: Path, home: Path) -> Found:
         (root / ".edgar" / "skills", "project"),
     ]
     for folder, origin in scopes:
-        for path in sorted(folder.glob("*/SKILL.md")) if folder.is_dir() else []:
-            # 2. Read one skill; a broken file is reported, never fatal.
-            try:
-                skill = _read(path, origin)
-            except (OSError, UnicodeDecodeError, ValueError) as exc:
-                found.problems.append(f"{path}: {exc}")
-                continue
-            # 3. Keep it, saying which one it replaces [TOOL-9].
-            old = found.skills.get(skill.name)
-            if old is not None:
-                found.warnings.append(
-                    f"the {origin} skill {skill.name!r} replaces the {old.origin} one"
-                )
-            found.skills[skill.name] = skill
+        scan(folder, origin, found)
     return found
+
+
+def scan(folder: Path, origin: str, found: Found) -> None:
+    """One scope's skills, folded into `found`; reused for an extension's own
+    `skills/` folder (EXT-8), which scans after every unbundled scope."""
+    for path in sorted(folder.glob("*/SKILL.md")) if folder.is_dir() else []:
+        # 1. Read one skill; a broken file is reported, never fatal.
+        try:
+            skill = _read(path, origin)
+        except (OSError, UnicodeDecodeError, ValueError) as exc:
+            found.problems.append(f"{path}: {exc}")
+            continue
+        # 2. Keep it, saying which one it replaces [TOOL-9].
+        old = found.skills.get(skill.name)
+        if old is not None:
+            found.warnings.append(
+                f"the {origin} skill {skill.name!r} replaces the {old.origin} one"
+            )
+        found.skills[skill.name] = skill
 
 
 def _read(path: Path, origin: str) -> Skill:
@@ -98,4 +107,32 @@ def _read(path: Path, origin: str) -> Skill:
         raise ValueError(f"`name` is {name!r} but the folder is {path.parent.name!r}")
     if not isinstance(description, str) or not 0 < len(description.strip()) <= 1024:
         raise ValueError("`description` must be text, 1 to 1,024 characters")
-    return Skill(name, " ".join(description.split()), path, origin)
+    paths, keywords = _when(head.get("when", {}))
+    verify = head.get("verify")
+    if verify is not None and not isinstance(verify, str):
+        raise ValueError("`verify` must be a shell command string")
+    return Skill(name, " ".join(description.split()), path, origin, paths, keywords, verify)
+
+
+def _when(when: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    # `when: { paths: [globs], keywords: [words] }`, both optional [SKL-17].
+    if not isinstance(when, dict):
+        raise ValueError("`when` must be a table, e.g. { paths = [...] }")
+    paths, keywords = when.get("paths", []), when.get("keywords", [])
+    if not isinstance(paths, list) or not all(isinstance(p, str) for p in paths):
+        raise ValueError("`when.paths` must be a list of glob strings")
+    if not isinstance(keywords, list) or not all(isinstance(k, str) for k in keywords):
+        raise ValueError("`when.keywords` must be a list of words")
+    return tuple(paths), tuple(k.lower() for k in keywords)
+
+
+_WHEN_TO_USE = ("use when", "use for", "use this", "when to use", "whenever")
+
+
+def lint(skill: Skill) -> str | None:
+    """`skills validate` warns when a description says what a skill is but not
+    when to use it [SKL-17]: no "use when"-shaped phrase anywhere in the text."""
+    lower = skill.description.lower()
+    if any(phrase in lower for phrase in _WHEN_TO_USE):
+        return None
+    return f"{skill.name}: description does not say when to use the skill"

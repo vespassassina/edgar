@@ -226,11 +226,11 @@ def test_a_session_starts_no_server_and_a_project_server_needs_trust(
     _write(tmp_project / ".edgar" / "config.toml", '[mcp.two]\nurl = "https://example.test/mcp"\n')
     config = load(tmp_project, home=home, env={})
     assert "mcp server two" in trust.executable(tmp_project, config)  # [PERM-13]
-    tools, _, found = toolset(tmp_project, home, config, project_exec=False)
+    tools, _, found, _, _ = toolset(tmp_project, home, config, project_exec=False)
     assert [s.name for s in found] == ["one"]  # the untrusted project server is left out
     assert not mark.exists()  # nothing was started [TOOL-8]
     assert tools.get("tool_search") is not None  # both servers are waiting to be asked
-    tools, _, found = toolset(tmp_project, home, config, project_exec=True)
+    tools, _, found, _, _ = toolset(tmp_project, home, config, project_exec=True)
     assert [s.name for s in found] == ["one", "two"]
 
 

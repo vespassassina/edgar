@@ -20,7 +20,9 @@ from edgar.config.schema import Config, ModelSection
 from edgar.context.tokens import message_text
 from edgar.core.events import EventBus
 from edgar.core.loop import run_turn
-from edgar.skills.discovery import discover, split
+from edgar.core.message import Message, ToolUseBlock
+from edgar.skills.activate import activate, touched_paths, verify_command
+from edgar.skills.discovery import Skill, discover, split
 from edgar.tools.base import ToolContext
 from edgar.tools.builtin.skill import SkillTool
 from edgar.tools.custom import load
@@ -223,3 +225,39 @@ def test_the_example_skills_validate(tmp_project: Path, home: Path) -> None:
     found = discover(tmp_project, home)
     assert found.problems == [] and "changelog" in found.skills
     assert (found.skills["changelog"].path.parent / "template.md").is_file()  # [SKL-5]
+
+
+# deterministic activation [SKL-17]
+
+
+def test_a_typed_keyword_activates_a_skill(tmp_project: Path) -> None:
+    folder = _skill(_project(tmp_project), "deploy", body="Run `just ship`.")
+    skill = Skill("deploy", "Use when deploying.", folder / "SKILL.md", "project", (), ("ship",))
+    hits = activate({"deploy": skill}, "please ship this", ())
+    assert hits == ["skill deploy:\nRun `just ship`."]
+    assert activate({"deploy": skill}, "please build this", ()) == []
+
+
+def test_a_touched_path_activates_a_skill(tmp_project: Path) -> None:
+    folder = _skill(_project(tmp_project), "migrate", body="Check the schema.")
+    skill = Skill("migrate", "Use when migrating.", folder / "SKILL.md", "project", ("*.sql",))
+    hits = activate({"migrate": skill}, "hi", ("schema.sql",))
+    assert hits == ["skill migrate:\nCheck the schema."]
+    assert activate({"migrate": skill}, "hi", ("readme.md",)) == []
+
+
+def test_touched_paths_reads_the_most_recent_round_of_tool_calls() -> None:
+    calls = (ToolUseBlock("1", "read", {"path": "a.txt"}), ToolUseBlock("2", "write", {}))
+    transcript = [Message.user("hi"), Message(role="assistant", content=calls)]
+    assert touched_paths(transcript) == ("a.txt",)
+    assert touched_paths([]) == ()
+    assert touched_paths([Message.user("hi")]) == ()
+
+
+def test_verify_command_chains_loaded_skills_in_order(tmp_project: Path) -> None:
+    folder = _skill(_project(tmp_project), "a")
+    first = Skill("a", "Use when a.", folder / "SKILL.md", "project", verify="one")
+    second = Skill("b", "Use when b.", folder / "SKILL.md", "project", verify="two")
+    assert verify_command([first, second]) == "one && two"
+    assert verify_command([Skill("c", "Use when c.", folder / "SKILL.md", "project")]) is None
+    assert verify_command([]) is None

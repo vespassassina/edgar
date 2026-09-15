@@ -7,17 +7,17 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 ## Pick up here
 
-The next piece of work, as of 2026-09-15, now that M9 is done (this session):
+The next piece of work, as of 2026-09-15, now that M10 is done (this session):
 
-1. **M10**, scoped by ADR-0053: the extension manifest and discovery, `ext list`
-   only, hooks entire, provider plugin entry points, deterministic skill activation
-   and the description lint, a skill's `verify`, `edgar.run()` and the remaining
-   slash commands. `edgar.run()` should be designed for the caller in
-   [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md) — one program owning
-   many sessions across many project directories, starting turns nobody is watching.
-   Read [ADR-0053](adr/0053-what-1-0-actually-ships.md) first: it says what 1.0 no
-   longer ships, and building a cut item by mistake is the easiest way to waste the
-   remaining budget (626 lines of code left in v1's tier as of this session).
+1. **M11**, the last v1 milestone and the 1.0 release: `edgar init`, `edgar
+   doctor`, docs. Read the M11 section of [ROADMAP.md](ROADMAP.md) first, and
+   note the budget: only 82 lines of code left in v1's 8,000-line tier as of
+   this session, so anything that does not fit needs a simplification pass
+   first, not a raised budget ([ADR-0050](adr/0050-trim-should-items-from-v1.md)
+   is the precedent for how that trim gets decided). ADR-0053 already cut plan
+   mode, the `todo` tool, `edgar route explain`, `edgar agents list|validate`,
+   `ext validate`, `ext add`, the `edgar.testing.contract` kit, `config show
+   --resolved` and `edgar context show` from 1.0 — do not build any of them.
 
 ## Open items
 
@@ -123,10 +123,59 @@ Carried forward until done. Newest first.
 - **The picker's provider question has no default.** In `edgar models`, Enter at
   "provider?" cancels. A sensible default would be the first provider whose key
   is set, or Ollama if it answers; it needs a few lines of code Core does not have.
-- **A skill's `verify` command** is accepted and ignored in Core; it moves to M10
-  with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-15 · Closing M10
+
+**Asked**
+- "Next milestone" — the standing instruction that has driven every session
+  since M9 closed: pick up the next item on the "Pick up here" list and build
+  it.
+
+**Done**
+- M10 is done, commit and [ADR-0055](adr/0055-m10-extensions-as-built.md).
+  Extensions, discovery, `edgar ext list`, hooks and provider plugins had
+  landed earlier in this session; this pass closed out the rest:
+  - Deterministic skill activation [SKL-17] wired into both `cli/oneshot.py`
+    and `cli/repl.py` via `skills/activate.py`'s `matching()` and `bodies()`,
+    so a keyword the user typed or a path the last round touched loads a
+    skill without the model calling the `skill` tool.
+  - A loaded skill's own `verify:` command as a VER-1 source. `--verify`
+    (session-level) and an agent's frontmatter (spawn-time) were already
+    known before a turn starts; a skill's is only known once that turn's
+    prompt is read, so `cli/setup.py` gained `verify_for_turn()`, mirroring
+    the existing per-turn override `daily()` already does for the cost cap.
+    Chaining more than one loaded skill's command joins them with `" && "` in
+    `skill_verify()` — one `Check`, first failure wins. Authorising a verify
+    command needed the same guard check in `agents/spawn.py` that
+    `cli/setup.py` already did, but `agents/` cannot import `cli/`; the check
+    moved down into a new `core/verify.py::authorise()` that both sit above.
+  - `edgar.run()` [EXT-9], the embedding API, in `src/edgar/__init__.py`:
+    a thin async wrapper that builds a session and calls the same
+    `run_turn()` the CLI does, with an `asker` for out-of-band permission
+    answers and `subscribers` for the frozen event format — exactly what
+    [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md)'s supervisor
+    caller needs. Every non-trivial import is deferred inside the function
+    body, checked with `-X importtime`, because `__init__.py` runs on every
+    `import edgar.anything`, not only the CLI entry point.
+  - The remaining slash commands `/agents`, `/skills`, `/tools` [CLI-14],
+    each a thin dump of state the session already built during `setup()`.
+  - Two `test_tour.py` failures left over from the previous session: stop 23
+    converted from "planned" to a built stop, and the size table's drifted
+    `cli/` row corrected (and a missing `extensions/` row added).
+- `just check` is clean: 667 tests passing, ruff and mypy clean on every
+  touched file. v1 is at 7,918 of 8,000 lines of code — 82 left for M11.
+
+**Decided**
+- [ADR-0055](adr/0055-m10-extensions-as-built.md): the five decisions above,
+  in full — the per-turn verify override's shape, chaining verify commands
+  with `&&`, moving verify authorisation down to `core/verify.py`,
+  `edgar.run()`'s deferred imports and its optional keyword surface, and
+  `/agents` reading `Setup.tools` rather than `Runtime.tools` so a test
+  harness that overrides `Runtime.tools` cannot silently disagree with it.
+
+**Next:** M11 — init, doctor, docs, the 1.0 release.
 
 ## 2026-09-15 · Closing M9
 

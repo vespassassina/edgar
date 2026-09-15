@@ -168,6 +168,20 @@ def test_spawn_turns_a_provider_failure_into_a_tool_error(tmp_project: Path) -> 
     assert "helper" in result.text and "failed" in result.text
 
 
+# spawn(): the agent's own `verify:` frontmatter authorises before its turn [VER-1, VER-4]
+
+
+def test_spawn_denies_a_verify_command_its_guard_would_not_allow(tmp_project: Path) -> None:
+    ctx = build_context(new_session(tmp_project), runtime(scripted()))
+    config = Config(model=ModelSection(default="fake/test"))
+    agent = AgentDefinition(
+        name="helper", description="Helps.", path=Path("x.md"), prompt="Help.", verify="true"
+    )
+    result = _run_spawn(agent, "hi", ctx=ctx, config=config, guard=guard(tmp_project))
+    assert result.error == "internal"
+    assert "verify command" in result.text and "not allowed" in result.text
+
+
 # spawn(): a model with no tool support is refused at selection [ROUTE-6]
 
 

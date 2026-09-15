@@ -34,7 +34,8 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 0.1.0 |
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
 | M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
-| M10–M17 | Planned | 1.0, 2.0 |
+| M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
+| M11–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -407,6 +408,15 @@ skill in unaudited in v1, the conformance and danger checks stay manual until
 v2 wires SKL-18 into it.
 
 **Resolves:** OQ-9 (`ext update`).
+
+*2026-09-15: M10 is done ([ADR-0055](adr/0055-m10-extensions-as-built.md)).
+Extensions, hooks and provider plugins had landed earlier; this pass closed
+out deterministic skill activation wired into both CLI paths [SKL-17], a
+loaded skill's own `verify:` command taking its place in VER-1's precedence
+chain, `edgar.run()` as the embedding API [EXT-9] with every non-trivial
+import deferred inside its body so a bare `import edgar` stays on the NFR-1
+budget, and the remaining slash commands `/agents`, `/skills`, `/tools`
+[CLI-14]. v1 is at 7,918 of 8,000 lines of code — 82 left for M11.*
 
 ---
 

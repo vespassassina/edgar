@@ -1,9 +1,9 @@
 """Tools by name, which one wins a name, and which schemas a request can afford
 [TOOL-9, TOOL-15].
 
-    project custom  >  user custom  >  MCP  >  built-in
+    project custom  >  user custom  >  extensions (by name)  >  MCP  >  built-in
 
-Extensions join the order in M10. A replaced tool is reported, never silent.
+A replaced tool is reported, never silent.
 """
 
 # Building a registry:
@@ -94,8 +94,8 @@ def cost(schemas: Iterable[ToolSchema]) -> int:
 
 
 def _defers(tool: Tool) -> bool:
-    # Built-ins and the tools a human wrote are always sent; MCP is what grows
-    # without bound. Extensions join it in M10.
+    # Built-ins, extension and hand-written tools are always sent; MCP is what
+    # grows without bound.
     return tool.schema.kind == "mcp"
 
 
@@ -113,15 +113,17 @@ def registry_for(
     project_exec: bool,
     extra: Iterable[Tool] = (),
     mcp: Iterable[Tool] = (),
+    ext: Iterable[Tool] = (),
     budget: int | None = None,
 ) -> ToolRegistry:
     """Built-ins and `extra` (the `skill` tool), then the MCP servers' tools, then
-    `~/.edgar/tools/*.toml`, then, in a trusted project, `.edgar/tools/*.toml`
-    [PERM-13]. Later beats earlier, so a tool a human wrote wins its name."""
+    `ext` (an extension's bundled `tools/` [EXT-8]), then `~/.edgar/tools/*.toml`,
+    then, in a trusted project, `.edgar/tools/*.toml` [PERM-13]. Later beats
+    earlier, so a tool a human wrote wins its name."""
     from edgar.tools.builtin.fs import builtins
     from edgar.tools.custom import load
 
     folders = [(home / ".edgar" / "tools", "user")]
     if project_exec:
         folders.append((cwd / ".edgar" / "tools", "project"))
-    return ToolRegistry([*builtins(shell), *extra, *mcp, *load(folders)], budget=budget)
+    return ToolRegistry([*builtins(shell), *extra, *mcp, *ext, *load(folders)], budget=budget)

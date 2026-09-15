@@ -222,7 +222,7 @@ def test_a_control_file_changed_during_a_session_warns_the_next_one(
     s = setup(tmp_project, config, home=home, env={})
     session = start(Session(cwd=tmp_project, model="fake/test", mode="ask"))
     (tmp_project / "AGENTS.md").write_text("be terse\n")  # e.g. a write the user allowed
-    finish(s, session)
+    finish(s, session, EventBus())
     again = setup(tmp_project, config, home=home, env={})
     assert any("AGENTS.md" in w and session.id in w for w in again.warnings)  # [PERM-12]
 
