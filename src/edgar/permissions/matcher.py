@@ -10,11 +10,13 @@ decision; `decide()` gets the result.
 from __future__ import annotations
 
 import fnmatch
+import ipaddress
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 # Credentials: never readable or writable by the model outside yolo.
 CREDENTIALS = (".ssh", ".aws", ".gnupg", ".kube", ".docker", ".netrc", ".config/gcloud")
@@ -72,3 +74,19 @@ def within(path: Path, cwd: Path, globs: Iterable[str]) -> bool:
 
 def credential(path: Path, home: Path) -> bool:
     return any(inside(path, home / name) for name in CREDENTIALS)
+
+
+def link_local(url: str) -> bool:
+    """True when a URL's host is a literal link-local address: 169.254.0.0/16 or
+    fe80::/10, the range every major cloud serves its instance-metadata endpoint
+    on (169.254.169.254), so a fetched or injected URL cannot walk off with the
+    machine's cloud credentials [PERM-16]. Only a literal IP is caught; a hostname
+    that merely resolves there still gets through, which is why this sits beside
+    the catastrophic-command list rather than replacing a sandbox."""
+    host = urlsplit(url).hostname
+    if host is None:
+        return False
+    try:
+        return ipaddress.ip_address(host).is_link_local
+    except ValueError:
+        return False

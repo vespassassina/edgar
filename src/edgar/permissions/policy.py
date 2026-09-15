@@ -1,11 +1,13 @@
-"""The permission decision: one pure function [PERM-1..5, PERM-11, PERM-12, PERM-14].
+"""The permission decision: one pure function
+[PERM-1..5, PERM-11, PERM-12, PERM-14, PERM-16].
 
 Everything that needs I/O (resolving paths, loading grants, asking the user) is
 done by the caller, `permissions/guard.py`. What is left can be tested
 exhaustively. First match wins:
 
-1. the hard layer, which no rule or grant overrides: catastrophic commands,
-   credentials, control files, and anything outside the working directory
+1. the hard layer, which no rule or grant overrides: catastrophic commands, a
+   literal link-local URL (cloud metadata), credentials, control files, and
+   anything outside the working directory
 2. an explicit per-tool rule from config, then a grant a human gave
 3. the mode's default, tightened by taint in `auto`; `remember` only proposes a
    fact a human confirms later, so it needs no prompt outside read-only [MEM-21]
@@ -79,6 +81,8 @@ def _decide(tool: ToolSchema, s: Subject, p: Policy) -> Decision:
     # 1. The hard layer.
     if any(matcher.matches(c, matcher.CATASTROPHIC) for c in commands):
         return Deny(f"{s.text!r} is never run", "hard")
+    if kind == "network" and matcher.link_local(s.text):
+        return Deny(f"{s.text} names a link-local address", "hard")  # [PERM-16]
     if p.mode == "yolo":
         return Allow("mode")
     if s.path is not None:
