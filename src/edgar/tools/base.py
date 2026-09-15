@@ -4,10 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from edgar.core.events import EventBus
 from edgar.core.message import ErrorKind
+
+if TYPE_CHECKING:
+    from edgar.core.loop import Runtime
+    from edgar.core.session import Session
 
 Category = Literal["read", "write", "shell", "network", "memory", "agent"]
 
@@ -44,6 +48,26 @@ class ToolContext:
     blob_dir: Path  # where spilled output goes [CTX-13]
     max_output_tokens: int
     timeout_s: float = DEFAULT_TIMEOUT_S
+    mode: str = "ask"  # the calling session's mode, for a subagent to narrow [PERM-8]
+    depth: int = 0  # 0 is the main loop; the `task` tool checks it against the ceiling [SUB-6]
+    chain: tuple[str, ...] = ()  # agent names already running in this call stack [SUB-10]
+    budget_remaining: float | None = None  # what is left to inherit [SUB-7]
+
+
+def build_context(session: Session, rt: Runtime) -> ToolContext:
+    """What every tool call in the turn gets, assembled once per turn."""
+    cap = rt.budget.session_cost_cap
+    remaining = None if cap is None else cap - (session.cost or 0.0)
+    return ToolContext(
+        cwd=session.cwd,
+        bus=rt.bus,
+        blob_dir=session.dir / "blobs",
+        max_output_tokens=rt.max_output_tokens,
+        mode=session.mode,
+        depth=session.depth,
+        chain=session.agent_chain,
+        budget_remaining=remaining,
+    )
 
 
 class Tool(Protocol):

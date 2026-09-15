@@ -7,6 +7,7 @@ answers, and emits one `PermissionResolved` per decision. `decide()` stays pure.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -30,6 +31,10 @@ class Guard:
     store: Store | None = None  # where "always" goes
     granted: set[tuple[str, str]] = field(default_factory=set)
     prompt_denials: int = 0  # Asks nobody could answer: `-p` exits 5 [PERM-7]
+    # A subagent shares its parent's Guard (BLUEPRINT §9), so concurrent `task`
+    # calls that fan out [TOOL-12] can each reach `_ask()` at once; the lock
+    # makes the asker see one prompt at a time, never several interleaved.
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
     def __post_init__(self) -> None:
         if self.store is not None:
@@ -46,6 +51,7 @@ class Guard:
         call_id: str,
         bus: EventBus,
         subject: Subject | None = None,
+        agent_id: str = "main",
     ) -> Allow | Deny:
         s = subject or resolve(args, cwd)
         policy = replace(
@@ -58,7 +64,7 @@ class Guard:
         )
         decision: Decision = decide(tool, s, policy)
         if isinstance(decision, Ask):
-            decision = await self._ask(tool.name, s.text, decision)
+            decision = await self._ask(tool.name, s.text, decision, agent_id)
         if isinstance(decision, Deny) and decision.needed_prompt:
             self.prompt_denials += 1
         reason = decision.reason if isinstance(decision, Deny) else ""
@@ -75,9 +81,11 @@ class Guard:
         )
         return decision
 
-    async def _ask(self, tool: str, text: str, ask: Ask) -> Allow | Deny:
+    async def _ask(self, tool: str, text: str, ask: Ask, agent_id: str) -> Allow | Deny:
         assert self.asker is not None  # decide() turns Ask into Deny when non-interactive
-        answer = await self.asker(tool, text, ask.reason)
+        reason = ask.reason if agent_id == "main" else f"[{agent_id}] {ask.reason}"
+        async with self._lock:  # one prompt at a time, however many agents are asking
+            answer = await self.asker(tool, text, reason)
         if answer == "deny":
             return Deny("you said no", "user")
         if answer in ("session", "always"):

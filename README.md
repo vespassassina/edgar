@@ -33,8 +33,10 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
   Works with small local models too.
 - **No hidden calls.** edgar never contacts a host you did not configure, has no
   telemetry, and its system prompt is a short file you can read and replace.
-- **Done means verified.** A turn that changed something ends when your check
-  passes, not when the model says it is finished.
+- **Done means verified, when you say what that means.** Declare a check with
+  `--verify` or `verify.command`, and a turn that changed something ends when it
+  passes, not when the model says it is finished. Declare nothing and edgar stops
+  the way any tool does: honestly, this only fires if you ask it to.
 
 ## Quick start
 
@@ -131,6 +133,24 @@ loop and a function call, and production systems whose complexity buries the
 interesting parts. There is a gap in the middle: a harness that implements the
 genuinely hard bits honestly, at a size a person can hold in their head.
 
+### Why I built it, and how
+
+I wanted to learn how these things actually work underneath an SDK: how a tool
+call gets repaired when a small model writes bad JSON, how compaction avoids
+corrupting a transcript mid-conversation, how a permission decision gets made
+without a black box. It's for myself first — it always is.
+
+Most of the code was written by an AI coding agent, working from a spec I wrote
+and revised, under decisions I made and can point to: every one that a reasonable
+person could make differently is an [ADR](docs/adr/), every session is a dated
+entry in the [journal](docs/JOURNAL.md), and the size budgets, the pseudocode
+comments, the "humans widen, machines tighten" rule — all of it exists so the
+result stays something a person can actually read, not just something that
+compiles. I say this here because a project like this earns more trust hiding
+nothing than pretending otherwise.
+
+It's named after my son. He's also the reason I build things at all.
+
 ## What it does
 
 **Terminal-native.** Interactive REPL for daily use, `-p` for one-shot and pipes.
@@ -170,20 +190,18 @@ subscription: vendors keep those for their own apps
 ([ADR-0032](docs/adr/0032-oauth-keys-and-mcp.md)). Small local models that
 fence their tool calls or write them as plain JSON are repaired, deterministically.
 
-**Subagents with their own models.** Declared in markdown, not code. Run a cheap
-local model for exploration and an expensive one for review, in parallel, each with
-its own tool allowlist and budget.
+**Extend it without Python, today.** Give the agent a CLI with a command tool (an
+argv template, never a shell) or an API with an HTTP tool (a request template with
+the host fixed and secrets from the environment). Add MCP servers or skills in
+Claude's `SKILL.md` format. All four are built and in Core or 0.1.
 
-**Model routing that isn't magic.** Declarative rules pick the model before the
-turn, as a pure function with zero model calls. Escalation and fallback are kept
-separate from routing and from each other, because "not capable enough" and "not
-reachable" want different responses. Every switch is announced.
-
-**Extend it without Python.** Give the agent a CLI with a command tool (an argv
-template, never a shell) or an API with an HTTP tool (a request template with the
-host fixed and secrets from the environment). Add MCP servers, skills in Claude's
-`SKILL.md` format, subagents in markdown, and hooks that can veto a tool call.
-Bundle any of it into an extension folder and share it by copying.
+**Coming in 1.0 (M9 to M11, designed and specced, not yet built).** Subagents
+declared in markdown, so a cheap local model can explore while an expensive one
+reviews, each with its own tool allowlist and budget. Declarative model routing as
+a pure function with zero model calls, escalation and fallback kept apart because
+"not capable enough" and "not reachable" want different responses. Hooks that can
+veto a tool call, and extension folders that bundle any of the above and share it
+by copying.
 
 **Long sessions that stay valid.** Context is compressed in stages, cheapest
 first: big outputs spill to disk, old tool results become stubs, old turns fold
@@ -195,9 +213,14 @@ facts live in separate places, on purpose. Only what you type, or an error the
 harness classified itself, becomes a fact. When the model wants to remember
 something, it asks you first. Tool output and web pages never reach memory.
 
-**Safe to point at a repo you just cloned.** Project hooks, MCP servers and tools
-run only after you trust the project. The agent cannot edit its own config without
-asking, and `auto` mode tightens after it reads untrusted content.
+**Safer to point at a repo you just cloned, honestly described.** Project hooks,
+MCP servers and tools run only after you trust the project. The agent cannot edit
+its own config without asking, and `auto` mode tightens after it reads untrusted
+content. Shell command matching is documented as a speed bump, not a boundary
+([PERM-14](docs/PRD.md#74-permissions)); the one thing that *is* a hard, unconditional
+denial — even in `yolo` — is a `fetch` or HTTP call that literally names the cloud
+metadata address ([PERM-16](docs/adr/0049-network-hard-layer.md)). For anything
+genuinely untrusted, [run it in a container](docs/COOKBOOK.md#run-untrusted-work-in-a-container).
 
 **A controller that cannot hurt you** (v2). Deterministic checks after each turn;
 a cheap model runs only when one trips. It returns typed proposals from a fixed
@@ -233,8 +256,9 @@ something to argue with.
 | [Blueprint](docs/BLUEPRINT.md) | Architecture, module map, data model, interfaces |
 | [ADRs](docs/adr/) | Decisions, with the alternatives that were rejected |
 | [Decisions](docs/DECISIONS.md) | The v0.3 and v0.4 revisions in one page: tiers, context, memory, extensions, security, ports |
+| [FAQ](docs/FAQ.md) | AGPL, Python, "another harness", the docs-to-code ratio, the AI-agent build, the name |
 | [Field review](docs/research/hn-2026-09.md) | What 11,647 Hacker News comments say about agent harnesses |
-| [Cookbook](docs/COOKBOOK.md) | Recipes: a local model, pipes, your own tools and skills, a check that decides done |
+| [Cookbook](docs/COOKBOOK.md) | Recipes: a local model, pipes, your own tools and skills, a container for untrusted work, a check that decides done |
 | [Roadmap](docs/ROADMAP.md) | Eighteen milestones in three tiers, each one shippable |
 | [Testing](docs/TESTING.md) | How you test something nondeterministic |
 | [Brainstorm](docs/BRAINSTORM.md) | The original design conversation |

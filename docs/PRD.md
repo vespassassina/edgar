@@ -163,6 +163,10 @@ passes its suite with the v2 packages deleted [NFR-12].
 - Scheduling via `tick`, host installers, `schedule_self`
 - A capability broker: each tool call checked against a ticket bound to what
   the human typed, with a signed receipt of every allow and refusal
+- Media input: one `ImageBlock` in the message vocabulary, images spilled to blobs
+  like tool output, a provider that cannot take one failing loudly, and every other
+  format converted to text and images by a tool at the boundary. Not yet assigned
+  to a milestone ([ADR-0052](adr/0052-media-input-in-v2.md))
 
 **Requirement map.** IDs keep their numbers; this table says which tier delivers
 them. A constraint (for example MEM-9) applies from the tier in which its mechanism
@@ -173,10 +177,10 @@ first lands.
 | CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 20, 22, 29; the rest of 25; rest of 14 (`/plan /go /save /history /fork /remember /memory /skills /agents /tools /init /browser`) | `/scope` and `--scope` (CAP-4) |
 | Providers | 1–13, 15–17, 20 | 14, 18, 19 | — |
 | Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 14, 15; `task` `todo` `remember` `recall` | `schedule_self` |
-| Permissions | 1–14 | 15 | — |
-| Context | 1, 3–9, 11–17, 19 | 2, 10, 18 | — |
-| Subagents | — | 1–11 | — |
-| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17, 18; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16 |
+| Permissions | 1–14 | — | 15 |
+| Context | 1, 3–9, 11–17, 19 | 2, 18 | 10 |
+| Subagents | — | 1–10 | 11 |
+| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16, 18 |
 | Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
 | Controller | — | — | 1–13 |
 | Routing | 1 (static roles) | 2–4, 6, 7, 9, 10 | 5, 8, 11, 12 |
@@ -216,8 +220,12 @@ concurrent execution of independent read-only tool calls within one response
 (calls run in order; consecutive `task` calls already fan out, TOOL-12),
 remote/shared memory, embedding or graph retrievers in core (a retriever port
 exists for plugins, ADR-0024), a TUI mode, `git` and language-server tools,
-generating HTTP tools from an OpenAPI spec, Homebrew and Scoop manifests, image and
-multimodal input.
+generating HTTP tools from an OpenAPI spec, Homebrew and Scoop manifests.
+
+Image and multimodal input moved from here into v2 scope
+([ADR-0052](adr/0052-media-input-in-v2.md)): one `ImageBlock` in the message
+vocabulary and nothing else, every other format converted to text and images by a
+tool at the boundary.
 
 ## 6. User journeys
 
@@ -486,6 +494,7 @@ Requirements are numbered for traceability. Each milestone in
 | PERM-13 | **Project trust.** Executable project config (hooks, MCP servers, command and HTTP tools, extensions, `verify.command`) runs only in a trusted project. Interactive first use lists it and asks; trust is keyed by project path and a hash of that config and is asked again when the hash changes. Non-interactive and untrusted exits 3 naming `edgar trust` and `--no-project-exec`. User-scope config is trusted | Must |
 | PERM-14 | Shell commands are split on `;` `&&` `||` `\|` and newlines after whitespace normalisation; denied if any segment matches a deny pattern, auto-allowed only if every segment matches an allow pattern; command substitution is never auto-allowed. Documented as a speed bump, not a boundary | Must |
 | PERM-15 | Sandbox port: `shell.sandbox = "none" \| "bwrap" \| "seatbelt" \| "container"` runs `shell`, command tools and the verify command inside the chosen backend, with the project and blob directories writable and network per the permission decision. Default `none`; `doctor` recommends an available backend; an unavailable configured backend fails loudly ([ADR-0022](adr/0022-ports-and-adapters.md)) | Should |
+| PERM-16 | **Network hard layer.** `fetch` and any HTTP tool whose URL names a literal link-local address (169.254.0.0/16, fe80::/10 — the range every major cloud serves its instance-metadata endpoint on) is denied in every mode, `yolo` included, in the same hard layer as catastrophic commands. Only a literal IP is caught; a hostname that resolves there still gets through, and loopback and private ranges are unaffected ([ADR-0049](adr/0049-network-hard-layer.md)) | Must |
 
 ### 7.5 Context and compaction
 
@@ -695,7 +704,7 @@ event; an **extension** is a folder bundling any of them.
 |---|---|---|
 | EXT-1 | An extension is a folder with `extension.toml` (`name`, `version`, `description`, optional `requires = { edgar, commands }`) and any of `tools/`, `skills/`, `agents/`, `hooks.toml`, `mcp.toml` | Must |
 | EXT-2 | Discovered at `./.edgar/extensions/` and `~/.edgar/extensions/`; enabled by presence, disabled by `extensions.disabled`; project extensions are executable project config (PERM-13) | Must |
-| EXT-3 | `edgar ext list`, `ext validate` (manifest schema, required commands on PATH) and `ext add PATH\|GIT_URL`, which audits every skill it would copy (SKL-18), shows the report, then copies the folder in and records source and commit in the manifest. No index, search or update service | Must |
+| EXT-3 | `edgar ext list`, `ext validate` (manifest schema, required commands on PATH) and `ext add PATH\|GIT_URL`, which copies the folder in and records source and commit in the manifest. No index, search or update service. In v1, copies skills unaudited; SKL-18 lands in v2 and `ext add` starts running it first ([ADR-0050](adr/0050-trim-should-items-from-v1.md)) | Must |
 | EXT-4 | Hooks declared as `[[hooks]]` with `event`, optional `match`, `command` (argv list) and `timeout_s`, in config or an extension's `hooks.toml` | Must |
 | EXT-5 | Hook events: `session_start`, `pre_tool`, `post_tool`, `turn_end`, `verify_finished`, `session_end`. The hook receives the event as JSON on stdin | Must |
 | EXT-6 | A `pre_tool` hook may only veto: exit 2 denies with stderr as the reason returned to the model; any other failure or timeout also denies (fail closed). Hooks cannot modify arguments or allow what policy denies | Must |
@@ -890,6 +899,7 @@ model's own `write` and `edit` calls on control files always go through a prompt
 | Autolearn poisoned via injected content | Persistent compromise across sessions | Only typed text and harness-computed error records create active facts (MEM-8/9/22); model-proposed and distilled facts stay pending until a human confirms (MEM-17/21) |
 | A cloned repository ships hooks, MCP servers or tools that run on launch | Arbitrary code execution from `git clone && edgar` | Project trust keyed by a hash of executable config (PERM-13); non-interactive untrusted runs exit 3 |
 | `auto` mode reads a page with injected instructions and exfiltrates data | Data leaves the machine | Taint tightens `auto` defaults for shell and network egress after untrusted content arrives (PERM-11); the docs recommend a container for untrusted work |
+| A `fetch` call, model-directed or injected, reaches the cloud instance-metadata endpoint | Cloud credential theft, before the session is even tainted | A literal link-local URL is denied in the hard layer, in every mode including `yolo` (PERM-16); a hostname that merely resolves there is not caught, so this is a floor, not a sandboxed network policy |
 | The agent edits its own config to widen its policy | Silent privilege growth | Control files are always-ask and read once per session (PERM-12, CFG-8); grants live in the DB, not in config (PERM-6) |
 | Scope grows past "lightweight" | Unreadable codebase, never ships | Per-tier size budgets (NFR-4) and a removable v2 (NFR-12) |
 | A dependency or release is compromised (as LiteLLM's was in 2026) | Malware on users' machines | Five required dependencies, hash-pinned lockfile, trusted publishing with attestations, one distribution to secure (NFR-5, NFR-14, ADR-0022) |

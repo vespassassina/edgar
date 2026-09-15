@@ -9,6 +9,46 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 Carried forward until done. Newest first.
 
+- **Driving edgar from a phone is a separate project that does not exist yet.**
+  Decided in [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md) and unstarted.
+  **Desired result:** edgar runs continuously on a Proxmox container; an iOS app
+  opens projects (empty ones, filled by upload), starts sessions, follows them from
+  a cursor over the append-only record, and answers permission prompts; the Mac
+  terminal connects to that same instance instead of running its own. edgar's only
+  obligations are `edgar.run()` (EXT-9, M10) and the frozen formats (EXT-10) — the
+  "Never" list still says no server, no HTTP API, no GUI, and none of that changes.
+  Open before anyone starts: whether that project is AGPL too, and whether it
+  depends on `edgar-harness` as a library or drives the CLI.
+- **Media input is v2 scope with no milestone.**
+  [ADR-0052](adr/0052-media-input-in-v2.md) moved image and multimodal input out of
+  "deferred past v2", because models read images and documents now and a phone
+  client makes it structural. **Desired result:** one `ImageBlock` in
+  `core/message.py` and nothing else; PDF, PPTX, audio and video converted to text
+  and images by a tool at the boundary; images spilled to blobs like tool output; a
+  provider that cannot take one failing loudly; token counting that knows image
+  geometry. Estimated 150–250 lines of code against v2's 11,000, which does not
+  move. Give it a slot when v2 is planned.
+- **Four capabilities the v1.0 pitch ("extensible and remembers") implies don't
+  ship at 1.0.** Trimmed from M9–M11 up front, before writing the code, to fit
+  the fixed 8,000-LOC v1 budget with 1,144 lines left when the cut was made
+  ([ADR-0050](adr/0050-trim-should-items-from-v1.md)): worktree-isolated
+  subagents (`isolation: worktree`, SUB-11 — every subagent runs in the
+  parent's own working copy in v1), sandboxed shell execution (PERM-15 —
+  `shell.sandbox` keeps its `bwrap`/`seatbelt`/`container` type, only `none`
+  runs anything), `edgar skills audit` (SKL-18 — `ext add` copies a skill in
+  unaudited), and `edgar sessions compact ID` outside the REPL (CTX-10 —
+  in-REPL `/compact` is unaffected). Each is a real gap, not a rounding error;
+  all four move to v2.
+- **The cost table is stale and needs a live check, not a guess.**
+  `providers/pricing.py`'s `BUILTIN` table says `CHECKED = "2026-09-13"` in its own
+  header and its docstring already admits it is "small and dated" — that self-
+  disclosure was judged enough for the pre-launch pass, but it is a standing gap,
+  not a closed one. Whoever does this needs current numbers from each provider's
+  own pricing page (not memory, not a guess): OpenAI's `gpt-5` family, Anthropic's
+  `claude-opus-4-5` / `claude-sonnet-4-5` / `claude-haiku-4-5` (confirm those are
+  still the current model slugs, not superseded ones), and anything OpenRouter
+  reports live already skips this table by design. Update `CHECKED` to the date it
+  was actually done, and cite the source page per model.
 - **There is no first-run wizard, and a fresh install has no config at all.**
   `edgar init` and `edgar doctor` are M11 and unbuilt, so today the only thing that
   ever writes config is the picker, which writes one key (`[model] default`) and
@@ -40,8 +80,10 @@ Carried forward until done. Newest first.
   (and azure, openrouter, anthropic). Only Ollama's are recorded so far.
 - **Live smoke workflow** (TESTING.md layer 5) is specified but not created; it
   needs provider secrets in the repository settings first.
-- **Size watch.** The budget test measures v1: 6,809 of 8,000 lines of code,
-  1,191 left for M9 to M11. Core's own files stayed at 5,000.
+- **Size watch.** The budget test measures v1: 7,398 of 8,000 lines of code,
+  602 left for the rest of M9 plus M10 and M11. Core's own files stayed at 5,000;
+  `core/loop.py` itself sits at 199 of its own 200-line cap, 1 line of slack —
+  the next thing that needs room there should plan on its own extraction.
 - **`/skills` and `/tools` in the REPL** still say they arrive in M6, which is done;
   `edgar skills list` and `edgar tools list` exist. Wire them or relabel them.
 - **A moved project loses its facts** (ADR-0045): the scope is a hash of the path.
@@ -53,6 +95,408 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-15 · Consecutive subagents fan out
+
+**Asked**
+- Continue M9 toward closing v1: fan-out concurrency for consecutive `task`
+  calls (TOOL-12) was the largest item left open in the previous entry.
+
+**Done**
+- `tools/execute.py`: a new `execute_many()` runs a whole response's tool
+  calls, one at a time, except a run of consecutive `task` calls, which it
+  groups and awaits together with `asyncio.gather`, bounded by an
+  `asyncio.Semaphore` sized from `max_parallel`. `_fan_out_group()` finds each
+  run; results come back as one list, in the original call order, regardless
+  of which call in a group finished first. `execute()` itself — the one-call
+  primitive validate → permission → run → spill — is unchanged; fanning out
+  is only ever concurrent `execute()` calls, never a second code path.
+- `core/loop.py`: `_run_tools()` now calls `execute_many()` and only keeps the
+  books — the verify gate's `acted` flag, session tainting — replaying them
+  over the returned results in call order, so nothing here can race even
+  though the calls themselves ran concurrently. The change came in a hair
+  over the file's 200-line cap at first (203); moving the grouping and the
+  semaphore into `execute_many()` and having it return a plain list instead
+  of calling back into a closure brought it in at 199, 1 line of slack.
+- `tests/unit/test_execute.py`: `_fan_out_group()`'s own grouping logic
+  parametrized over seven call-name shapes; and `execute_many()` timed with a
+  `_Waiter` stub tool that actually sleeps — asserting a run of `task` calls
+  finishes in well under their summed time, that `max_parallel` caps how many
+  run at once (two batches of two, not four together), that calls under any
+  other name stay strictly sequential, and that results keep call order even
+  when a later call in a group finishes first.
+- `tests/unit/test_spawn.py`: one new end-to-end test sends two `task` calls
+  addressed to two different agents in the same response and checks, through
+  the real loop, that both actually ran (two `TurnStarted` events at depth 1,
+  one per agent id), that each got its own logged session, and that the
+  combined tool-result message keeps the calls' own order.
+- Docs: the tour's stop 22 lost its "still to come" line for this and now
+  names `tools/execute.py` and `execute_many()`; `docs/ROADMAP.md`'s M9
+  section got a second dated note; `CHANGELOG.md`'s existing "Subagents" entry
+  gained a sentence on parallel `task` calls; this entry; and the stale
+  "Size watch" open item (7,158/8,000, `loop.py` at 198) corrected to today's
+  real numbers.
+
+**Decided**
+- The grouping and the `asyncio.gather` belong in `tools/execute.py`, not
+  `core/loop.py`, once the loop's own 200-line cap left no room — the same
+  "extract to a collaborator" move as `providers/fallback.py`'s
+  `next_provider()`. `execute_many()` returning a plain `list[ToolResultBlock]`
+  (rather than an `on_result` callback into the loop) was chosen over the
+  callback shape specifically because it came out shorter in `loop.py`: a
+  `for call, result in zip(calls, results, ...)` reads the same as the old
+  one-at-a-time loop it replaced, where a callback needed its own nested
+  `def` plus a nine-argument call passing it through.
+- Only calls literally named `task` fan out. The `task` tool's schema name
+  is fixed and it is the only built-in tool with `category="agent"`, so
+  matching on the call's own name (rather than looking the tool up in the
+  registry mid-grouping) keeps `_fan_out_group()` a pure function over the
+  call list alone.
+
+**Open**
+- Multi-row status bar for concurrent subagents [SUB-9] — now the natural
+  next piece, since without it two subagents running at once show as one
+  interleaved stream of events with no way to tell which is which.
+- `edgar route explain`, `edgar agents list|validate`, example agents in
+  `examples/`, plan mode and the `todo` tool — unchanged from the previous
+  entry.
+- Whether `Guard`'s own asking lock (shared across every concurrently running
+  subagent) actually serialises prompts one at a time under real concurrency,
+  not just under the fake provider's effectively-instant calls — this session's
+  tests proved the fan-out's timing and ordering, not its prompt-asking
+  behaviour under contention.
+
+## 2026-09-14 · A subagent is not a second engine
+
+**Asked**
+- Continue M9 toward closing v1: the `task` tool and `agents/spawn.py` were the
+  largest piece still open after routing and fallback landed.
+
+**Done**
+- `agents/spawn.py`: `spawn()` builds a second `Runtime` and calls the same
+  `run_turn()` from `core/loop.py`, with a fresh `Session`, a model picked by
+  `select_model()`'s `role="subagent"` case (or the agent's own `model:`
+  frontmatter), and its tool registry filtered to the agent's `tools:` list
+  when it names one. Four checks keep it inside the parent's policy:
+  `narrow_mode()` never widens the calling session's mode [PERM-8]; a depth
+  counter refuses past `[subagents] max_depth`, itself clamped to a hard
+  `HARD_DEPTH = 5` no config can raise [SUB-6]; `Session.agent_chain` refuses
+  an agent already running above itself [SUB-10]; and `_cap()` gives a
+  subagent the smaller of its own `budget.cost` and whatever the parent has
+  left, flagging the returned text when the cap was hit before the answer was
+  whole [SUB-7]. A raised exception inside `run_turn()` — a bad model string,
+  a dead provider — comes back as a `ToolResult(error="internal")`, never a
+  crash [SUB-8]. `subagents_config()` reads `[subagents]` from
+  `Config.later` the same way `routes_from_config()` and `chain_from_config()`
+  already do for their own not-yet-typed sections.
+- `tools/builtin/task.py`: the `task` tool. Its schema lists every discovered
+  agent by name and description; `TaskTool.run()` looks one up and hands off
+  to `spawn()`; `TaskTool.subject()` labels a permission prompt
+  `agent NAME: task text`, the same pattern command and HTTP tools already use.
+- `tools/base.py`: `ToolContext` gained four read-only fields a subagent needs
+  to narrow itself — `mode`, `depth`, `chain`, `budget_remaining` — and a new
+  `build_context(session, rt)` assembles them once per turn. `core/loop.py`'s
+  `_start()` now calls it instead of building a `ToolContext` inline, which
+  came out net LOC-negative (two lines to one) for a file with three lines of
+  slack left on its own 200-line cap.
+- `core/session.py`: `Session` gained `agent_chain: tuple[str, ...] = ()`,
+  populated by `spawn()` as `(*ctx.chain, agent.name)` — what SUB-10's cycle
+  check reads, and what `tools/execute.py` now reads too:
+  `guard.check(..., agent_id=ctx.chain[-1] if ctx.chain else "main")`, so a
+  subagent's permission prompts are labelled with its own name without
+  `core/loop.py`'s call to `execute()` changing at all. `Guard` itself already
+  took an `agent_id` parameter for this from a prior session; nothing had ever
+  passed one until now.
+- `cli/setup.py`: `setup()` discovers agents (`agents/discovery.py`) and, when
+  any exist, builds `subagents_config(config.later)` and adds a `TaskTool` to
+  the registry, constructed with the session's own `Guard` and `env` — not a
+  throwaway one. (First attempt wired this into `toolset()` instead, with a
+  freshly constructed `Guard` that had no asker and no store; caught before
+  any test ran, since it broke the documented invariant that a subagent
+  shares its parent's `Guard`, and reverted.)
+- One `RoutingContext(mode=...)` mypy error: `narrow_mode()` returns a plain
+  `str` (it computes over `ToolContext.mode`, itself `str`, deliberately not
+  `Mode`, to keep `tools/base.py` from importing `config.schema`'s `Mode`
+  Literal into a contract meant to stay MCP-shaped) but `RoutingContext.mode`
+  is `Mode`. Fixed with one `cast(Mode, mode)` at the call site, with a
+  comment naming why the cast is safe (`narrow_mode()` only ever returns one
+  of `_MODE_RANK`'s own keys, which are `Mode`'s own values).
+- `tests/unit/test_spawn.py`, 25 new tests: `narrow_mode()` and
+  `subagents_config()` as pure functions; `_cap()`'s budget arithmetic;
+  `spawn()`'s cycle refusal, depth refusal, a provider failure turned into a
+  tool error, and a budget-exhausted partial result — all four via `spawn()`
+  directly, no provider resolution needed for the first two; one end-to-end
+  test through the real loop with a `TaskTool` and the fake provider, driving
+  a subagent that actually calls `read`, asserting its `TurnStarted` event
+  carries `depth=1` and `agent_id="helper"` and that it wrote its own session
+  file under `.edgar/sessions/` rather than folding into the parent's; and
+  `TaskTool`'s schema, its `subject()`, and its unknown-agent error.
+- Docs: the tour's stop 22 is a built stop now, linked to `tools/builtin/task.py`
+  and `agents/spawn.py` with a "Look for" line and prose describing what
+  landed and what a fan-out concurrency change would still need; its `agents/`
+  and `tools/` size-table rows updated (~100 → ~220, ~1,200 → ~1,300).
+  `docs/ROADMAP.md`'s M9 section got a dated status note, the same shape M7
+  and M8 used when they were mid-flight. `CHANGELOG.md` gained an "Added"
+  entry for the `task` tool under Unreleased.
+
+**Decided**
+- Extending `ToolContext` with `mode`/`depth`/`chain`/`budget_remaining`,
+  rather than giving tools the whole `Session`, keeps `tools/base.py`'s own
+  documented promise that the tool contract is "MCP-shaped, so MCP is a
+  translation layer, not a second system" [TOOL-1] — a real MCP tool call
+  could never receive a live `Session` object. All four fields are read-only
+  inputs a subagent needs to narrow itself, not state a tool could mutate.
+- `agent.verify` (a subagent's own declared check, from its frontmatter) is
+  parsed by `agents/discovery.py` but not yet wired into the `Runtime` `spawn()`
+  builds — `rt.verify` stays `None`, so a subagent never runs its own verify
+  gate today. Left as a gap for whoever picks up the rest of M9, not fixed
+  quietly in passing.
+
+**Open**
+- Consecutive `task` calls still run one at a time; `asyncio.gather` fan-out
+  under `SpawnLimits.max_parallel` (TOOL-12) needs `core/loop.py` to find
+  room in its own 200-line cap (three lines of slack today), which likely
+  means another extraction like `next_provider()`'s.
+- Multi-row status bar for concurrent subagents [SUB-9], `edgar route
+  explain`, `edgar agents list|validate`, example agents in `examples/`, plan
+  mode and the `todo` tool — everything else M9's checklist still lists.
+- Whether the `ToolContext` extension is worth its own ADR (a reasonable
+  person could have threaded `Session` through instead, or added explicit
+  parameters to `execute()`) — not yet written.
+
+## 2026-09-14 · Fallback earns its own collaborator, and routing goes live
+
+**Asked**
+- Continue M9 (subagents, routing rules and fallback) toward closing v1, keeping
+  docs and the tour in step with the code.
+
+**Done**
+- `core/loop.py` went over its own 200-line cap (217) once the fallback-retry
+  path landed. Fixed by moving that reaction out of the loop rather than
+  golfing the formatting: `providers/fallback.py` gained `next_provider()`,
+  the whole response to a `ProviderError` — pick the next `(provider, model,
+  name, reasoning)` from the chain, emit `Fallback`, or re-raise once the
+  chain is exhausted. `core/loop.py`'s own `_fall_back()` helper is gone;
+  `_ask()` just calls the new function. `core/loop.py` is back to 198/200.
+- Three integration tests in `tests/integration/test_loop.py` drive the
+  fallback path through the real loop, not just the pure `choose()` unit
+  tests: a `ProviderError` on the primary model produces a successful retry
+  on the next one in the chain, with the right event sequence and `Fallback`
+  fields; a fallback that crosses provider families drops `reasoning` to
+  `False` on the retry call; and the original error still propagates once
+  every candidate in the chain has been tried. `tests/support/harness.py`'s
+  `runtime()` and `tests/support/scripted.py`'s `ScriptedProvider` both
+  gained the small additions these tests needed (a `fallback` kwarg, a
+  `reasoning_used` log) without changing any existing call site.
+- `cli/setup.py`'s `runtime()` now resolves `[[route]]` rules
+  (`routes_from_config(config.later)`) and the `[model] fallback` chain
+  (`chain_from_config(config.later)`, resolved eagerly the same way the
+  compactor role already was) and passes both into `Runtime`. Routing and
+  fallback were implemented and unit-tested in a prior session but were
+  unreachable from real config until now; a session started from `edgar`
+  actually honours `[[route]]` and falls back sideways on a real outage.
+- `docs/tour/index.html`: the `cli/` size-table row updated to the code's
+  actual size (~1,850 lines), and stop s22's prose now says routing and the
+  fallback chain are read from real config, not just unit-tested.
+- `docs/ROADMAP.md`: split the `M9–M17` status row so M9 shows "In progress"
+  on its own line.
+
+**Decided**
+- Extracting `next_provider()` was a genuine architectural call, not a
+  line-count trick: `core/loop.py`'s own docstring says every concern lives
+  in a collaborator, and reacting to a `ProviderError` by choosing the next
+  model is the provider layer's concern, not the loop's — it now sits next
+  to the pure `choose()` it calls. The three model mechanisms (routing,
+  escalation, fallback) stay in their own functions per ADR-0013; this only
+  moved fallback's reaction to a failure closer to fallback's own module.
+
+**Open**
+- `agents/spawn.py`, the `task` tool, `asyncio.gather` fan-out for
+  consecutive `task` calls in `_run_tools()`, policy narrowing
+  (`narrow_mode()`), multi-row status bar for concurrent subagents,
+  `edgar route explain`, `edgar agents list|validate`, example agents,
+  plan mode and the `todo` tool — all still to build before M9 is done.
+- Whether the `next_provider()` extraction deserves its own ADR, or folds
+  into a single "M9 as built" ADR once the milestone is further along.
+
+## 2026-09-14 · Running edgar somewhere else, and reading more than text
+
+**Asked**
+- How edgar could run in a mobile app, iOS only, keeping the format and putting a
+  UI on top; then on a Proxmox container with the phone controlling it — new chats
+  and projects, responding, approving — with the local Mac CLI connected to the
+  same instance; then several Docker containers at once, one local edgar running
+  them as isolated subagents, each with its own model and rules.
+- A new project starts as an empty directory the phone fills by upload (documents,
+  images, whatever); the app proxies the OAuth sign-in.
+- "This is a separate project basically."
+- Image and document processing (audio, video, slides) is something edgar will need:
+  models can process it, so edgar should support it.
+- Docs only this session: leave the media implementation for v2 and touch no code,
+  because another process is building M9 in this working copy.
+
+**Done**
+- Two ADRs and the spec edits they imply. No code, and nothing in `src/` touched.
+- `ROADMAP.md`: M10's `edgar.run()` bullet now names the caller it must serve;
+  image and multimodal input left the past-v2 list.
+- `PRD.md`: §5.3 loses image and multimodal input, §5.1's v2 list gains it.
+- Both open items above, with their desired results written out.
+
+**Decided**
+- [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md): the remote layer is a
+  separate project, outside this repository and this budget, embedding edgar
+  through `edgar.run()`. The supervisor is a transport for a human and never a
+  stand-in: it relays a permission prompt or it blocks, and a timeout may pause a
+  turn but may never answer one (PERM-6). Containers are the `container` backend of
+  `shell.sandbox` (PERM-15, v2 per ADR-0050), not a new kind of subagent — the loop
+  stays in one process and tool calls execute inside containers, which keeps
+  "subagents are function calls, not a network" true. Clients follow a session from
+  a cursor over the append-only record, not a live socket, so a phone losing the
+  network loses nothing. Uploads are attached context and never a learning source
+  (CLI-3, MEM-9). ADR-0048 decision 1 is amended: a client may proxy the sign-in and
+  relay the code, because a headless container has no browser.
+- [ADR-0052](adr/0052-media-input-in-v2.md): media input is v2, one `ImageBlock`
+  and nothing else, every other format converted by a tool at the boundary.
+- Not done and deliberately so: nothing was committed. The working copy holds
+  another process's M9 work, so staging these files would sweep it in.
+
+**Pending**
+- Both new open items at the top of this file.
+
+## 2026-09-14 · Acting on the review, before Hacker News
+
+**Asked**
+- Apply all the fixes proposed in the review above.
+- Explain how edgar was built and the story behind it: "doing something to learn.
+  It's for myself first. It always is." The name: "edgar because it's the name of
+  my son, and my motivation to do stuff."
+- Annotate and update the docs; update the tour; fix the security issue the review
+  found before Hacker News; put the maintainer's answers to the review's pushback
+  findings into the repo's own docs; prepare the HN post text, leading with the
+  review and introducing the repo. "We are going to finish this before we post
+  anything. Get everything in order before we start the next milestones."
+
+**Done**
+- **The security fix (PERM-16).** `fetch` and any HTTP tool could be sent to
+  `169.254.169.254` (the cloud instance-metadata address on AWS, GCP, Azure,
+  DigitalOcean and Oracle) in `auto` mode before a session was even tainted, and in
+  `yolo` always. A literal link-local URL (`169.254.0.0/16`, `fe80::/10`) is now
+  denied in every mode, in the same hard layer as catastrophic shell commands:
+  `matcher.link_local()` reads the URL's host as a literal IP, and `_decide()`
+  checks it right after the catastrophic-command check. A naive "block loopback
+  too" version was rejected first: `FixtureServer` in the offline suite binds
+  `127.0.0.1` to stand in for the internet, so that would have broken
+  `test_safety.py`, `test_login.py` and `test_mcp.py`. Scoped to link-local only,
+  tested (`test_link_local`, the yolo-still-denies cases, the "a hostname that
+  merely resolves there gets through" case, the loopback-is-unaffected case), and
+  documented in [ADR-0049](adr/0049-network-hard-layer.md), PRD §7.4 and §10, and
+  `BLUEPRINT.md` §7. Full suite: 554 passed.
+- **The Cookbook/Blueprint mismatch.** `BLUEPRINT.md` already claimed a devcontainer
+  recipe lived in `COOKBOOK.md`; it didn't. Wrote it ("Run untrusted work in a
+  container") rather than removing the claim, since the review's own point was that
+  the permission engine is a speed bump and a container is the actual wall.
+- **The README's present-tense problem.** Split the bullet that described
+  subagents, model routing, hooks and extensions as if built into two: one for what
+  ships today (command/HTTP tools, MCP, skills), one headed "Coming in 1.0 (M9 to
+  M11, designed and specced, not yet built)" for the rest.
+- **The "safe to point at a repo you just cloned" overclaim.** Rewritten as "safer
+  ... honestly described," naming both the PERM-14 speed bump and the new PERM-16
+  hard layer, with a link to the container recipe for anyone who wants an actual
+  wall.
+- **"Done means verified" overstatement.** Reworded to say verification is opt-in
+  (`--verify` or `[verify] command`), not automatic.
+- **The name and the build story.** Added "Why I built it, and how" to the README
+  and a "Why 'edgar'?" entry in the new `docs/FAQ.md`, in the maintainer's own
+  words: built to learn, for himself first, and named for his son, who is also why
+  he builds things at all.
+- **The pushback doc.** New `docs/FAQ.md`: vibe-coded vs. this (points at the ADRs,
+  the journal, and `AGENTS.md`'s own hand-authored rule), why AGPL over Apache/MIT
+  ([ADR-0026](adr/0026-licence-agpl.md)), why Python over Rust or Go
+  ([ADR-0012](adr/0012-startup-budget.md), [ADR-0019](adr/0019-dependency-budget.md)),
+  "just another harness" (points at `docs/research/hn-2026-09.md`, 11,647 HN
+  comments read before the v0.4 spec revision), why the docs outweigh the code, why
+  `-p` requires `--mode`, and the name.
+- **The tour.** Stop 7's flowchart now shows the link-local check between the
+  catastrophic check and the `yolo` branch, with a note that it holds even in
+  `yolo` and only catches a literal address, not a hostname that resolves to one.
+  Stop 8 adds `link_local` to what it tells a reader to look for.
+  `tests/unit/test_tour.py`: 36 passed.
+- Every doc edit above landed in `CHANGELOG.md` (a new "Security" section under
+  Unreleased) and cross-linked from the README's documentation table (`FAQ.md`
+  added, `COOKBOOK.md`'s row mentions the container recipe).
+
+**Decided**
+- **No demo recording.** No terminal-recording tool (`asciinema`, `vhs`, `agg`,
+  `termtosvg`) is installed in this environment, and fabricating one would
+  misrepresent what the program actually does, which is the opposite of the
+  honesty this round of work is about. Left for the maintainer to record with a
+  tool of his choice, or to use a text transcript instead.
+- **`providers/pricing.py` left as it is.** The table already documents itself as
+  "small and dated" in its own docstring; re-verifying every current price against
+  the web was judged not worth the overhead for a launch-prep pass, and no figure
+  in it was found to be actively wrong, only unverified.
+
+**Also done**
+- Reread `docs/ROADMAP.md`'s status table: no milestone state changed this round,
+  nothing to update.
+- Ran `just check` after every documentation edit landed: ruff format, ruff check,
+  mypy --strict and the offline suite (554 tests) all green; `just loc` still under
+  budget (v1 at 6,856 of 8,000).
+- Drafted the Hacker News post: [`docs/HN_POST.md`](HN_POST.md), leading with the
+  review (what it found, the security fix that came out of it, why that fix is
+  the load-bearing proof the review was real) before introducing edgar itself.
+  Two title options, a body written to stand on its own as the post text, and a
+  note for whoever posts it. Not posted — that stays the maintainer's own action.
+
+**Pending**
+- The maintainer decides when to post, and whether to act on the two things this
+  round left undone: no terminal-recording demo (no tool installed, declined to
+  fake one) and `providers/pricing.py` left unverified against current live prices.
+- Nothing in this session was committed; the maintainer commits when ready.
+
+## 2026-09-14 · Review before Hacker News
+
+**Asked**
+- "Review project edgar so far. I am open to suggestions, changes and overall
+  feedback. I am trying to make it useful, interesting and honestly cool. Idea is
+  to throw in Hacker News and see what happens."
+
+**Done**
+- Reviewed the repository as an HN reader would: installed nothing, read the
+  README, the tour, the loop, compaction, the policy, the shell and fetch tools;
+  ran the suite (547 tests, 7.5 s), a `-p` run against `fake/test`, the REPL
+  through a pseudo-terminal, and measured what HN measures: 60 ms to first byte
+  for a trivial `-p` run, about 3,000 tokens sent before the prompt with the ten
+  built-in tools (the system prompt itself is about 400).
+- Found and fixed a flaky test, `test_fork_and_load_on_the_command_line` (2
+  failures in 15 runs). Cause: two sessions made in the same millisecond got ULIDs
+  whose order was random, and `find(root, "")`, which `--continue` and `--fork`
+  rely on, picks the latest session by sorting names. `new_id()` now never
+  reuses the previous id's millisecond (nor an earlier one, if the clock went
+  back), so the random bits stay and a short prefix still tells ids apart; a test
+  makes 2,000 ids in a loop and checks the order.
+- The tour said M7 to M17 were planned and marked memory as planned although M7
+  and M8 are built. Header, contents, Part II pill and the intro prose now say
+  M0 to M8 built, M9 to M17 planned. `test_tour.py` cannot see this kind of
+  staleness, which is why it lasted.
+- Started a page for edgar in Cairn (Projects → edgar) with the state and the
+  review's findings.
+
+**Findings handed to the maintainer** (not acted on; details in the session)
+- The README describes subagents, routing, hooks, extensions and `/plan` in the
+  present tense with only the status paragraph to say they are unbuilt.
+- Say plainly that it was built with an AI coding agent under a human's
+  decisions; the journal and `AGENTS.md` show it anyway.
+- No terminal recording; the verify gate catching a failing check is the scene.
+- `fetch` has no guard for loopback or link-local addresses; the catastrophic list
+  is a tripwire, said in PRD PERM-14 but not in the README.
+- Nobody explains the name.
+- `edgar context show` (what exactly is sent) and a "no key at all" line with
+  `--model fake/test` are cheap and on-message before a launch.
+
+**Pending**
+- The maintainer decides which findings to act on before posting.
+- v1 is at 6,838 of 8,000 lines of code.
 
 ## 2026-09-14 · The picker signs you in
 

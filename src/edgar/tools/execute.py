@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import Sequence
 from typing import Any
 
 from edgar.core.events import ToolFinished, ToolProposed, ToolStarted
@@ -60,6 +61,7 @@ async def execute(
         call_id=call.id,
         bus=bus,
         subject=described(call.args, ctx.cwd) if described else None,
+        agent_id=ctx.chain[-1] if ctx.chain else "main",
     )
     if isinstance(decision, Deny):
         return _failed(call, "permission_denied", f"denied: {decision.reason}")
@@ -102,6 +104,46 @@ async def execute(
         )
     )
     return block
+
+
+async def execute_many(
+    calls: Sequence[ToolUseBlock],
+    *,
+    registry: ToolRegistry,
+    ctx: ToolContext,
+    guard: Guard,
+    mode: str,
+    tainted: bool,
+    max_parallel: int,
+) -> list[ToolResultBlock]:
+    # One call at a time, except a run of consecutive `task` calls, which fan
+    # out together bounded by max_parallel; results still come back in call
+    # order either way, so a caller's own bookkeeping never races [TOOL-12].
+    sem = asyncio.Semaphore(max(max_parallel, 1))
+
+    async def bounded(call: ToolUseBlock) -> ToolResultBlock:
+        async with sem:
+            return await execute(
+                call, registry=registry, ctx=ctx, guard=guard, mode=mode, tainted=tainted
+            )
+
+    results: list[ToolResultBlock] = []
+    i = 0
+    while i < len(calls):
+        group = _fan_out_group(calls, i)
+        results.extend(await asyncio.gather(*(bounded(c) for c in group)))
+        i += len(group)
+    return results
+
+
+def _fan_out_group(calls: Sequence[ToolUseBlock], i: int) -> Sequence[ToolUseBlock]:
+    """`calls[i]` alone, unless it starts a run of consecutive `task` calls."""
+    if calls[i].name != "task":
+        return calls[i : i + 1]
+    j = i + 1
+    while j < len(calls) and calls[j].name == "task":
+        j += 1
+    return calls[i:j]
 
 
 def _validate(schema: ToolSchema, args: dict[str, Any]) -> str | None:

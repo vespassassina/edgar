@@ -21,3 +21,6 @@ htmlcov/
 
 # Local agent tooling state
 .gstack/
+
+# Launch-prep drafts, not part of the shipped docs
+docs/HN_POST.md

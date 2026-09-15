@@ -99,8 +99,8 @@
     Nothing is done until it's verified.</p>
   </div>
   <div class="ak-meta">
-    <span class="ak-pill ak-pill-ok">Core built</span> M0 to M6<br>
-    <span class="ak-pill ak-pill-warn">Planned</span> M7 to M17<br>
+    <span class="ak-pill ak-pill-ok">Built</span> M0 to M8<br>
+    <span class="ak-pill ak-pill-warn">Planned</span> M9 to M17<br>
     Kept in sync by a test
   </div>
 </header>
@@ -133,9 +133,9 @@
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></p>
   <ol class="ak-nav">
-    <li class="planned"><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
+    <li><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
     <li><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
-    <li class="planned"><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
+    <li><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
     <li class="planned"><a href="#s23"><span class="n">23</span>Extensions, hooks (M10)</a></li>
     <li class="planned"><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
   </ol>
@@ -158,10 +158,11 @@ it. Keep the code open beside this page. The numbered steps in the diagrams matc
 the numbered comments in the code.</p>
 
 <p>The tour comes in three parts, one per tier, so you can read it a tier at a time.
-<strong>Core</strong> is built: read it now. <strong>v1</strong> and
-<strong>v2</strong> are planned. Their stops name the files they will be, the
-milestone that brings each one, and the seam in Core where it will attach. As each
-milestone lands, its stop gets links like the rest.</p>
+<strong>Core</strong> is built: read it now. In <strong>v1</strong>, memory and
+MCP (M7, M8) are built too; the rest of v1 and all of <strong>v2</strong> are
+planned. A planned stop names the files it will be, the milestone that brings it,
+and the seam in Core where it will attach. As each milestone lands, its stop gets
+links like the rest.</p>
 
 <ol class="ak-stepper" aria-label="The six stages of Core">
   <li class="ak-step"><a href="#stage-1"><span class="ak-t">1. The spine</span>45 minutes</a></li>
@@ -200,16 +201,17 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
   <thead><tr><th>Package</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
   <tbody>
     <tr data-package="core"><td><code>core/</code></td><td class="loc">~700</td><td>The turn loop and the types everything else speaks in</td></tr>
-    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,200</td><td>What the model can do, and the pipeline every call goes through</td></tr>
+    <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,300</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
-    <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,100</td><td>Five vendors, two adapters, a table of differences</td></tr>
+    <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,200</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
     <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~60</td><td>Finding skills, and reading only their frontmatter</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~200</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,750</td><td>The REPL, one-shot runs, rendering, setup</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~1,850</td><td>The REPL, one-shot runs, rendering, setup: routing rules and fallback wired in (v1)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
+    <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~220</td><td>A subagent's definition, finding them, and spawning one (v1)</td></tr>
   </tbody>
 </table>
 </div>
@@ -366,7 +368,9 @@ flowchart TD
 flowchart TD
     in["tool, subject, policy"] --> c1{"catastrophic?"}
     c1 -->|yes| d1["Deny"]
-    c1 -->|no| yolo{"yolo mode?"}
+    c1 -->|no| ll{"network call to a<br/>link-local address?"}
+    ll -->|yes| d3["Deny, hard"]
+    ll -->|no| yolo{"yolo mode?"}
     yolo -->|yes| a0["Allow"]
     yolo -->|no| cred{"credential<br/>path?"}
     cred -->|yes| d2["Deny"]
@@ -387,17 +391,24 @@ flowchart TD
   into a <code>Deny</code> with <code>needed_prompt</code> set, and
   <code>edgar -p</code> exits 5. Taint is sticky: once a tool returns content from
   the network, <code>auto</code> mode asks before shell and network calls for the
-  rest of the session.</p>
+  rest of the session. The link-local check sits in the same hard layer as
+  catastrophic commands, so it holds even in <code>yolo</code>: a URL that literally
+  names <code>169.254.169.254</code> or another link-local address, the range every
+  major cloud serves its instance-metadata endpoint on, is denied before anything
+  else runs. It only catches a literal address, not a hostname that resolves to one
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0049-network-hard-layer.md">ADR-0049</a>).</p>
 </article>
 
 <article class="stop" id="s8" data-files="src/edgar/permissions/guard.py src/edgar/permissions/matcher.py">
   <h4><span class="n">8</span>The asking</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/guard.py"><code>permissions/guard.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/matcher.py"><code>permissions/matcher.py</code></a></p>
-  <p class="look">Look for: <code>Guard</code> <code>subject</code> <code>CATASTROPHIC</code> <code>credential</code> <code>inside</code></p>
+  <p class="look">Look for: <code>Guard</code> <code>subject</code> <code>CATASTROPHIC</code> <code>credential</code> <code>inside</code> <code>link_local</code></p>
   <p>The I/O half that keeps <code>decide</code> pure. <code>Guard</code> works out
   what a call touches, builds the <code>Policy</code>, asks you when the answer is
   <code>Ask</code>, and remembers your "always" answers. The matcher holds the list
-  of commands that never run and the detection of credential paths.</p>
+  of commands that never run, the detection of credential paths, and
+  <code>link_local</code>, which reads a URL's host as a literal IP address and
+  checks it against <code>169.254.0.0/16</code> and <code>fe80::/10</code>.</p>
 </article>
 
 <article class="stop" id="s9" data-files="src/edgar/tools/builtin/fs.py src/edgar/tools/builtin/shell.py">
@@ -461,7 +472,9 @@ between "the model asked" and "the thing happened"?</p>
   <p>Small local models fence their tool calls or write them as plain JSON; the
   repair recovers them deterministically and never invents a call. Routing in Core
   is a pure function that binds roles to models. It never picks a model you did not
-  name.</p>
+  name. v1 (stop 22) adds declarative <code>[[route]]</code> rules ahead of that
+  binding, same first-match-wins shape as <code>permissions.decide()</code>, still
+  a pure function with zero cost.</p>
   <p>Skip these on a first pass: <code>pricing.py</code>, <code>registry.py</code>,
   <code>fake.py</code>, <code>http.py</code>.</p>
 </article>
@@ -549,7 +562,7 @@ issue</a>.</p>
 
 <!-- ─────────────────────────────── Part II ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">M7 built, M8 to M11 planned</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">M7 and M8 built, M9 to M11 planned</span></div>
 <p class="part-intro">Extensible, and it remembers: memory, MCP, subagents,
 extensions and hooks. At most 8,000 lines of code for Core plus v1. Nothing in v1
 changes the shape of the turn: each piece plugs into a seam you have already
@@ -616,13 +629,42 @@ flowchart LR
   openrouter</code>, where the key a provider issues is yours, not edgar's.</p>
 </article>
 
-<article class="stop planned" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/providers/fallback.py">
+<article class="stop" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/tools/execute.py">
   <h4><span class="n">22</span>Subagents, routing rules and fallback</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M9 · planned</span> <code>tools/builtin/task.py</code> <code>agents/spawn.py</code> <code>providers/fallback.py</code></p>
-  <p>A subagent is not a second engine. The <code>task</code> tool calls the same
-  <code>run_turn</code> (stop 1) with a fresh transcript and a narrower policy.
-  Consecutive <code>task</code> calls fan out concurrently. Fallback goes sideways
-  when a provider is down, and is kept apart from routing and escalation. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/task.py"><code>tools/builtin/task.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/spawn.py"><code>agents/spawn.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/execute.py"><code>tools/execute.py</code></a></p>
+  <p class="look">Look for: <code>TaskTool</code> <code>spawn</code> <code>narrow_mode</code> <code>SpawnLimits</code> <code>execute_many</code></p>
+  <p>A subagent is not a second engine (ADR-0006): <code>spawn()</code> builds a
+  second <code>Runtime</code> and calls the very same <code>run_turn</code> from
+  stop 1, with a fresh <code>Session</code>, a model picked by
+  <code>select_model()</code>'s <code>role="subagent"</code> case (stop 14, or the
+  agent's own <code>model:</code> frontmatter), and its tool registry filtered to
+  the agent's <code>tools:</code> list. The <code>task</code> tool is the only
+  caller: its schema lists every agent
+  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/discovery.py"><code>agents/discovery.py</code></a>
+  found by name and description, and <code>TaskTool.run()</code> looks one up and
+  hands off to <code>spawn()</code>. Four checks keep it inside the parent's
+  policy: <code>narrow_mode()</code> never widens the calling session's
+  <code>mode</code>; a depth counter refuses past <code>[subagents] max_depth</code>
+  (read by <code>subagents_config()</code>, capped at <code>HARD_DEPTH</code> no
+  matter what config says); <code>Session.agent_chain</code> refuses an agent
+  already running above itself; and its budget is the smaller of its own
+  <code>budget.cost</code> and whatever the parent has left to give. Guard is not
+  recreated: a subagent shares its parent's, so its permission prompts share the
+  same asking lock and are labelled with the agent's name. Sideways fallback on a
+  <code>ProviderError</code> lives in
+  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/fallback.py"><code>providers/fallback.py</code></a>,
+  whose <code>next_provider()</code> is what <code>core/loop.py</code>'s
+  <code>_ask()</code> (stop 1) retries with, for a subagent's own <code>Runtime</code>
+  same as the main one. Consecutive <code>task</code> calls fan out together
+  (TOOL-12): <code>core/loop.py</code>'s own <code>_run_tools()</code> stayed one
+  call at a time, so the grouping and the <code>asyncio.gather</code> live in
+  <code>execute_many()</code> here instead, bounded by an
+  <code>asyncio.Semaphore</code> sized from the <code>task</code> tool's own
+  <code>SpawnLimits.max_parallel</code>; results still come back in call order
+  regardless of which subagent finishes first, so the loop's bookkeeping never
+  races. Still planned: a multi-row status bar for concurrent subagents and
+  <code>edgar agents list|validate</code>.
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
 </article>
 
 <article class="stop planned" id="s23" data-files="src/edgar/extensions/manifest.py src/edgar/extensions/hooks.py src/edgar/sandbox/base.py">

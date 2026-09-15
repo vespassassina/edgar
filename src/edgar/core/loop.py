@@ -44,6 +44,7 @@ from edgar.config.schema import BudgetSection, ContextSection
 from edgar.context.builder import build
 from edgar.context.compact import compact
 from edgar.core.cancel import seal
+from edgar.core.errors import ProviderError
 from edgar.core.events import (
     Event,
     EventBus,
@@ -62,8 +63,9 @@ from edgar.core.verify import Check, verify
 from edgar.permissions.guard import Guard
 from edgar.permissions.policy import Policy, category
 from edgar.providers.base import Provider, Usage, plus
-from edgar.tools.base import ToolContext
-from edgar.tools.execute import execute
+from edgar.providers.fallback import next_provider
+from edgar.tools.base import ToolContext, build_context
+from edgar.tools.execute import execute_many
 from edgar.tools.registry import ToolRegistry
 
 
@@ -80,11 +82,10 @@ class Runtime:
     name: str = ""  # the full model string, e.g. "fake/test"
     guard: Guard | None = None  # None: the policy's defaults, nobody to ask
     verify: Check | None = None  # the gate's command, authorised before the turn [VER-4]
-    context: ContextSection = field(
-        default_factory=ContextSection
-    )  # when and how far to compact [CTX-3]
+    context: ContextSection = field(default_factory=ContextSection)  # compact timing [CTX-3]
     budget: BudgetSection = field(default_factory=BudgetSection)  # cost caps [BUD-2]
     compactor: tuple[Provider, str] | None = None  # None: the main model writes summaries
+    fallback: tuple[tuple[str, Provider, str], ...] = ()  # (name, provider, its model) [ROUTE-7]
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,6 +109,8 @@ class _Turn:
     acted: bool = False  # a non-read tool ran: the verify gate will run [VER-2]
     attempt: int = 0  # verify attempts so far
     text: str = ""  # the last answer: the result, or what a cap leaves [BUD-3]
+    tried: set[str] = field(default_factory=set)  # models a ProviderError already ruled out
+    reasoning: bool = True  # False once fallback crosses families [PRV-13]
 
 
 async def run_turn(
@@ -188,8 +191,7 @@ def _start(session: Session, prompt: str, rt: Runtime, attached: Sequence[str]) 
     blocks = (TextBlock(prompt), *(TextBlock(a, attached=True) for a in wrapped))
     session.append(Message("user", blocks))
     # Set up what tool calls share for the whole turn.
-    blobs, limit = session.dir / "blobs", rt.max_output_tokens
-    ctx = ToolContext(cwd=session.cwd, bus=rt.bus, blob_dir=blobs, max_output_tokens=limit)
+    ctx = build_context(session, rt)
     guard = rt.guard or Guard(Policy(mode=session.mode, cwd=session.cwd, home=Path.home()))
     return _Turn(id=turn_id, ctx=ctx, guard=guard)
 
@@ -205,15 +207,23 @@ async def _ask(session: Session, rt: Runtime, turn: _Turn) -> Message:
     await compact(session, rt)
     # 2. Build the request: system prompt, then the (possibly compacted) view.
     messages = build(session, rt.system_prompt)
-    rt.bus.emit(
-        RequestStarted(
-            provider=rt.provider.name,
-            model=session.model,
-            input_tokens=rt.provider.count_tokens(messages),
-        )
-    )
-    # 3. Stream the answer. Text arrives as TextDelta events on the bus.
-    response = await rt.provider.stream(messages, rt.tools.schemas(), model=rt.model, bus=rt.bus)
+    # 3. Stream the answer, falling back sideways on a ProviderError [ROUTE-7].
+    #    Retries and backoff already ran inside stream(); reaching here means
+    #    that is exhausted, or the failure was never retryable.
+    provider, model, name = rt.provider, rt.model, rt.name
+    while True:
+        tokens = provider.count_tokens(messages)
+        rt.bus.emit(RequestStarted(provider=provider.name, model=name, input_tokens=tokens))
+        try:
+            response = await provider.stream(
+                messages, rt.tools.schemas(), model=model, bus=rt.bus, reasoning=turn.reasoning
+            )
+            break
+        except ProviderError as exc:
+            required = bool(rt.tools.schemas())
+            provider, model, name, turn.reasoning = next_provider(
+                name, provider, exc, rt.fallback, turn.tried, tools_required=required, bus=rt.bus
+            )
     # 4. Add up what it cost, for the turn and for the session.
     turn.usage += response.usage
     turn.cost, session.cost = plus(turn.cost, response.cost), plus(session.cost, response.cost)
@@ -229,27 +239,28 @@ async def _ask(session: Session, rt: Runtime, turn: _Turn) -> Message:
 async def _run_tools(
     calls: Sequence[ToolUseBlock], session: Session, rt: Runtime, turn: _Turn
 ) -> None:
-    # In order, one at a time [TOOL-12]. Failures come back as error results, so
-    # the model can recover; nothing here raises.
+    # In order, except consecutive `task` calls fan out together [TOOL-12].
+    # Failures come back as error results, so the model can recover.
     turn.results.clear()
-    for call in calls:
-        # 1. Validate, check permission, run, spill: all inside execute().
-        result = await execute(
-            call,
-            registry=rt.tools,
-            ctx=turn.ctx,
-            guard=turn.guard,
-            mode=session.mode,
-            tainted=session.tainted,
-        )
+    limits = getattr(rt.tools.get("task"), "limits", None)
+    results = await execute_many(
+        calls,
+        registry=rt.tools,
+        ctx=turn.ctx,
+        guard=turn.guard,
+        mode=session.mode,
+        tainted=session.tainted,
+        max_parallel=getattr(limits, "max_parallel", 1),
+    )
+    for call, result in zip(calls, results, strict=True):
         turn.results.append(result)
-        # 2. Remember whether anything changed, for the verify gate.
+        # 1. Remember whether anything changed, for the verify gate.
         turn.acted = turn.acted or _acted(rt, call.name, result)
-        # 3. Content from the network taints the session, for good [PERM-11].
+        # 2. Content from the network taints the session, for good [PERM-11].
         if result.untrusted and not session.tainted:
             session.tainted = True
             rt.bus.emit(SessionTainted(by_tool=call.name))
-    # 4. All results go back in one tool message, right after the calls [CTX-4].
+    # All results go back in one tool message, right after the calls [CTX-4].
     session.append(Message("tool", tuple(turn.results)))
     assert_pairing(session.transcript)
 

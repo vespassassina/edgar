@@ -8,6 +8,22 @@ extension formats freeze.
 
 ## Unreleased
 
+### Added
+- Subagents. A `task` tool appears once any agent is discovered in
+  `.edgar/agents/` or `~/.edgar/agents/`: pick one by name and it runs in a fresh
+  session, with its own model (routed for role `subagent`, or its own
+  frontmatter `model:`), its own tool subset, and a `mode:` that can only ever
+  narrow the calling session's, never widen it. It shares the parent's
+  permission guard, so its prompts ask one at a time alongside the main turn's
+  own and are labelled with the agent's name; its budget is capped at whatever
+  the parent has left to give, and a result that ran out of budget says so
+  rather than passing a truncated answer off as whole. An agent already running
+  above itself, or a call past `[subagents] max_depth`, is refused rather than
+  run. Ask the model for several subagents in the same turn and they run
+  together, bounded by `[subagents] max_parallel`; everything else still runs
+  one call at a time, and results come back in the order they were asked for,
+  not the order they finish.
+
 ### Changed
 - `edgar models` offers to sign in instead of sending you away. Picking a provider
   that has no key but can issue one through the browser now asks "no key for
@@ -16,6 +32,23 @@ extension formats freeze.
   keyring to keep it in. Answer `n` and you get the old message naming the
   environment variable. A provider with no browser sign-in (OpenAI, Anthropic) is
   unchanged: its key is named, never asked for.
+
+### Fixed
+- Two sessions started within the same millisecond (a fork right after its parent,
+  a script starting several) could sort in the wrong order, so `edgar --continue`
+  could reopen the older one. An id now never reuses the previous one's
+  millisecond.
+- The tour said M7 to M17 were planned; M7 (memory) and M8 (MCP, signing in) have
+  been built since 0.1.0. It now says M0 to M8 built, M9 to M17 planned.
+
+### Security
+- `fetch` and any HTTP tool could be sent to the cloud instance-metadata address
+  (169.254.169.254 and the rest of that range) in `auto` mode before the session
+  was even tainted, and in `yolo` always. A URL that literally names a link-local
+  address is now denied in every mode, the same hard layer as catastrophic shell
+  commands. A hostname that merely resolves there still gets through; see
+  [ADR-0049](docs/adr/0049-network-hard-layer.md) for what this does and does not
+  cover.
 
 ## 0.1.0 — 2026-09-14
 

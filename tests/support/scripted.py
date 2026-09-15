@@ -36,6 +36,7 @@ class ScriptedProvider(FakeProvider):
     def __init__(self, script: Sequence[ScriptedResponse] | None = None) -> None:
         self.script = list(script) if script is not None else None
         self.requests: list[list[Message]] = []
+        self.reasoning_used: list[bool] = []  # what each call actually asked for [PRV-13]
 
     @property
     def call_count(self) -> int:
@@ -51,6 +52,7 @@ class ScriptedProvider(FakeProvider):
         reasoning: bool = True,
     ) -> ProviderResponse:
         self.requests.append(list(messages))
+        self.reasoning_used.append(reasoning)
         if self.script is None:
             return await super().stream(messages, tools, model=model, bus=bus, reasoning=reasoning)
         if not self.script:

@@ -23,6 +23,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from edgar.agents.discovery import discover as discover_agents
+from edgar.agents.spawn import subagents_config
 from edgar.cli.trust import from_project
 from edgar.config.load import load, project_config
 from edgar.config.schema import Config, McpSection
@@ -39,8 +41,9 @@ from edgar.memory.store import Memory, project_scope
 from edgar.permissions.control import control_files, snapshot
 from edgar.permissions.guard import Asker, Guard
 from edgar.permissions.policy import Deny, Policy
+from edgar.providers.fallback import chain_from_config
 from edgar.providers.registry import resolve, split
-from edgar.providers.routing import RoutingContext, Selection, select_model
+from edgar.providers.routing import RoutingContext, Selection, routes_from_config, select_model
 from edgar.skills.discovery import Found, discover
 from edgar.storage.db import Store
 from edgar.storage.transcript import control_changes, find, replay, start
@@ -48,6 +51,7 @@ from edgar.tools.base import Tool
 from edgar.tools.builtin.memory_tools import Recall, Remember
 from edgar.tools.builtin.shell import Shell
 from edgar.tools.builtin.skill import SkillTool
+from edgar.tools.builtin.task import TaskTool
 from edgar.tools.builtin.tool_search import searchable
 from edgar.tools.mcp.client import Server, servers
 from edgar.tools.registry import ToolRegistry, registry_for
@@ -133,6 +137,10 @@ def setup(
     )
     guard = Guard(base, asker=asker, store=Store(root / ".edgar" / "edgar.db"))
     tools, found, servers_here = toolset(root, home, config, project_exec=project_exec)
+    agents = discover_agents(root, home)
+    if agents.agents:
+        limits = subagents_config(config.later)
+        tools.add([TaskTool(agents.agents, tools, guard, config, env, limits)])
     skills = list(found.skills.values())
     from_project = config.origins.get("verify.command") == str(project_config(root))
     command = verify or (config.verify.command if project_exec or not from_project else None)
@@ -144,7 +152,13 @@ def setup(
     facts = [f.text for f in memory.pinned(scope, config.memory.pinned_max)]
     kept = notes(facts, config.memory.pinned_max, memory.path)
     sections = pinned(root, home, files) + kept + skill_index(skills, root)
-    warnings = [*tools.warnings, *found.warnings, *found.problems]
+    warnings = [
+        *tools.warnings,
+        *found.warnings,
+        *found.problems,
+        *agents.warnings,
+        *agents.problems,
+    ]
     for sec in sections:
         if sec.name == "personality" and approx_tokens(sec.text) > PERSONALITY_WARN:
             warnings.append(f"{sec.source} is ~{approx_tokens(sec.text):,} tokens; keep it short")
@@ -244,7 +258,8 @@ async def authorise_verify(rt: Runtime, session: Session) -> None:
 def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runtime:
     """The runtime for the configured main model, or for `choice` (`/model`)."""
     config = s.config
-    selection = choice or select_model(RoutingContext(), config.model)
+    rules = routes_from_config(config.later)  # [[route]] rules, ahead of role binding [ROUTE-2]
+    selection = choice or select_model(RoutingContext(), config.model, rules)
     provider, provider_model = resolve(selection.model, config, env=s.env)
     block = config.providers.get(split(selection.model)[0])
     setting = block.prompt_profile if block and block.prompt_profile else config.prompt.profile
@@ -252,6 +267,11 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
     bus.emit(ModelSelected(model=selection.model, rule=selection.rule, reason=selection.reason))
     system = load_prompt(s.root, profile_prompt(profile))
     role = config.model.compactor  # auxiliary: only the model the user named [PRV-15]
+    # Resolved eagerly, same as the compactor above: [model] fallback names models
+    # by "provider/model" string; each one is resolved once, here [ROUTE-7].
+    fallback = tuple(
+        (name, *resolve(name, config, env=s.env)) for name in chain_from_config(config.later)
+    )
     return Runtime(
         provider=provider,
         model=provider_model,
@@ -265,6 +285,7 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
         context=config.context,
         budget=config.budget,
         compactor=resolve(role, config, env=s.env) if role else None,
+        fallback=fallback,
     )
 
 

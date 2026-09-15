@@ -16,7 +16,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from edgar.permissions.control import control_files
-from edgar.permissions.matcher import Subject, segments, subject, within
+from edgar.permissions.matcher import Subject, link_local, segments, subject, within
 from edgar.permissions.policy import Allow, Ask, Deny, Policy, category, decide
 from edgar.tools.base import ToolSchema
 
@@ -102,6 +102,26 @@ def test_credentials_are_denied_outside_yolo() -> None:
     for t in (READ, WRITE):
         decision = decide(t, at(str(HOME / ".ssh" / "id_ed25519")), policy("auto"))
         assert isinstance(decision, Deny) and decision.source == "hard"
+
+
+@pytest.mark.parametrize(
+    "url",
+    ["http://169.254.169.254/latest/meta-data/", "http://[fe80::1]/", "http://169.254.1.1:80/"],
+)
+def test_link_local_urls_are_denied_even_in_yolo(url: str) -> None:  # [PERM-16]
+    decision = decide(NET, Subject(url), policy("yolo"))
+    assert isinstance(decision, Deny) and decision.source == "hard"
+
+
+def test_a_hostname_that_merely_resolves_there_is_not_caught() -> None:  # [PERM-16]
+    # link_local() only reads the literal host, honestly: no DNS lookup happens.
+    decision = decide(NET, Subject("http://metadata.google.internal/"), policy("auto"))
+    assert isinstance(decision, Allow)
+
+
+def test_a_loopback_url_is_unaffected() -> None:  # tests fake "the internet" on 127.0.0.1
+    decision = decide(NET, Subject("http://127.0.0.1:8080/"), policy("auto"))
+    assert isinstance(decision, Allow)
 
 
 def test_outside_the_root_asks_and_a_grant_lets_it_through() -> None:
@@ -197,6 +217,14 @@ def test_segments() -> None:
 def test_within() -> None:
     assert within(ROOT / "a" / "b.py", ROOT, ["./**"])
     assert not within(Path("/elsewhere/b.py"), ROOT, ["./**"])
+
+
+def test_link_local() -> None:  # [PERM-16]
+    assert link_local("http://169.254.169.254/latest/meta-data/")
+    assert link_local("https://[fe80::1]/")
+    assert not link_local("http://127.0.0.1:8080/")  # loopback, not link-local
+    assert not link_local("https://example.com/169.254.169.254")  # a path, not the host
+    assert not link_local("not a url at all")
     tmp = Path("/tmp").resolve()
     assert within(tmp / "x", ROOT, [(tmp / "*").as_posix()])
 
@@ -248,3 +276,75 @@ def test_once_grants_nothing_and_always_never_stores_a_control_file(tmp_path: Pa
     assert guard.granted == set()
     asyncio.run(check("config.toml"))
     assert store.grants() == [] and len(guard.granted) == 1  # this session only
+
+
+def test_a_subagents_prompt_is_labelled_with_its_id(tmp_path: Path) -> None:  # [TOOL-12]
+    import asyncio
+
+    from edgar.core.events import EventBus
+    from edgar.permissions.guard import Answer, Guard
+
+    seen: list[str] = []
+
+    async def asker(tool: str, subject: str, reason: str) -> Answer:
+        seen.append(reason)
+        return "once"
+
+    cwd = tmp_path.resolve()
+    base = Policy(mode="ask", cwd=cwd, home=HOME)
+    guard = Guard(base, asker=asker)
+
+    async def check(agent_id: str) -> None:
+        await guard.check(
+            WRITE,
+            {"path": "a.py"},
+            cwd=cwd,
+            mode="ask",
+            tainted=False,
+            call_id="1",
+            bus=EventBus(),
+            agent_id=agent_id,
+        )
+
+    asyncio.run(check("main"))
+    asyncio.run(check("reviewer"))
+    assert seen[1] == f"[reviewer] {seen[0]}" and not seen[0].startswith("[")
+
+
+def test_concurrent_asks_from_a_fan_out_are_serialised(tmp_path: Path) -> None:  # [TOOL-12]
+    import asyncio
+
+    from edgar.core.events import EventBus
+    from edgar.permissions.guard import Answer, Guard
+
+    order: list[str] = []
+
+    async def asker(tool: str, subject: str, reason: str) -> Answer:
+        order.append(f"start {reason}")
+        await asyncio.sleep(0.01)  # a slow human; a second asker must wait, not interleave
+        order.append(f"end {reason}")
+        return "once"
+
+    cwd = tmp_path.resolve()
+    base = Policy(mode="ask", cwd=cwd, home=HOME)
+    guard = Guard(base, asker=asker)
+
+    async def check(agent_id: str) -> None:
+        await guard.check(
+            WRITE,
+            {"path": "a.py"},
+            cwd=cwd,
+            mode="ask",
+            tainted=False,
+            call_id=agent_id,
+            bus=EventBus(),
+            agent_id=agent_id,
+        )
+
+    async def fan_out() -> None:
+        await asyncio.gather(check("one"), check("two"))
+
+    asyncio.run(fan_out())
+    # Each ask's start is immediately followed by its own end: never interleaved.
+    assert order[0].startswith("start") and order[1].startswith("end")
+    assert order[0].split(" ", 1)[1] == order[1].split(" ", 1)[1]

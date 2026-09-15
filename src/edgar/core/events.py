@@ -75,6 +75,28 @@ class EventBus:
         for subscriber in self._subscribers:
             subscriber(event)
 
+    def scoped(self, *, agent_id: str, depth: int) -> EventBus:
+        """A view stamping every event with a subagent's id and depth, so a
+        `task` call (stop 22) needs no change at any existing `emit()` site
+        [SUB-3, SUB-9]. Subscribing on the view subscribes on the same bus."""
+        return _ScopedBus(self, agent_id=agent_id, depth=depth)
+
+
+class _ScopedBus(EventBus):
+    def __init__(self, inner: EventBus, *, agent_id: str, depth: int) -> None:
+        self._inner = inner
+        self._agent_id = agent_id
+        self._depth = depth
+
+    def subscribe(self, subscriber: Subscriber) -> None:
+        self._inner.subscribe(subscriber)
+
+    def unsubscribe(self, subscriber: Subscriber) -> None:
+        self._inner.unsubscribe(subscriber)
+
+    def emit(self, event: Event) -> None:
+        self._inner.emit(dataclasses.replace(event, agent_id=self._agent_id, depth=self._depth))
+
 
 # lifecycle
 
@@ -156,6 +178,14 @@ class ModelSelected(Event):
     # cli/setup.py, when the model for the session is chosen.
     model: str
     rule: str
+    reason: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Fallback(Event):
+    # core/loop.py, when a ProviderError sends a request sideways (v1) [ROUTE-7].
+    from_model: str
+    to_model: str
     reason: str
 
 

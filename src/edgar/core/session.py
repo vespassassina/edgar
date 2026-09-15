@@ -24,9 +24,18 @@ if TYPE_CHECKING:
 _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 
+_last_ms = 0  # the previous id's millisecond, so two ids made together still sort in order
+
+
 def new_id() -> str:
     """A ULID: 48 bits of milliseconds then 80 random bits, sortable by creation time."""
-    value = (time.time_ns() // 1_000_000) << 80 | int.from_bytes(os.urandom(10))
+    global _last_ms
+    # 1. The millisecond, never the same as the last id's (nor earlier, if the clock
+    #    went back), so "the latest session" is the one made last [CTX-14]. The
+    #    random bits stay, so a short prefix still tells two ids apart.
+    _last_ms = max(time.time_ns() // 1_000_000, _last_ms + 1)
+    # 2. Then 80 random bits, in Crockford's base 32.
+    value = _last_ms << 80 | int.from_bytes(os.urandom(10))
     return "".join(_CROCKFORD[(value >> shift) & 31] for shift in range(125, -1, -5))
 
 
@@ -40,6 +49,7 @@ class Session:
     transcript: list[Message] = field(default_factory=list)
     depth: int = 0
     parent_id: str | None = None
+    agent_chain: tuple[str, ...] = ()  # agent names running above this session [SUB-10]
     pending_steers: list[str] = field(default_factory=list)  # drained at the safe point
     title: str | None = None  # first line of the first prompt; never a model call [CLI-28]
     tainted: bool = False  # untrusted content entered the transcript; sticky [PERM-11, OQ-7]

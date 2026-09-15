@@ -33,7 +33,8 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M6 Skills, Core release | Done ([ADR-0041](adr/0041-skills-as-built.md)) | 0.1.0 |
 | M7 Memory and session search | Done ([ADR-0045](adr/0045-memory-as-built.md), [ADR-0046](adr/0046-forks-saves-and-the-daily-cap.md)) | 0.1.0 |
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
-| M9–M17 | Planned | 1.0, 2.0 |
+| M9 Subagents, routing rules and fallback | In progress | 1.0 |
+| M10–M17 | Planned | 1.0, 2.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -334,7 +335,6 @@ of code.*
 - Multi-row status bar [SUB-9]
 - Routing rules and `edgar route explain` [ROUTE-2..4, ROUTE-6, ROUTE-9]
 - `providers/fallback.py`, with reasoning off after a family switch [ROUTE-7, ROUTE-10, PRV-13]
-- `isolation: worktree` for write-capable subagents [SUB-11] *(Should)*
 - `edgar agents list|validate`, example agents in `examples/`
 - Plan mode (`/plan`, `/go`, `--plan`) and the `todo` tool, pinned as working
   state [CLI-20, TOOL-14, CTX-18], moved from M5 ([ADR-0037](adr/0037-core-fits-in-5000.md))
@@ -343,6 +343,30 @@ of code.*
 within its own allowlist and budget, with cost attributed per agent and their
 permission prompts asked one at a time; a simulated outage falls back sideways
 across families and the next request is accepted.
+
+`isolation: worktree` for write-capable subagents [SUB-11] moved to v2
+([ADR-0050](adr/0050-trim-should-items-from-v1.md)): every subagent runs in the
+parent's own working copy in v1.
+
+*2026-09-14: `agents/definition.py`, `agents/discovery.py` and `agents/spawn.py`
+are built, and the `task` tool re-enters `run_turn` with a fresh session, a
+narrowed policy and an inherited budget cap; `cli/setup.py` wires it in whenever
+an agent is discovered. Depth ceiling, cycle guard and policy narrowing
+[SUB-6, SUB-10, PERM-8] are enforced; consecutive `task` calls still run one at
+a time, `SpawnLimits.max_parallel` is read but not yet a real cap. Still open:
+fan-out concurrency and the multi-row status bar it needs [SUB-9], `edgar route
+explain`, `edgar agents list|validate`, example agents, plan mode and the `todo`
+tool. v1 is at 7,364 of 8,000 lines of code.*
+
+*2026-09-15: consecutive `task` calls fan out [TOOL-12]. `core/loop.py`'s own
+`_run_tools()` had no room left under its 200-line cap, so the grouping and the
+`asyncio.gather` moved to `tools/execute.py`'s new `execute_many()`, bounded by
+an `asyncio.Semaphore` sized from the `task` tool's own
+`SpawnLimits.max_parallel`; loop.py keeps only the bookkeeping (verify's
+`acted` flag, session tainting), replayed in call order once each result lands
+so it never races. Still open: the multi-row status bar concurrent subagents
+need [SUB-9], `edgar route explain`, `edgar agents list|validate`, example
+agents, plan mode and the `todo` tool. v1 is at 7,398 of 8,000 lines of code.*
 
 ---
 
@@ -353,19 +377,27 @@ across families and the next request is accepted.
 - `extensions/manifest.py`, `discovery.py`, `edgar ext list|validate|add` [EXT-1..3, EXT-8]
 - `extensions/hooks.py` — events, veto-only `pre_tool`, fail closed [EXT-4..7]
 - Provider plugins through `edgar.providers` entry points [PRV-14]
-- `sandbox/` port: `none`, `bwrap`, `seatbelt`, `container` [PERM-15] *(Should)*
+- `shell.sandbox` keeps its `none | bwrap | seatbelt | container` type; only
+  `none` runs anything in v1, `doctor` recommends no backend — the `bwrap`,
+  `seatbelt` and `container` backends [PERM-15] move to v2
+  ([ADR-0050](adr/0050-trim-should-items-from-v1.md))
 - Deterministic skill activation, description lint [SKL-17]
-- `edgar skills audit`: conformance and dangers checked deterministically, an opt-in
-  model review that only advises, suggested fixes as a diff; `ext add` audits
-  before it copies [SKL-18, EXT-3, ADR-0042] *(Should)*
 - A skill's `verify` command as a verification source, authorised like activation [SKL-1, VER-1, ADR-0041]
 - `edgar.testing.contract` — the contract kit for plugin authors
-- `edgar.run()` embedding API [EXT-9]
+- `edgar.run()` embedding API [EXT-9]. Design it for the caller described in
+  [ADR-0051](adr/0051-controlling-edgar-from-elsewhere.md): one program owning many
+  sessions across many project directories, starting turns nobody is watching, and
+  answering permission prompts out of band
 - Remaining slash commands [CLI-14]
 
 **Done when:** a user builds an extension with a command tool, a skill, an agent
 and a hook from the docs alone; a plugin provider in a separate package passes the
 contract kit; a failing `pre_tool` hook denies; and startup time is unchanged.
+
+`edgar skills audit` [SKL-18] moved to v2
+([ADR-0050](adr/0050-trim-should-items-from-v1.md)): `ext add` [EXT-3] copies a
+skill in unaudited in v1, the conformance and danger checks stay manual until
+v2 wires SKL-18 into it.
 
 **Resolves:** OQ-9 (`ext update`).
 
@@ -385,10 +417,10 @@ dead-ends, with Enter the right answer at every step.
   file that already exists ([ADR-0034](adr/0034-model-picker.md))
 - `edgar` with nothing configured offers to run that setup instead of erroring
 - `edgar doctor` — credentials, connectivity, MCP, extensions, trust, DB integrity,
-  cloud-synced directory warning, sandbox recommendation; `--network` lists every
-  reachable host [CFG-5, PRV-15]
+  cloud-synced directory warning; `--network` lists every reachable host [CFG-5,
+  PRV-15]. No sandbox recommendation in v1: only the `none` backend exists
+  ([ADR-0050](adr/0050-trim-should-items-from-v1.md))
 - `config show --resolved` with grant origins [CFG-2]
-- `edgar sessions compact ID` [CTX-10]
 - `edgar context show` with per-section token counts [CTX-2] (moved from M5,
   [ADR-0038](adr/0038-context-and-sessions-as-built.md))
 - ~~`docs/TOUR.md`~~ done early as [A Tour of the Harness](https://vespassassina.github.io/edgar/),
@@ -401,6 +433,10 @@ dead-ends, with Enter the right answer at every step.
 - `examples/` executed in CI; docs-coverage test [NFR-10]
 - Release automation: PyPI, PyApp binaries per platform, Docker image
 - **Verification: hand the docs to someone and time them adding a provider**
+
+`edgar sessions compact ID` [CTX-10] moved to v2
+([ADR-0050](adr/0050-trim-should-items-from-v1.md)): `/compact` inside the REPL
+(already Core) is unaffected.
 
 **Done when:** the v1.0 success criteria in PRD §11 are met, the formats in EXT-10
 are documented as stable, and `src/` is under 8,000 LOC.
@@ -560,8 +596,10 @@ Ordered by expected value, not commitment.
 6. **Shared or remote memory** — team-level facts
 7. **`git` and language-server tools** — `shell` and command tools cover the common cases
 8. **Homebrew and Scoop manifests** — when someone asks
-9. **Image and multimodal input**
-10. **Prompt-caching optimisation** across providers, not just Anthropic
+9. **Prompt-caching optimisation** across providers, not just Anthropic
+
+Image and multimodal input left this list for v2 scope
+([ADR-0052](adr/0052-media-input-in-v2.md)); it has no milestone yet.
 
 ## Never
 

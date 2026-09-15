@@ -147,6 +147,30 @@ for every run in a project, put it in `.edgar/config.toml` (this also needs
 command = "just check"
 ```
 
+## Run untrusted work in a container
+
+The permission engine is a speed bump, not a boundary: it says so in
+[BLUEPRINT §7.4](BLUEPRINT.md#74-residual-risks). For a repository you did not
+write, or any prompt built from web content, put a real wall around it. A
+minimal one:
+
+```dockerfile
+FROM python:3.12-slim
+RUN pip install --no-cache-dir uv
+WORKDIR /work
+ENTRYPOINT ["uvx", "edgar-harness"]
+```
+
+```bash
+docker build -t edgar-sandboxed .
+docker run --rm -it -v "$PWD":/work -e OPENAI_API_KEY edgar-sandboxed
+```
+
+The container's own network and filesystem limits hold even against a model
+talked into something by injected text; the permission engine's mode, taint and
+hard-layer checks (PERM-1..16) still run inside it, on top. Neither replaces the
+other — [ADR-0021](adr/0021-humans-widen-machines-tighten.md) is the reasoning.
+
 ## Pick up where you left off
 
 ```bash

@@ -10,8 +10,12 @@ from harness import Recorder, new_session, run_turn_sync, runtime, scripted, too
 from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.core.errors import ProviderError
-from edgar.core.events import Event, SteerApplied, TextDelta, ToolProposed
+from edgar.core.events import Event, Fallback, SteerApplied, TextDelta, ToolProposed
 from edgar.core.units import pairing_violations
+
+
+class _OtherFamily(ScriptedProvider):
+    family = "other"  # a fallback that crosses provider families [PRV-13]
 
 
 def test_loop_executes_tool_and_continues(tmp_project: Path, recorder: Recorder) -> None:
@@ -135,6 +139,43 @@ def test_provider_errors_propagate(tmp_project: Path) -> None:
     provider = scripted(ScriptedResponse(raises=ProviderError("rate limited")))
     with pytest.raises(ProviderError):
         run_turn_sync(new_session(tmp_project), "hi", runtime(provider))
+
+
+def test_a_provider_error_falls_back_to_the_next_model(
+    tmp_project: Path, recorder: Recorder
+) -> None:  # [ROUTE-7]
+    primary = scripted(ScriptedResponse(raises=ProviderError("rate limited")))
+    secondary = scripted(ScriptedResponse(text="from the fallback"))
+    rt = runtime(
+        primary, recorder, name="primary/test", fallback=(("secondary/test", secondary, "test"),)
+    )
+    result = run_turn_sync(new_session(tmp_project), "hi", rt)
+
+    assert result.text == "from the fallback"
+    assert secondary.call_count == 1
+    fell_back = recorder.of(Fallback)
+    assert len(fell_back) == 1 and fell_back[0].from_model == "primary/test"
+    assert fell_back[0].to_model == "secondary/test"
+    assert recorder.names.count("RequestStarted") == 2
+    assert recorder.names.count("RequestFinished") == 1  # only the request that succeeded
+
+
+def test_a_fallback_across_families_drops_reasoning(tmp_project: Path) -> None:  # [PRV-13]
+    primary = scripted(ScriptedResponse(raises=ProviderError("down")))
+    secondary = _OtherFamily([ScriptedResponse(text="ok")])
+    rt = runtime(primary, name="a/test", fallback=(("b/test", secondary, "test"),))
+    run_turn_sync(new_session(tmp_project), "hi", rt)
+
+    assert secondary.reasoning_used == [False]
+
+
+def test_fallback_is_exhausted_when_nothing_covers_the_turn(tmp_project: Path) -> None:
+    original = ProviderError("rate limited")
+    primary = scripted(ScriptedResponse(raises=original))
+    already_tried = scripted()  # empty script: would raise "exhausted" if ever called
+    rt = runtime(primary, name="a/test", fallback=(("a/test", already_tried, "test"),))
+    with pytest.raises(ProviderError, match="rate limited"):
+        run_turn_sync(new_session(tmp_project), "hi", rt)
 
 
 def test_the_rule_based_test_model_reads_a_file(tmp_project: Path) -> None:

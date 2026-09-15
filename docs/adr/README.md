@@ -60,6 +60,10 @@ that did not need an ADR.
 | [0046](0046-forks-saves-and-the-daily-cap.md) | Forks, saved sessions and the daily cap as built: a fork is one line, a save travels redacted, the cap becomes the turn's | Accepted · completes M7 |
 | [0047](0047-mcp-as-built.md) | MCP as built: `[mcp.NAME]` blocks, a config-hashed tool cache so no server starts at session start, deferred schemas listed in `tool_search`, results always untrusted | Accepted · first half of M8 |
 | [0048](0048-signing-in-as-built.md) | Signing in as built: PKCE on a loopback port opened before registration, dynamic client registration, tokens in the OS keyring, and a turn that never opens a browser | Accepted · completes M8, implements ADR-0032 and PRV-18 |
+| [0049](0049-network-hard-layer.md) | A link-local hard layer for network tools: catches the cloud metadata endpoint without breaking loopback-based tests or a local dev server | Accepted · adds PERM-16 |
+| [0050](0050-trim-should-items-from-v1.md) | Move v1's `(Should)` items to v2 before building M9–M11: worktree-isolated subagents, sandbox backends beyond `none`, `edgar skills audit`, out-of-REPL session compaction | Accepted · moves SUB-11, PERM-15, SKL-18, CTX-10 to v2 |
+| [0051](0051-controlling-edgar-from-elsewhere.md) | Controlling edgar from a phone or a remote terminal: a separate project embeds it, and the proxy relays or blocks but never answers | Accepted · constrains `edgar.run()`, amends ADR-0048 decision 1, "Never" list unchanged |
+| [0052](0052-media-input-in-v2.md) | Media input in v2: one `ImageBlock` and nothing else, every other format converted by a tool at the boundary | Accepted · amends PRD §5.3 and §5.1 |
 
 ## Writing a new ADR
 

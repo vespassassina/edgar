@@ -178,7 +178,10 @@ just cov        # coverage report
 3. Write the tests first where the shape is clear from the requirement
 4. Implement
 5. `just check`
-6. Update docs in the same commit, never "later"
+6. Update docs in the same commit, never "later" — PRD, BLUEPRINT, README, and
+   the tour (`docs/tour/index.html`) all count. `test_tour.py` only catches
+   broken references, not stale prose, so reread every tour stop for a file
+   the milestone touched before calling it done.
 7. If you made a decision a reasonable person would make differently, write an ADR
 
 ## When you disagree with the spec

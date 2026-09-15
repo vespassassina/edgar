@@ -1227,8 +1227,9 @@ JSON Lines) and `edgar.run()`, a thin async wrapper that builds a session and ca
 ## 7. Permissions
 
 A pure function at the centre, which is what makes it testable exhaustively.
-[PERM-1..14], [ADR-0004](adr/0004-permission-model.md),
-[ADR-0021](adr/0021-humans-widen-machines-tighten.md)
+[PERM-1..16], [ADR-0004](adr/0004-permission-model.md),
+[ADR-0021](adr/0021-humans-widen-machines-tighten.md),
+[ADR-0049](adr/0049-network-hard-layer.md)
 
 ### 7.1 The decision
 
@@ -1257,9 +1258,11 @@ Evaluation order, first match wins:
 
 1. **Hard layer** — never overridable by rules: anything outside `cwd` (Ask; only a
    grant for that exact path lets it through), credential paths (deny), a few
-   catastrophic commands such as `rm -rf /` (deny, even in yolo), and **writes to
-   control files, which are Ask in every mode except `yolo`** (deny when
-   non-interactive)
+   catastrophic commands such as `rm -rf /` (deny, even in yolo), a `fetch` or HTTP
+   tool URL that literally names a link-local address such as the cloud
+   metadata endpoint (deny, even in yolo — [PERM-16], `matcher.link_local()`),
+   and **writes to control files, which are Ask in every mode except `yolo`**
+   (deny when non-interactive)
 2. **Explicit per-tool rule** from config, then **grants**
 3. **Mode default**, tightened by **taint** in `auto`
 4. **Tool's own `dangerous` flag** → escalate to Ask
@@ -1326,6 +1329,9 @@ than one that is honest:
   Git Bash pipeline started ([ADR-0036](adr/0036-safety-layer-as-built.md))
 - **The recommended setup for untrusted work is a sandbox backend (§7.5), a
   container or a VM.** `docs/COOKBOOK.md` has a devcontainer recipe
+- **The link-local hard layer (PERM-16) reads only the literal host in the URL.**
+  A hostname that merely resolves to 169.254.169.254 still gets through, and
+  private and loopback ranges are untouched on purpose ([ADR-0049](adr/0049-network-hard-layer.md))
 - **Agents under restriction improvise.** Observed in the field: forged lockfile
   hashes, `|| true` appended to hide a failure, a user-space network stack built to
   get around a container. This is why "done" is decided by the verify gate running
