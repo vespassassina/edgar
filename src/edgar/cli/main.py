@@ -14,6 +14,9 @@ from edgar.core.errors import EdgarError
 # prompt_toolkit, jsonschema, yaml, keyring or any edgar.providers module is pulled
 # in (NFR-1, ADR-0012). The run paths are imported inside main().
 
+# The subcommands that look at a project rather than run a turn (cli/admin.py).
+ADMIN = {"trust", "permissions", "sessions", "tools", "skills", "cost", "mcp", "login", "logout"}
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -37,11 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     again = parser.add_mutually_exclusive_group()
     again.add_argument("--resume", nargs="?", const="", metavar="ID", help="reopen a session")
     again.add_argument(
-        "--continue",
-        action="store_const",
-        const="",
-        dest="resume",
-        help="reopen the latest session",
+        "--continue", action="store_const", const="", dest="resume", help="reopen the last session"
     )
     again.add_argument("--fork", metavar="ID[@TURN]", help="branch a session into a new one")
     again.add_argument("--load", type=Path, metavar="PATH", help="open a file /save wrote")
@@ -66,26 +65,13 @@ def main(argv: list[str] | None = None) -> int:
             from edgar.cli.memory import command as memory
 
             return memory(argv[1:], Path.cwd())
-        admin = (
-            ["trust"],
-            ["permissions"],
-            ["sessions"],
-            ["tools"],
-            ["skills"],
-            ["cost"],
-            ["mcp"],
-            ["login"],
-            ["logout"],
-        )
-        if argv[:1] in admin:
+        if argv[:1] and argv[0] in ADMIN:
             from edgar.cli.admin import command
 
             return command(argv, Path.cwd())
         return _run(build_parser(), argv)
     except EdgarError as exc:
-        print(f"edgar: {exc}", file=sys.stderr)
-        if exc.hint:
-            print(f"hint: {exc.hint}", file=sys.stderr)
+        print(f"edgar: {exc}" + (f"\nhint: {exc.hint}" if exc.hint else ""), file=sys.stderr)
         return exc.exit_code
     except KeyboardInterrupt:
         # The turn was cancelled and its transcript sealed before we got here.

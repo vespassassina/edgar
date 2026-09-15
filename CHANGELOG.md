@@ -25,6 +25,10 @@ extension formats freeze.
   not the order they finish.
 
 ### Changed
+- A `[[route]]` rule with a key edgar does not recognise is now a config error
+  naming the rule. A misspelt condition used to be dropped, so the rule matched
+  every turn.
+- `/plan` says it arrives in v2; plan mode moved there before 1.0.
 - `edgar models` offers to sign in instead of sending you away. Picking a provider
   that has no key but can issue one through the browser now asks "no key for
   openrouter. Sign in now? [Y/n]" — Enter signs in and the picker carries straight

@@ -327,9 +327,11 @@ happened".</p>
 <article class="stop" id="s5" data-files="src/edgar/tools/base.py">
   <h4><span class="n">5</span>The tool contract</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/base.py"><code>tools/base.py</code></a></p>
-  <p class="look">Look for: <code>Tool</code> <code>ToolSchema</code> <code>ToolContext</code> <code>ToolResult</code></p>
+  <p class="look">Look for: <code>Tool</code> <code>ToolSchema</code> <code>ToolContext</code> <code>ToolResult</code> <code>builtin_schema</code></p>
   <p>A tool is a schema plus an async <code>run</code>. The schema's category (read,
-  write, shell, network) is what the permission engine reasons about.</p>
+  write, shell, network) is what the permission engine reasons about. Every built-in
+  tool builds its schema through <code>builtin_schema</code>, which closes the object
+  to the properties it names.</p>
 </article>
 
 <article class="stop" id="s6" data-files="src/edgar/tools/execute.py">
@@ -448,7 +450,8 @@ between "the model asked" and "the thing happened"?</p>
   <p class="look">Look for: <code>OpenAICompatible</code> <code>Quirks</code> <code>QUIRKS</code> <code>connect</code> <code>Minted</code></p>
   <p>OpenAI, Azure, OpenRouter, Ollama and any compatible server share one adapter.
   How they differ is a table of data, not branches in code. Check whether the table
-  earns the claim.</p>
+  earns the claim: even what a provider can do (its context window, reasoning,
+  parallel calls) is read off its row by <code>HttpAdapter</code>, never its name.</p>
   <p><code>connect</code> finds the credential before any request: a key from the
   environment, or else a token printed by a command the user named, such as
   <code>gcloud auth print-access-token</code>. That is how Azure without keys,

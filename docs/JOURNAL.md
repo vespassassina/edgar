@@ -7,28 +7,24 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 ## Pick up here
 
-The next three pieces of work, in order, as of 2026-09-15 (`0cb9e40`). Read
+The next two pieces of work, in order, as of 2026-09-15, after the simplification
+pass (which left 708 lines of code for them). Read
 [ADR-0053](adr/0053-what-1-0-actually-ships.md) before any of them: it says what
 1.0 no longer ships, and building a cut item by mistake is the easiest way to
 waste the remaining budget.
 
-1. **The simplification pass**, owed by ADR-0053 decision 9 and by the standing
-   rule to simplify before moving features. Targets, largest first: `cli/` (1,864
-   lines of code), `tools/` (1,340), `providers/` (1,286) — the three that grew
-   most incrementally. Precedent: commit `944efde` shaved 116 without losing a
-   feature. The number it yields is the real headroom for M10 and M11, so measure
-   with `just loc` and record it; do not reinstate anything ADR-0053 cut on the
-   strength of an expected saving. `core/loop.py` is at 199 of its own 200-line
-   cap, so anything needing room there extracts a collaborator first, the way
-   `execute_many()` and `next_provider()` did.
-2. **Close M9.** What is left under the new scope is the multi-row status bar for
+1. **Close M9.** What is left under the new scope is the multi-row status bar for
    concurrent subagents [SUB-9] — without it two subagents show as one interleaved
    stream — and example agents in `examples/`. Then an M9 as-built ADR (the
    pattern every milestone follows: 0045/0046 for M7, 0047/0048 for M8) and the
    status table moves to Done. One open question to settle there: whether `Guard`'s
    asking lock really serialises prompts one at a time under real concurrency, which
-   the fan-out tests did not prove.
-3. **M10**, scoped by ADR-0053: the extension manifest and discovery, `ext list`
+   the fan-out tests did not prove. And one gap the simplification pass found:
+   `check_capabilities` [ROUTE-6] is tested but never called from product code —
+   `agents/spawn.py` computes `tools_required` and nobody checks it, and
+   `cli/setup.py`'s `runtime()` never checks the main model either. Wire it in
+   both places, with the failure going back to the model as a tool error.
+2. **M10**, scoped by ADR-0053: the extension manifest and discovery, `ext list`
    only, hooks entire, provider plugin entry points, deterministic skill activation
    and the description lint, a skill's `verify`, `edgar.run()` and the remaining
    slash commands. `edgar.run()` should be designed for the caller in
@@ -143,6 +139,48 @@ Carried forward until done. Newest first.
   with deterministic activation (ADR-0041).
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-15 · The simplification pass
+
+**Asked**
+- Pick the next item on "Pick up here" and do it: the simplification pass that
+  ADR-0053 decision 9 owes before the rest of M9, M10 and M11.
+
+**Done**
+- `src/` went from 7,398 to **7,292 of 8,000 lines of code**, 106 saved with no
+  feature lost and no test removed (647 pass). 708 are now left, against the
+  roughly 650 ADR-0053 estimated the remaining 1.0 work at.
+- `providers/` (−32): `HttpAdapter.__init__` now reads every capability off the
+  quirks row, so neither adapter keeps a constructor of its own; Anthropic says
+  only `caching = True`. `openai_compat.py` builds a tool call and a tool schema
+  through two small helpers; `registry.py` lists the four OpenAI-compatible
+  built-ins once; `routing.py` builds a `Route` straight from its table.
+- `tools/` (−41): a `builtin_schema()` helper in `tools/base.py` is now the one
+  constructor for every built-in tool's schema (closed object, named
+  properties), replacing seven hand-written JSON Schema literals.
+- `cli/` (−33): the admin subcommands are one `ADMIN` set in `main.py`; the
+  error print and `--continue` are one call each; `setup()` builds its warnings
+  in one expression and now numbers its six steps. `agents/discovery.py` uses
+  `permissions.policy.MODES` instead of its own copy of the mode list.
+- `/plan` now says it arrives in v2, not M9: the "still owed" table in
+  `cli/slash.py` was stale after ADR-0053.
+- Tour stops 5 (`builtin_schema`) and 12 (capabilities read off the row) reread
+  and updated.
+
+**Decided**
+- A `[[route]]` rule with a key edgar does not know is now a config error rather
+  than silently ignored. Before, `prompt_tokens_over` (a typo) was dropped and the
+  rule matched every turn, which sends every prompt to the wrong model with no
+  message. "Machines tighten" applies to config validation too.
+- No ADR: nothing here is a decision a reasonable person would make the other
+  way; the route strictness is a bug fix to a v1 feature not yet released.
+
+**Pending**
+- ROUTE-6 is not wired (see "Pick up here"); moved to closing M9 rather than
+  fixed here, since it changes behaviour and belongs with the M9 as-built ADR.
+- Diminishing returns past this point: the largest files left (`cli/slash.py`
+  320, `cli/setup.py` 284, `cli/repl.py` 276) are a list of small commands and
+  would shrink only by merging things a reader wants apart.
 
 ## 2026-09-15 · Docs check after M9's first two thirds
 

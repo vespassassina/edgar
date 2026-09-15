@@ -80,11 +80,8 @@ def select_model(
             "no model configured",
             hint="pass --model provider/model, or set [model] default in .edgar/config.toml",
         )
-    if ctx.role == "main":
-        return Selection(models.default, "default", "[model] default")
-    return Selection(
-        models.default, "default", f"[model] default; {ctx.role} has no model of its own"
-    )
+    why = "" if ctx.role == "main" else f"; {ctx.role} has no model of its own"
+    return Selection(models.default, "default", f"[model] default{why}")
 
 
 def _matches(rule: Route, ctx: RoutingContext) -> bool:
@@ -131,19 +128,9 @@ def _route(index: int, entry: Any) -> Route:
     model = entry.get("model")
     if not isinstance(name, str) or not isinstance(model, str) or not model:
         raise ConfigError(f'[[route]] rule {index}: needs model = "provider/model"')
+    # Every other key is a Route field of the same name, so a misspelt condition
+    # fails loudly here instead of silently matching everything.
     try:
-        return Route(
-            name=name,
-            model=model,
-            role=entry.get("role"),
-            agent=entry.get("agent"),
-            mode=entry.get("mode"),
-            tools_required=entry.get("tools_required"),
-            prompt_tokens_lt=entry.get("prompt_tokens_lt"),
-            prompt_tokens_gt=entry.get("prompt_tokens_gt"),
-            budget_remaining_lt=entry.get("budget_remaining_lt"),
-            tags=frozenset(entry.get("tags", [])),
-            schedule=entry.get("schedule"),
-        )
+        return Route(**{**entry, "name": name, "tags": frozenset(entry.get("tags", []))})
     except TypeError as exc:
         raise ConfigError(f"[[route]] {name!r}: {exc}") from None

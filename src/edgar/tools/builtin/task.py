@@ -12,8 +12,7 @@ from edgar.agents.spawn import SpawnLimits, spawn
 from edgar.config.schema import Config
 from edgar.permissions.guard import Guard
 from edgar.permissions.matcher import Subject
-from edgar.tools.base import ToolContext, ToolResult
-from edgar.tools.builtin.fs import _schema
+from edgar.tools.base import ToolContext, ToolResult, builtin_schema
 from edgar.tools.registry import ToolRegistry
 
 
@@ -30,7 +29,7 @@ class TaskTool:
         self.agents, self.registry, self.guard = agents, registry, guard
         self.config, self.env, self.limits = config, env, limits
         listed = "\n".join(f"- {a.name}: {a.description}" for a in agents.values())
-        self.schema = _schema(
+        self.schema = builtin_schema(
             "task",
             f"Run a subagent in a fresh context, with its own model, tools and policy. "
             f"Use one when its description fits the work. Agents available:\n{listed}",

@@ -40,7 +40,7 @@ fanning out through `tools/execute.py`'s `execute_many()` [TOOL-12], declarative
 routing rules and sideways fallback (`providers/fallback.py`) are built; the
 multi-row status bar [SUB-9], `edgar route explain`, `edgar agents list|validate`,
 example agents, plan mode and the `todo` tool are not. The
-budget test measures v1, 7,398 of 8,000 — 602 lines of code for the rest of M9,
+budget test measures v1, 7,292 of 8,000 after a simplification pass — 708 lines of code for the rest of M9,
 all of M10 and all of M11, so read [ADR-0050](docs/adr/0050-trim-should-items-from-v1.md)
 before planning anything, and then
 [ADR-0053](docs/adr/0053-what-1-0-actually-ships.md), which is that second trim:

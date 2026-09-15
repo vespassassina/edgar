@@ -117,6 +117,7 @@ def test_no_route_key_is_no_rules() -> None:
         {"route": [{"name": "no-model"}]},
         {"route": [{"model": ""}]},
         {"route": [{"model": 5}]},
+        {"route": [{"model": "a/b", "prompt_tokens_over": 10}]},  # a misspelt condition
     ],
 )
 def test_a_malformed_route_rule_is_a_config_error(raw: dict[str, object]) -> None:

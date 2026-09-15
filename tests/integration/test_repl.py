@@ -264,7 +264,7 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/reset", "conversation emptied"),
         ("/history", "nothing yet"),
         ("/fork", "none found"),
-        ("/plan", "/plan arrives in v1"),
+        ("/plan", "/plan arrives in v2"),
         ("/sessions", "no sessions yet"),
         ("/load NOPE", "none found"),
         ("/compact", "nothing to compact"),

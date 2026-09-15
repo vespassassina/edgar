@@ -40,11 +40,8 @@ from edgar.storage.transcript import (
 Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
-LATER = {
-    "M9": "/agents",
-    "M10": "/skills /tools",
-    "v1": "/plan /go /init",
-}
+# Commands still owed, and when; plan mode moved to v2 in ADR-0053.
+LATER = {"M9": "/agents", "M10": "/skills /tools", "M11": "/init", "v2": "/plan /go"}
 
 
 def command(names: str, help: str) -> Callable[[Command], Command]:

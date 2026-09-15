@@ -123,6 +123,7 @@ def setup(
     project_exec: bool = True,
     asker: Asker | None = None,
 ) -> Setup:
+    # 1. The permission guard, over the policy config describes.
     home = home or Path.home()
     p = config.permissions
     base = Policy(
@@ -136,29 +137,26 @@ def setup(
         control=control_files(root, home, config.instructions.files),
     )
     guard = Guard(base, asker=asker, store=Store(root / ".edgar" / "edgar.db"))
+    # 2. Tools, skills and MCP servers; `task` only when there is an agent to run.
     tools, found, servers_here = toolset(root, home, config, project_exec=project_exec)
     agents = discover_agents(root, home)
     if agents.agents:
         limits = subagents_config(config.later)
         tools.add([TaskTool(agents.agents, tools, guard, config, env, limits)])
+    # 3. The verify check; a project's own command runs only once it is trusted.
     skills = list(found.skills.values())
     from_project = config.origins.get("verify.command") == str(project_config(root))
     command = verify or (config.verify.command if project_exec or not from_project else None)
     check = Check(command, config.verify.max_attempts, config.shell.program) if command else None
     files = config.instructions.files
-    # The pinned facts are chosen now and frozen: a fact saved mid-session is found by
-    # `recall`, and pinned from the next session on [MEM-6].
+    # 4. The prompt's prefix. Pinned facts are chosen now and frozen: a fact saved
+    #    mid-session is found by `recall`, and pinned from the next session on [MEM-6].
     memory, scope = open_memory(home, config), project_scope(root)
     facts = [f.text for f in memory.pinned(scope, config.memory.pinned_max)]
     kept = notes(facts, config.memory.pinned_max, memory.path)
     sections = pinned(root, home, files) + kept + skill_index(skills, root)
-    warnings = [
-        *tools.warnings,
-        *found.warnings,
-        *found.problems,
-        *agents.warnings,
-        *agents.problems,
-    ]
+    # 5. What the human should hear before the first prompt.
+    warnings = tools.warnings + found.warnings + found.problems + agents.warnings + agents.problems
     for sec in sections:
         if sec.name == "personality" and approx_tokens(sec.text) > PERSONALITY_WARN:
             warnings.append(f"{sec.source} is ~{approx_tokens(sec.text):,} tokens; keep it short")
@@ -166,6 +164,7 @@ def setup(
     if changed:
         listed = ", ".join(changed)
         warnings.append(f"control files changed during session {last}: {listed}; review them")
+    # 6. What the session ends by comparing against, and what /browser would start.
     control = snapshot(root, home, files)
     browser = _browser_server(root, home, config, project_exec=project_exec)
     return Setup(

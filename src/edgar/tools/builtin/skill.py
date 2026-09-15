@@ -20,14 +20,13 @@ from __future__ import annotations
 from typing import Any
 
 from edgar.skills.discovery import Skill, split
-from edgar.tools.base import ToolContext, ToolResult
-from edgar.tools.builtin.fs import _schema
+from edgar.tools.base import ToolContext, ToolResult, builtin_schema
 
 
 class SkillTool:
     def __init__(self, skills: dict[str, Skill]) -> None:
         self.skills = skills
-        self.schema = _schema(
+        self.schema = builtin_schema(
             "skill",
             "Load a skill's instructions by name, from the skills listed in the system "
             "prompt. Load one when its description fits the task.",

@@ -21,7 +21,7 @@ import json
 from typing import Any
 
 from edgar.context.tokens import approx_tokens
-from edgar.tools.base import ToolContext, ToolResult, ToolSchema
+from edgar.tools.base import ToolContext, ToolResult, ToolSchema, builtin_schema
 from edgar.tools.mcp.client import FAILURES, Server
 from edgar.tools.registry import ToolRegistry, cost
 
@@ -37,18 +37,9 @@ class ToolSearch:
 
     @property
     def schema(self) -> ToolSchema:
-        return ToolSchema(
-            name="tool_search",
-            description=self._description(),
-            input_schema={
-                "type": "object",
-                "properties": {"query": {"type": "string", "description": "what you need to do"}},
-                "required": ["query"],
-            },
-            kind="builtin",
-            origin="builtin",
-            category="read",
-            read_only=True,
+        query = {"type": "string", "description": "what you need to do"}
+        return builtin_schema(
+            "tool_search", self._description(), {"query": query}, ["query"], read_only=True
         )
 
     def _description(self) -> str:

@@ -371,6 +371,11 @@ so it never races. Still open: the multi-row status bar concurrent subagents
 need [SUB-9], `edgar route explain`, `edgar agents list|validate`, example
 agents, plan mode and the `todo` tool. v1 is at 7,398 of 8,000 lines of code.*
 
+*2026-09-15: the simplification pass ADR-0053 owed took v1 to 7,292 of 8,000
+lines of code (106 saved, nothing cut), leaving 708 for SUB-9, example agents,
+M10 and M11. It also found `check_capabilities` [ROUTE-6] tested but never
+called; wiring it is part of closing M9.*
+
 ---
 
 ## M10 — Extensions, hooks, plugins, embedding

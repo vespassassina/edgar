@@ -23,8 +23,7 @@ from typing import Any
 from edgar.core.events import FactProposed
 from edgar.memory.retriever import Retriever
 from edgar.memory.store import Memory
-from edgar.tools.base import ToolContext, ToolResult
-from edgar.tools.builtin.fs import _schema
+from edgar.tools.base import ToolContext, ToolResult, builtin_schema
 
 KINDS = {"facts": ["fact"], "sessions": ["turn"], "all": ["fact", "turn"]}
 
@@ -32,7 +31,7 @@ KINDS = {"facts": ["fact"], "sessions": ["turn"], "all": ["fact", "turn"]}
 class Remember:
     def __init__(self, memory: Memory, scope: str) -> None:
         self.memory, self.scope = memory, scope
-        self.schema = _schema(
+        self.schema = builtin_schema(
             "remember",
             "Propose a short, durable note for future sessions in this project: a "
             "convention, a decision, a preference the user stated. The user confirms "
@@ -53,7 +52,7 @@ class Remember:
 class Recall:
     def __init__(self, retriever: Retriever, scopes: list[str]) -> None:
         self.retriever, self.scopes = retriever, scopes
-        self.schema = _schema(
+        self.schema = builtin_schema(
             "recall",
             "Search remembered facts and past sessions of this project. Matching is by "
             "words, so pass several terms, synonyms included: "

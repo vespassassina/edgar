@@ -27,9 +27,9 @@ from edgar.core.errors import ContextOverflow, EdgarError, ProviderError
 from edgar.core.events import EventBus, ProviderRetry, ToolCallRepaired
 from edgar.core.message import Message, ToolUseBlock
 from edgar.providers import repair
-from edgar.providers.base import Usage
+from edgar.providers.base import Capabilities, Usage
 from edgar.providers.pricing import cost_of
-from edgar.providers.quirks import Key, Minted
+from edgar.providers.quirks import Key, Minted, Quirks
 
 RETRYABLE = frozenset({408, 409, 429, 500, 502, 503, 504, 529})  # 529: Anthropic overloaded
 TIMEOUT = httpx.Timeout(connect=15.0, read=300.0, write=60.0, pool=15.0)
@@ -56,17 +56,31 @@ class HttpAdapter:
 
     name: str
     family: str
+    caching = False  # whether the wire format has prompt-cache breakpoints [PRV-8]
 
     def __init__(
         self,
         name: str,
+        quirks: Quirks,
         *,
         api_key: Key,
         prices: Mapping[str, PriceSection],
         transport: httpx.AsyncBaseTransport | None = None,
         retry: Retry | None = None,
     ) -> None:
-        self.name = name
+        # 1. What the provider can do is read off its quirks row, never its name.
+        self.name, self.quirks = name, quirks
+        self.base = (quirks.base_url or "").rstrip("/")
+        self.capabilities = Capabilities(
+            tools=True,
+            parallel_tool_calls=quirks.parallel_tools,
+            streaming=True,
+            reasoning=quirks.reasoning,
+            prompt_caching=self.caching,
+            max_context=quirks.max_context,
+            max_output=quirks.max_output,
+        )
+        # 2. The key, the price table, and the per-loop client made on first use.
         self._key = api_key
         self.prices = prices
         self.retry = retry or Retry()

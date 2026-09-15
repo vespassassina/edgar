@@ -31,6 +31,20 @@ class ToolSchema:
     dangerous: bool = False  # default to ask even in auto mode
 
 
+def builtin_schema(
+    name: str,
+    description: str,
+    props: dict[str, Any],
+    required: list[str],
+    category: Category = "read",
+    **flags: bool,
+) -> ToolSchema:
+    # Every built-in takes one JSON object with exactly the properties it names.
+    shape: dict[str, Any] = {"type": "object", "properties": props, "required": required}
+    shape["additionalProperties"] = False
+    return ToolSchema(name, description, shape, "builtin", "builtin", category, **flags)
+
+
 @dataclass(frozen=True, slots=True)
 class ToolResult:
     """What a tool returns. The pipeline turns it into a ToolResultBlock."""

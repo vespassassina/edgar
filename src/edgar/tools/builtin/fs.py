@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from edgar.tools.base import ToolContext, ToolResult, ToolSchema
+from edgar.tools.base import ToolContext, ToolResult, builtin_schema
 
 READ_LIMIT = 2000  # lines
 LS_LIMIT = 1000  # entries
@@ -19,29 +19,11 @@ GREP_LIMIT = 500  # matching lines
 SKIP = {".git", ".edgar", ".venv", "node_modules", "__pycache__"}
 
 
-def _schema(
-    name: str, description: str, props: dict[str, Any], required: list[str], category: str = "read"
-) -> ToolSchema:
-    return ToolSchema(
-        name=name,
-        description=description,
-        input_schema={
-            "type": "object",
-            "properties": props,
-            "required": required,
-            "additionalProperties": False,
-        },
-        kind="builtin",
-        origin="builtin",
-        category=category,  # type: ignore[arg-type]  # one of the Category literals
-    )
-
-
 _PATH = {"type": "string", "description": "relative to the working directory"}
 
 
 class Read:
-    schema = _schema(
+    schema = builtin_schema(
         "read",
         "Read a text file. Lines are numbered from 1. For long files pass offset "
         f"(first line) and limit (line count, default {READ_LIMIT}).",
@@ -80,7 +62,9 @@ class Read:
 
 
 class Ls:
-    schema = _schema("ls", "List a directory. Directories end with '/'.", {"path": _PATH}, [])
+    schema = builtin_schema(
+        "ls", "List a directory. Directories end with '/'.", {"path": _PATH}, []
+    )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         path = ctx.cwd / args.get("path", ".")
@@ -113,7 +97,7 @@ def _files(root: Path, pattern: str, cwd: Path) -> list[Path]:
 
 
 class Glob:
-    schema = _schema(
+    schema = builtin_schema(
         "glob",
         "Find files by pattern, for example '**/*.py'. Paths come back relative to the "
         "working directory.",
@@ -134,7 +118,7 @@ class Glob:
 
 
 class Grep:
-    schema = _schema(
+    schema = builtin_schema(
         "grep",
         "Search file contents with a Python regular expression. Returns path:line:text.",
         {
@@ -169,7 +153,7 @@ class Grep:
 
 
 class Write:
-    schema = _schema(
+    schema = builtin_schema(
         "write",
         "Create or overwrite a text file. Parent folders are created.",
         {"path": _PATH, "content": {"type": "string"}},
@@ -186,7 +170,7 @@ class Write:
 
 
 class Edit:
-    schema = _schema(
+    schema = builtin_schema(
         "edit",
         "Replace exact text in a file. `old` must match the file exactly and only once, "
         "unless replace_all is true. Read the file first.",

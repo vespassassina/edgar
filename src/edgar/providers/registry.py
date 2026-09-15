@@ -25,14 +25,9 @@ if TYPE_CHECKING:
 
 _OPENAI = "edgar.providers.openai_compat"
 _ANTHROPIC = "edgar.providers.anthropic"
-BUILTIN = {
-    "openai": _OPENAI,
-    "azure": _OPENAI,
-    "openrouter": _OPENAI,
-    "ollama": _OPENAI,
-    "anthropic": _ANTHROPIC,
-    "fake": "edgar.providers.fake",
-}
+# Four built-ins share one adapter and differ only by their row in quirks.py.
+BUILTIN = dict.fromkeys(["openai", "azure", "openrouter", "ollama"], _OPENAI)
+BUILTIN |= {"anthropic": _ANTHROPIC, "fake": "edgar.providers.fake"}
 KINDS = {"openai-compatible": _OPENAI, "anthropic": _ANTHROPIC}
 
 

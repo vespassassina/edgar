@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import Any
 
 from edgar.agents.definition import AgentBudget, AgentDefinition
+from edgar.permissions.policy import MODES
 
 _FRONT = re.compile(r"---\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)(.*)", re.S)
 _NAME = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")  # same rule as a skill's name
-_MODES = frozenset({"read-only", "ask", "auto", "yolo"})
 
 
 @dataclass
@@ -69,8 +69,8 @@ def _agent(head: dict[str, Any], prompt: str, path: Path, origin: str) -> AgentD
     if not isinstance(description, str) or not 0 < len(description.strip()) <= 1024:
         raise ValueError("`description` must be text, 1 to 1,024 characters")
     mode = head.get("mode")
-    if mode is not None and mode not in _MODES:
-        raise ValueError(f"`mode` must be one of {sorted(_MODES)}")
+    if mode is not None and mode not in MODES:
+        raise ValueError(f"`mode` must be one of {list(MODES)}")
     tools = head.get("tools", [])
     if not isinstance(tools, list) or not all(isinstance(t, str) for t in tools):
         raise ValueError("`tools` must be a list of tool names")

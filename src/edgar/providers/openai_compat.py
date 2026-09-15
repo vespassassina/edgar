@@ -22,10 +22,9 @@ from typing import TYPE_CHECKING, Any
 
 from edgar.core.errors import ProviderError
 from edgar.core.events import EventBus, ReasoningDropped, TextDelta, ThinkingDelta
-from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock
-from edgar.providers.base import Capabilities, ProviderResponse, Usage
+from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock, ToolUseBlock
+from edgar.providers.base import ProviderResponse, Usage
 from edgar.providers.http import HttpAdapter, events, tool_calls
-from edgar.providers.quirks import Quirks
 
 if TYPE_CHECKING:
     from edgar.tools.base import ToolSchema
@@ -46,19 +45,6 @@ The result comes back in the next message. The tools:
 
 class OpenAICompatible(HttpAdapter):
     family = FAMILY
-
-    def __init__(self, name: str, quirks: Quirks, **kwargs: Any) -> None:
-        super().__init__(name, **kwargs)
-        self.quirks = quirks
-        self.capabilities = Capabilities(
-            tools=True,
-            parallel_tool_calls=quirks.parallel_tools,
-            streaming=True,
-            reasoning=quirks.reasoning,
-            prompt_caching=False,
-            max_context=quirks.max_context,
-            max_output=quirks.max_output,
-        )
 
     async def stream(
         self,
@@ -129,24 +115,21 @@ class OpenAICompatible(HttpAdapter):
     def listing(self) -> tuple[str, dict[str, str]] | None:
         if self.quirks.api_version:  # Azure lists base models, not your deployments
             return None
-        return f"{(self.quirks.base_url or '').rstrip('/')}/models", self._headers()
+        return f"{self.base}/models", self._headers()
 
     def _url(self, model: str) -> str:
-        base = (self.quirks.base_url or "").rstrip("/")
         version = self.quirks.api_version
         if version:  # Azure: the model name is the deployment name
-            return f"{base}/openai/deployments/{model}/chat/completions?api-version={version}"
-        return f"{base}/chat/completions"
+            return f"{self.base}/openai/deployments/{model}/chat/completions?api-version={version}"
+        return f"{self.base}/chat/completions"
 
     def _headers(self) -> dict[str, str]:
         style = self.quirks.auth_style
         if style == "none" or not self.api_key:
             return {}
-        return (
-            {"api-key": self.api_key}
-            if style == "api-key"
-            else {"authorization": f"Bearer {self.api_key}"}
-        )
+        if style == "api-key":
+            return {"api-key": self.api_key}
+        return {"authorization": f"Bearer {self.api_key}"}
 
     def _messages(
         self, messages: Sequence[Message], tools: Sequence[ToolSchema], bus: EventBus
@@ -167,19 +150,7 @@ class OpenAICompatible(HttpAdapter):
                 if not m.tool_calls:
                     entry["content"] = m.text
                 if m.tool_calls and native:
-                    entry["tool_calls"] = [
-                        {
-                            "id": c.id,
-                            "type": "function",
-                            "function": {
-                                "name": c.name,
-                                "arguments": c.malformed
-                                if c.malformed is not None
-                                else json.dumps(c.args),
-                            },
-                        }
-                        for c in m.tool_calls
-                    ]
+                    entry["tool_calls"] = [_call(c) for c in m.tool_calls]
                 elif m.tool_calls:
                     said = [json.dumps({"name": c.name, "arguments": c.args}) for c in m.tool_calls]
                     entry["content"] = "\n".join(filter(None, [m.text, *said]))
@@ -246,15 +217,15 @@ def _append(out: list[dict[str, Any]], role: str, text: str) -> None:
         out.append({"role": role, "content": text})
 
 
-def _tool(schema: ToolSchema) -> dict[str, Any]:
-    return {
-        "type": "function",
-        "function": {
-            "name": schema.name,
-            "description": schema.description,
-            "parameters": schema.input_schema,
-        },
-    }
+def _call(c: ToolUseBlock) -> dict[str, Any]:
+    # A malformed call goes back exactly as the model sent it, so it can see its slip.
+    args = c.malformed if c.malformed is not None else json.dumps(c.args)
+    return {"id": c.id, "type": "function", "function": {"name": c.name, "arguments": args}}
+
+
+def _tool(t: ToolSchema) -> dict[str, Any]:
+    spec = {"name": t.name, "description": t.description, "parameters": t.input_schema}
+    return {"type": "function", "function": spec}
 
 
 def _describe(tools: Sequence[ToolSchema]) -> str:

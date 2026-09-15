@@ -18,9 +18,8 @@ from typing import TYPE_CHECKING, Any
 from edgar.core.errors import ProviderError
 from edgar.core.events import EventBus, ReasoningDropped, TextDelta, ThinkingDelta
 from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock, ToolUseBlock
-from edgar.providers.base import Capabilities, ProviderResponse, Usage
+from edgar.providers.base import ProviderResponse, Usage
 from edgar.providers.http import HttpAdapter, events, tool_calls
-from edgar.providers.quirks import Quirks
 
 if TYPE_CHECKING:
     from edgar.tools.base import ToolSchema
@@ -32,20 +31,7 @@ _CACHE = {"type": "ephemeral"}
 
 class Anthropic(HttpAdapter):
     family = FAMILY
-
-    def __init__(self, name: str, quirks: Quirks, **kwargs: Any) -> None:
-        super().__init__(name, **kwargs)
-        self.quirks = quirks
-        self.base = (quirks.base_url or "").rstrip("/")
-        self.capabilities = Capabilities(
-            tools=True,
-            parallel_tool_calls=True,
-            streaming=True,
-            reasoning=True,
-            prompt_caching=True,
-            max_context=quirks.max_context,
-            max_output=quirks.max_output,
-        )
+    caching = True
 
     async def stream(
         self,
