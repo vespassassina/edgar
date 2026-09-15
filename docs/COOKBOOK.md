@@ -140,6 +140,15 @@ edgar trust
 Edit `url` to point at your API first. The response is marked untrusted: in
 `auto` mode, shell and network calls after it ask before they run.
 
+Not every API needs a token: [`examples/tools/weather.toml`](../examples/tools/weather.toml)
+calls wttr.in, which takes no auth, so the file has no `headers` and nothing
+to fill from `${env:NAME}` — `${env:NAME}` is only for the APIs that need it.
+
+```bash
+cp examples/tools/weather.toml .edgar/tools/
+edgar trust
+```
+
 ## Write a skill
 
 A skill is know-how the agent loads when it needs it: a folder with a `SKILL.md`,

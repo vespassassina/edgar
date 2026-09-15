@@ -1,0 +1,13 @@
+# An HTTP tool: a request template whose host is fixed. Arguments fill only the
+# path, query and body. No environment variable and no API key are needed here —
+# wttr.in answers with plain text and no auth, so there is nothing to fill from
+# ${env:NAME} and nothing to scrub from the response.
+name = "weather"
+description = "Current weather for a city, as one plain-text line, from wttr.in."
+method = "GET"
+url = "http://wttr.in/{city}?format=3"     # wttr.in's TLS certificate is expired; plain http works
+read_only = true
+[input]
+type = "object"
+required = ["city"]
+properties.city = { type = "string" }

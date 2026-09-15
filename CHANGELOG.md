@@ -72,6 +72,8 @@ extension formats freeze.
 - An example extension, `examples/extensions/audit-log/`: copy it into
   `.edgar/extensions/` for a manifest plus one hook that appends a line to a
   local log at the end of every turn.
+- An example HTTP tool that needs no API key, `examples/tools/weather.toml`:
+  copy it into `.edgar/tools/` for current weather by city from wttr.in.
 
 ### Changed
 - A `[[route]]` rule with a key edgar does not recognise is now a config error

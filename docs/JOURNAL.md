@@ -197,6 +197,51 @@ Carried forward until done. Newest first.
 `docs/DEPENDENCIES.md`, `examples/` in CI with a docs-coverage test, and
 release automation.
 
+## 2026-09-15 · Testing the docs with a cold subagent, and a weather tool
+
+**Asked**
+- Whether "verified by trying it on someone" (PRD §11) could start with an
+  agent instead of waiting on a person, since writing docs is exactly the
+  kind of thing an agent — or edgar itself — could try to follow.
+
+**Done**
+- Spawned a fresh subagent with none of this session's context and one
+  instruction: add a genuinely useful example tool using only
+  `docs/EXTENDING.md` and `docs/COOKBOOK.md`, never opening `src/edgar/`.
+  It chose a no-key weather lookup, wrote `examples/tools/weather.toml`
+  (HTTP tool, wttr.in, `format=3`) correctly on its first attempt purely
+  from the `service_status.toml` template and the HTTP-tool section of
+  EXTENDING.md, added the matching row to `examples/README.md`, and fixed
+  `tests/unit/test_skills.py::test_the_example_tools_load`'s hardcoded
+  tool-name list to include it.
+- It found one real doc gap: COOKBOOK's only HTTP-tool example needs
+  `${env:NAME}` for a bearer token, so a first-timer with a no-auth API
+  (the common case) had nothing to copy from confidently. Added a short,
+  additive note to the existing recipe showing the no-auth case — no
+  existing prose touched.
+- It hit one real undocumented behavior — `--cwd` isn't accepted alongside
+  a subcommand like `edgar trust`, only with the default `-p`/REPL
+  invocation — worked around it with `cd` and `--project` rather than
+  opening `src/` to find out why, and reported the friction rather than
+  silently absorbing it.
+- Verified independently before committing: `https://wttr.in` genuinely
+  has an expired TLS cert (confirmed with `curl -v`, unrelated to edgar),
+  so the file's `http://` URL and its explaining comment are correct, not
+  a shortcut. `uv run just check` (670 tests, ruff, mypy) and `just loc`
+  (still 8,000/8,000) both green afterward.
+
+**Decided**
+- An agent is a legitimate, cheap first pass at PRD §11's "add a tool
+  without opening `src/`" — but not a substitute for it: a subagent that
+  already reads TOML fluently isn't "a non-Python user", so ROADMAP.md's
+  still-open note now says the tool half has real evidence while both
+  human-verification criteria (a provider, tried by an actual outside
+  person) stay open exactly as before.
+
+**Next:** nothing further on M11 itself. The two PRD §11 items and the
+first real tagged release remain the only things this repo cannot verify
+on its own.
+
 ## 2026-09-15 · Finishing M11: docs, examples, docs-coverage, release automation
 
 **Asked**

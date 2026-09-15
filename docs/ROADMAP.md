@@ -458,11 +458,17 @@ dead-ends, with Enter the right answer at every step.
 - ~~Release automation: PyPI, PyApp binaries per platform, Docker image~~ done —
   PyPI trusted publishing already shipped; `pyapp` and `docker` jobs added to
   `.github/workflows/release.yml`, unverified by an actual release run (ADR-0056)
-- **Still open: hand the docs to someone and time them adding a provider.**
-  PRD §11's "verified by trying it on someone" and the non-Python-user
-  criterion need an actual outside person; nothing here can substitute for
-  that, so v1.0's two human-verification criteria stay open until someone
-  does it
+- A cold subagent, given only `EXTENDING.md`/`COOKBOOK.md` and told not to
+  open `src/`, added `examples/tools/weather.toml` (an HTTP tool, no auth,
+  wttr.in) on its first attempt and never needed to look — a real proxy for
+  half of the non-Python-user criterion below, though not the thing itself
+- **Still open: hand the docs to an actual person and time them adding a
+  provider.** The subagent run above is evidence the tool half of the
+  non-Python-user criterion is achievable from docs alone, but an agent
+  that already reads TOML fluently is not "a non-Python user", and nothing
+  here substitutes for "verified by trying it on someone" for a new
+  provider either. Both of PRD §11's human-verification criteria stay open
+  until an actual outside person does it
 
 `edgar sessions compact ID` [CTX-10] moved to v2
 ([ADR-0050](adr/0050-trim-should-items-from-v1.md)): `/compact` inside the REPL

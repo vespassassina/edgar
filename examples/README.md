@@ -7,6 +7,7 @@ until you copy it.
 |---|---|---|
 | [`tools/gh_issue.toml`](tools/gh_issue.toml) | A command tool: the `gh` CLI, one argv template, no shell | `.edgar/tools/` |
 | [`tools/service_status.toml`](tools/service_status.toml) | An HTTP tool: fixed host, token from the environment | `.edgar/tools/` |
+| [`tools/weather.toml`](tools/weather.toml) | An HTTP tool: fixed host, no auth needed | `.edgar/tools/` |
 | [`skills/changelog/`](skills/changelog/) | A skill: instructions plus a template file beside them | `.edgar/skills/` |
 | [`agents/code-reviewer.md`](agents/code-reviewer.md) | A subagent: one flat file, `read-only` mode, four tools | `.edgar/agents/` |
 | [`extensions/audit-log/`](extensions/audit-log/) | An extension: a manifest plus one observation-only hook | `.edgar/extensions/` |
