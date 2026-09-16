@@ -67,6 +67,8 @@ that did not need an ADR.
 | [0053](0053-what-1-0-actually-ships.md) | What 1.0 actually ships: cut the commands that read a format, never the format itself | Accepted · moves CLI-20, TOOL-14, CTX-18, CTX-2, CFG-2, ROUTE-9 and parts of CFG-5, EXT-3 and PRV-14 to v2 |
 | [0054](0054-m9-subagents-as-built.md) | M9 as built: subagents fan out through `execute_many()`, a multi-row status bar, an example agent, and `check_capabilities` wired in | Accepted · completes M9 |
 | [0055](0055-m10-extensions-as-built.md) | M10 as built: a per-turn verify override mirroring the daily cap, verify authorisation moved down to `core/verify.py`, `edgar.run()` with every heavy import deferred, and the last three slash commands | Accepted · completes M10; refines ADR-0006, ADR-0041; implements EXT-9, SKL-17, VER-1 in part, CLI-14 |
+| [0056](0056-m11-as-built.md) | M11 as built: Cookbook, EXTENDING, DEPENDENCIES, examples in CI, the docs-coverage test, release automation | Accepted · completes M11 and 1.0; implements NFR-10 in part |
+| [0057](0057-daily-driver-before-learning.md) | The daily driver comes before learning: v2 (M18–M22) is the daily driver, v3 (M12–M15) learning, v4 (M17, M16) unattended; every milestone ends with its tour | Accepted · supersedes ADR-0015's tier contents and v2 budget; assigns ADR-0052 to M20 |
 
 ## Writing a new ADR
 

@@ -193,4 +193,4 @@ every built-in adapter passes,
 is what "a new provider is done" means for code contributed to edgar itself,
 and is the reference to read even without importing it. A third-party plugin
 should still hand-test streaming, cancellation and tool-call translation
-against it; that gap moves to v2.
+against it; that gap closes in v2's M22, when the kit ships.

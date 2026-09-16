@@ -15,10 +15,12 @@ edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 > **Status:** 0.1 is on PyPI. Core is built (M0 to M6): the REPL and one-shot runs
 > against real models, with file, shell and web tools behind the permission engine,
 > the verify gate, your own CLI and HTTP tools, skills, sessions you can resume
-> (`edgar --continue`), compaction and cost caps. From v1: memory, session forks,
-> MCP servers and signing in (M7, M8). Subagents, routing, extensions and hooks
-> (M9 to M11) come at 1.0. The documents in `docs/` are the spec being built
-> against.
+> (`edgar --continue`), compaction and cost caps. v1 is code-complete (M7 to M11):
+> memory, session forks, MCP servers and signing in, subagents, routing and
+> fallback, extensions, hooks, `edgar.run()`, `init` and `doctor`. 1.0 is not
+> tagged yet. Next is v2, the daily driver
+> ([ADR-0057](docs/adr/0057-daily-driver-before-learning.md)). The documents in
+> `docs/` are the spec being built against.
 
 ## Why edgar
 
@@ -77,7 +79,9 @@ comments don't count):
 |---|---|---|
 | **Core** (0.x) | The loop, five providers, built-in and custom tools, skills, permissions, verify gate, staged compaction, sessions, REPL and pipes | ≤ 5,000 LOC |
 | **v1.0** | Memory, MCP, subagents, routing and fallback, extensions and hooks, an embedding API. Extension formats frozen | ≤ 8,000 LOC |
-| **v2.0** | Learning from what you type and what breaks, skill synthesis, a controller, a capability broker, scheduling | ≤ 11,000 LOC |
+| **v2.0** the daily driver | A tour page per feature, `@path` attachments, plan mode and `todo`, images, web search and git as extensions, worktrees and sandboxes, the inspection commands | ≤ 9,500 LOC |
+| **v3.0** learning | Learning from what you type and what breaks, skill synthesis, a controller, escalation. Removable | ≤ 12,000 LOC |
+| **v4.0** unattended | A capability broker and scheduling. Removable | ≤ 13,000 LOC |
 
 None of that is unusual. What is unusual is that the whole thing is small enough
 to read in an afternoon, and the parts usually hidden behind an SDK are written
@@ -119,7 +123,7 @@ flowchart TB
         direction LR
         bus["event bus<br/>stdout: the result<br/>stderr: status"]
         disk[("session JSONL · SQLite<br/>readable, never rewritten")]
-        v2["v2, removable<br/>learning · controller<br/>scheduling"]
+        v3["v3 and v4, removable<br/>learning · controller<br/>broker · scheduling"]
     end
 
     entry --> core
@@ -200,13 +204,19 @@ argv template, never a shell) or an API with an HTTP tool (a request template wi
 the host fixed and secrets from the environment). Add MCP servers or skills in
 Claude's `SKILL.md` format. All four are built and in Core or 0.1.
 
-**Coming in 1.0 (M9 to M11, designed and specced, not yet built).** Subagents
-declared in markdown, so a cheap local model can explore while an expensive one
-reviews, each with its own tool allowlist and budget. Declarative model routing as
-a pure function with zero model calls, escalation and fallback kept apart because
-"not capable enough" and "not reachable" want different responses. Hooks that can
-veto a tool call, and extension folders that bundle any of the above and share it
-by copying.
+**Built for 1.0 (M9 to M11).** Subagents declared in markdown, so a cheap local
+model can explore while an expensive one reviews, each with its own tool
+allowlist and budget. Declarative model routing as a pure function with zero
+model calls, and fallback kept apart from it because "not capable enough" and
+"not reachable" want different responses. Hooks that can veto a tool call, and
+extension folders that bundle any of the above and share it by copying.
+
+**Coming in 2.0, the daily driver (M18 to M22).** A tour page per feature and a
+map of the harness. `@path` attachments, plan mode and a `todo` list that survive
+compaction. Images in the conversation. Web search and git as extensions you can
+read. A git worktree per subagent that writes, and a sandboxed shell. The
+inspection commands: `context show`, `route explain`, `config show --resolved`,
+the rest of `doctor`.
 
 **Long sessions that stay valid.** Context is compressed in stages, cheapest
 first: big outputs spill to disk, old tool results become stubs, old turns fold
@@ -227,19 +237,19 @@ denial — even in `yolo` — is a `fetch` or HTTP call that literally names the
 metadata address ([PERM-16](docs/adr/0049-network-hard-layer.md)). For anything
 genuinely untrusted, [run it in a container](docs/COOKBOOK.md#run-untrusted-work-in-a-container).
 
-**A controller that cannot hurt you** (v2). Deterministic checks after each turn;
+**A controller that cannot hurt you** (v3). Deterministic checks after each turn;
 a cheap model runs only when one trips. It returns typed proposals from a fixed
 whitelist, dry-run by default, fully logged, and it can only ever tighten policy.
 It cannot write your instruction files — it proposes a diff and you apply it.
 
-**Every call answers to what you asked** (v2). Scope a request (`--scope
+**Every call answers to what you asked** (v4). Scope a request (`--scope
 paths=reports/q3.md`) and a line hidden in that report cannot send the agent to
 another file or host: calls outside the scope are refused, and subagents inherit
 the scope narrowed, never widened. Every allow and refusal goes into a signed
 receipt tied to the words you typed; `edgar receipt --refused` shows what the agent
 tried and was refused.
 
-**Scheduling without a daemon** (v2). One `tick` command plus one host cron entry.
+**Scheduling without a daemon** (v4). One `tick` command plus one host cron entry.
 Agents can schedule themselves, with guardrails.
 
 **Easy to build on.** `-p --json` for one result, `-p --events` for the live event

@@ -1,6 +1,6 @@
-# Decisions — spec revisions v0.3 and v0.4
+# Decisions — spec revisions v0.3, v0.4 and v0.5
 
-What changed in the spec on 2026-09-13, and why. This page is the readable summary;
+What changed in the spec on 2026-09-13 (v0.3, v0.4) and 2026-09-16 (v0.5), and why. This page is the readable summary;
 the ADRs are the formal record. [v0.4](#revision-v04--the-field-review) follows a
 field review of 11,647 Hacker News comments; v0.3, below it, came out of a full
 review of v0.2 against the project's goal:
@@ -13,6 +13,28 @@ lightweight: 154 Must requirements inside 8,000 lines and eight dependencies. It
 also found five leaks in the memory security claim, four side doors around
 "policy may only tighten", a compaction invariant weaker than what providers
 enforce, and a dozen places where the documents disagreed with each other.
+
+---
+
+## Revision v0.5 — the daily driver first (2026-09-16)
+
+v1.0 went code-complete at exactly 8,000 of 8,000 lines of code without anyone
+having worked a day in it. ADR-0015's next tier was learning, which learns from
+use there has not been. [ADR-0057](adr/0057-daily-driver-before-learning.md)
+puts a new tier in front of it and splits the old v2 in two:
+
+| Tier | Milestones | Promise | Budget |
+|---|---|---|---|
+| v2, the daily driver | M18–M22 | Tours for v1 and a map; `@path`, plan mode and `todo`; images, web search and git; worktrees and sandboxes; the inspection commands cut by ADR-0053. Extends Core and v1, not removable | ≤ 9,500 LOC |
+| v3, learning | M12–M15 | Learning, controller, synthesis, escalation. Removable | ≤ 12,000 LOC |
+| v4, unattended | M17, M16 | Broker, scheduling, notifications. Removable | ≤ 13,000 LOC |
+
+What holds from before: milestone IDs keep their numbers, budgets are
+constraints not estimates, NFR-12's removability rule (now naming v3 and v4),
+semver's meaning. What is new: every milestone's last item is its tour, and
+2.0's done test is two weeks of real use plus PRD §11's two human checks by an
+outside person, not a checklist. Web search and git cost zero lines of `src/`:
+they are extensions in `examples/`, which is what EXT-10's freeze was for.
 
 ---
 

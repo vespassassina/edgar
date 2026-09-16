@@ -6,8 +6,10 @@ v0.3 and v0.4 and why; [research/hn-2026-09.md](research/hn-2026-09.md) is the f
 review behind v0.4.
 
 Requirement IDs in brackets, e.g. `[TOOL-2]`, trace back to the PRD. Tier markers
-**(v1)** and **(v2)** show where a module lands ([ADR-0015](adr/0015-release-tiers.md));
-anything unmarked is Core.
+**(v1)**, **(v2)**, **(v3)** and **(v4)** show where a module lands ([ADR-0015](adr/0015-release-tiers.md),
+[ADR-0057](adr/0057-daily-driver-before-learning.md)); anything unmarked is Core.
+v2, the daily driver, extends Core and v1 packages and is not removable; v3
+(learning) and v4 (unattended) are the removable tiers.
 
 ---
 
@@ -60,7 +62,7 @@ flowchart TB
         JSONL[("transcripts + blobs")]
     end
 
-    subgraph v2["v2 — attached through the post-turn gate and the bus"]
+    subgraph v3v4["v3 and v4 — attached through the post-turn gate and the bus"]
         CTRL["controller/"]
         LEARN["learning/"]
         SCHED["schedule/"]
@@ -96,13 +98,14 @@ separate subagent engine; a subagent is the same loop with a different config, a
 fresh transcript and a narrowed policy. That is deliberate: one loop to understand,
 one loop to test.
 
-**The tier seam.** v2 packages (`controller/`, `learning/`, `schedule/`, `broker/`,
-`providers/escalation.py`) are never imported by Core or v1 code [NFR-12]. The loop
+**The tier seam.** The removable packages (v3: `controller/`, `learning/`,
+`providers/escalation.py`; v4: `schedule/`, `broker/`) are never imported by Core,
+v1 or v2 code [NFR-12]. The loop
 exposes a post-turn gate, a list of async callables, and the tool pipeline a list
-of `pre_tool` veto callables; `cli/main.py` fills both by importing v2 packages by
+of `pre_tool` veto callables; `cli/main.py` fills both by importing v3 and v4 packages by
 name with `importlib`, only when config enables them.
-Telemetry and history are event-bus subscribers. Deleting the v2 packages leaves a
-working v1, and a CI job proves it.
+Telemetry and history are event-bus subscribers. Deleting the removable packages leaves a
+working v2, and a CI job proves it.
 
 **Ports and adapters.** The core (`core/`, `context/`, `permissions/`,
 `tools/execute.py`) imports no adapter; adapters import only core types. Everything
@@ -116,7 +119,7 @@ distribution and third-party ones through entry points
 | Tool source | built-in, command, HTTP, MCP | TOML files; MCP servers | Core; MCP v1 |
 | Skill source | `SKILL.md` folders, extensions | files | Core |
 | Sandbox | `none`, `bwrap`, `seatbelt`, `container` | `edgar.sandboxes` | v1 |
-| Retriever | `fts5` | `edgar.retrievers` | port v1; plugins v2 |
+| Retriever | `fts5` | `edgar.retrievers` | port v1; plugins v3 |
 | Output | renderer, status line, `--json`, `--events` | `edgar.run()` subscribers | Core |
 
 Session storage and the permission engine are deliberately not ports: the JSONL
@@ -131,7 +134,7 @@ edgar/
 │   ├── __main__.py                 python -m edgar
 │   │
 │   ├── cli/
-│   │   ├── main.py                 arg parsing, mode dispatch, exit codes, v2 gate loading
+│   │   ├── main.py                 arg parsing, mode dispatch, exit codes, v3/v4 gate loading
 │   │   ├── setup.py                config and runtime, shared by -p and the REPL
 │   │   ├── repl.py                 Shell (queue, /steer, /btw, /stop) + the prompt_toolkit wiring
 │   │   ├── oneshot.py              -p mode, stdin attachment, --json, --events
@@ -159,7 +162,7 @@ edgar/
 │   │   ├── registry.py             model string → provider: built-in, user-defined, plugins (v1)
 │   │   ├── routing.py              ★ pure select_model(): static roles, rules (v1)
 │   │   ├── fallback.py             (v1) sideways on unavailability
-│   │   ├── escalation.py           (v2) upward on capability failure
+│   │   ├── escalation.py           (v3) upward on capability failure
 │   │   ├── openai_compat.py        OpenAI · Azure · OpenRouter · Ollama · user-defined
 │   │   ├── anthropic.py
 │   │   ├── http.py                 shared by both: retries, SSE, error mapping, token counts
@@ -179,11 +182,11 @@ edgar/
 │   │   │   ├── shell.py            shell selection per platform
 │   │   │   ├── fetch.py
 │   │   │   ├── skill.py            loads a skill's body on demand [SKL-4]
-│   │   │   ├── todo.py             the todo list [TOOL-14]
+│   │   │   ├── todo.py             (v2) the todo list [TOOL-14]
 │   │   │   ├── tool_search.py      (v1) deferred schemas [TOOL-15]
 │   │   │   ├── task.py             (v1) ★ spawns a subagent (re-enters loop)
 │   │   │   ├── memory_tools.py     (v1) remember · recall
-│   │   │   └── schedule_tools.py   (v2) schedule_self
+│   │   │   └── schedule_tools.py   (v4) schedule_self
 │   │   └── mcp/                    (v1)
 │   │       ├── client.py           JSON-RPC, discovery, lifecycle
 │   │       ├── stdio.py
@@ -200,7 +203,7 @@ edgar/
 │   ├── context/
 │   │   ├── builder.py              ★ deterministic prompt assembly, byte-stable prefix
 │   │   ├── compact.py              ★ staged compaction on whole units
-│   │   ├── working.py              plan + todo: pinned working state [CTX-18]
+│   │   ├── working.py              (v2) plan + todo: pinned working state [CTX-18]
 │   │   ├── prompts.py              load shipped or project system prompt [CTX-16]
 │   │   ├── tokens.py               counting, exact + approximate
 │   │   └── pins.py                 what may never be compacted
@@ -209,23 +212,24 @@ edgar/
 │   │   ├── system.md               base system prompt, ≤ 1,500 tokens [NFR-13]
 │   │   └── compact.md              small-model profile [PRV-17]
 │   │
-│   ├── sandbox/                    (v1) the Sandbox port [PERM-15]
+│   ├── sandbox/                    (v2) the Sandbox port [PERM-15]
 │   │   ├── base.py                 Sandbox protocol, detection
 │   │   ├── none.py
 │   │   ├── bwrap.py                Linux, bubblewrap
-│   │   ├── seatbelt.py             macOS, sandbox-exec profile
-│   │   └── container.py            Docker or Podman, any OS
+│   │   └── seatbelt.py             macOS, sandbox-exec profile
+│   │                               (container.py, Docker or Podman, is past v4)
 │   │
 │   ├── skills/
 │   │   ├── discovery.py            frontmatter-only scan (yaml.safe_load); the
 │   │   │                           `skill` tool loads a body (ADR-0041)
-│   │   └── audit.py                (v1) conformance and danger rules, the report
+│   │   └── audit.py                (v2) conformance and danger rules, the report
 │   │                               and the diff (ADR-0042)
 │   │
 │   ├── agents/                     (v1)
 │   │   ├── definition.py           markdown + frontmatter parsing
 │   │   ├── discovery.py            project > user > extensions
-│   │   └── spawn.py                fan-out group, concurrency cap, depth guard
+│   │   ├── spawn.py                fan-out group, concurrency cap, depth guard
+│   │   └── worktree.py             (v2) a git worktree per write-capable child [SUB-11]
 │   │
 │   ├── extensions/                 (v1)
 │   │   ├── manifest.py             extension.toml, validation
@@ -245,7 +249,7 @@ edgar/
 │   │   ├── markdown.py             facts ↔ markdown round trip
 │   │   └── redact.py               secret patterns
 │   │
-│   ├── learning/                   (v2)
+│   ├── learning/                   (v3)
 │   │   ├── learner.py              autolearn from typed text only
 │   │   ├── error_facts.py          ErrorRecord → templated facts
 │   │   ├── history.py              history.md append, condense queue
@@ -253,18 +257,18 @@ edgar/
 │   │   ├── synthesis.py            skill synthesis from the run outline
 │   │   └── curator.py              optional skill curator
 │   │
-│   ├── controller/                 (v2)
+│   ├── controller/                 (v3)
 │   │   ├── triggers.py             pure checks over session state
 │   │   ├── proposals.py            the eight-action whitelist, schemas
 │   │   └── apply.py                dry-run, apply, mutation log, revert
 │   │
-│   ├── schedule/                   (v2)
+│   ├── schedule/                   (v4)
 │   │   ├── parser.py               cron + interval shorthand
 │   │   ├── due.py                  ★ pure due calculation
 │   │   ├── tick.py                 run what is due
 │   │   └── install.py              cron · launchd · Task Scheduler
 │   │
-│   ├── broker/                     (v2)
+│   ├── broker/                     (v4)
 │   │   ├── caveats.py              the five caveats and their checks
 │   │   ├── ticket.py               intents, tickets, attenuation, chain check
 │   │   ├── authorize.py            ★ pure authorize(chain, request, uses, now)
@@ -408,7 +412,7 @@ ToolCallRepaired(tool, repair)                    # [PRV-16]
 # routing [ADR-0013]
 ModelSelected(model, rule, reason)
 ModelFellBack(from_model, to_model, cause, reasoning_off)
-ModelEscalated(from_model, to_model, trigger, escalation_count)   # v2
+ModelEscalated(from_model, to_model, trigger, escalation_count)   # v3
 
 # tools
 ToolProposed(id, name, args_preview)
@@ -454,7 +458,7 @@ FactSaved(fact_id, provenance)                    # (v1)
 BudgetWarning(scope, used, cap)
 Error(kind, message, recoverable)
 
-# v2
+# v3
 ControllerTriggered(check, value, threshold)
 ControllerProposal(action, reason, dry_run)
 ControllerApplied(action, mutation_id)
@@ -507,7 +511,7 @@ sequenceDiagram
     participant T as tools/execute
     participant Pol as permissions
     participant V as verify
-    participant G as post-turn gate (v2)
+    participant G as post-turn gate (v3)
 
     U->>L: prompt (+ attached context)
     loop until the model stops calling tools and the check passes
@@ -576,7 +580,7 @@ async def run_turn(session: Session, prompt: UserInput, rt: Runtime) -> TurnResu
             return finish(session, bus, reason="verification_failed")          # exit 9 [VER-5]
         session.append(verify.feedback(check))          # back to the model [VER-3]
 
-    for gate in POST_TURN_GATES:                        # empty unless v2 is enabled [NFR-12]
+    for gate in POST_TURN_GATES:                        # empty unless v3 is enabled [NFR-12]
         await gate(session, bus)
     return finish(session, bus, reason="completed")
 ```
@@ -838,7 +842,7 @@ pulls in no provider module and no HTTP library [NFR-1].
 ### 5.4 Routing, fallback, escalation
 
 Three mechanisms, deliberately separate, and now in three tiers: static role
-binding in Core, routing rules and fallback in v1, escalation in v2.
+binding in Core, routing rules and fallback in v1, escalation in v3.
 [ADR-0013](adr/0013-model-routing.md)
 
 ```mermaid
@@ -851,7 +855,7 @@ flowchart TB
     REQ --> OK{outcome}
     OK -- success --> DONE[continue]
     OK -- "provider unreachable<br/>auth · 5xx · backoff spent" --> FB["FALLBACK (v1)<br/>sideways<br/>capabilities ≥ original"]
-    OK -- "repeated tool-call errors<br/>schema violations" --> ES["ESCALATION (v2)<br/>upward only<br/>capped"]
+    OK -- "repeated tool-call errors<br/>schema violations" --> ES["ESCALATION (v3)<br/>upward only<br/>capped"]
 
     FB --> REQ
     ES --> CH{escalations<br/>< max?}
@@ -866,7 +870,7 @@ flowchart TB
 | **Direction** | n/a | Upward only | Sideways |
 | **Trigger** | Declarative rules | Repeated failure | Provider error |
 | **Cost** | Zero, pure function | A retry | A retry |
-| **Tier** | roles Core, rules v1 | v2 | v1 |
+| **Tier** | roles Core, rules v1 | v3 | v1 |
 
 ```python
 # providers/routing.py — pure, hence exhaustively testable [ROUTE-3]
@@ -909,7 +913,7 @@ Three guards that carry the weight:
   struggling task walks the chain to the most expensive model and stays there.
   Unannounced, cost and behaviour become inexplicable.
 
-`edgar route suggest` [ROUTE-12] (v2) mines experience telemetry and prints
+`edgar route suggest` [ROUTE-12] (v3) mines experience telemetry and prints
 candidate rules with their evidence. It never writes config.
 
 ### 5.5 Reasoning across providers
@@ -1020,14 +1024,14 @@ validate args ─→ pre_tool vetoes ─→ permission check ─→ run with tim
 ```
 
 The `pre_tool` stage runs hook commands (v1, §6.7) and in-process veto callables
-registered at startup; the v2 broker is the only one that ships (§7.6). A veto
+registered at startup; the v4 broker is the only one that ships (§7.6). A veto
 callable returns a refusal or `None`, never an allow.
 
 Errors going back to the model rather than up the stack is deliberate: the model
 frequently recovers from a bad argument or a denied path by trying something else,
 and that recovery is a behaviour worth being able to observe. The `ErrorRecord` is
 computed here, by the harness, from what it knows (tool, kind, exit code, program
-name) and is the only error information the learning path ever sees (v2, MEM-22).
+name) and is the only error information the learning path ever sees (v3, MEM-22).
 
 **Spill** (`tools/spill.py`, stage S0 of the context pipeline): output over
 `tools.max_output_tokens` keeps its head and tail with a marker such as
@@ -1185,7 +1189,7 @@ timeout_s = 5
 | `session_end` | no | deliver a scheduled run's result |
 
 The event is passed as JSON on stdin. Hooks cannot change arguments or allow what
-policy denies, so they obey "machines tighten". In-process veto callables (the v2
+policy denies, so they obey "machines tighten". In-process veto callables (the v4
 broker, §7.6) share the stage and the same rule. Their output never reaches the
 model or memory, except a `pre_tool` deny reason. Project-scope hooks need project
 trust.
@@ -1362,7 +1366,7 @@ sandbox reinforce each other. A configured backend that is unavailable fails the
 session start loudly; `doctor` recommends the best available one. Core tests use a
 fake sandbox and run everywhere; backend tests run where the backend exists.
 
-### 7.6 Capability broker (v2)
+### 7.6 Capability broker (v4)
 
 `broker/`, [CAP-1..10], [ADR-0039](adr/0039-capability-broker.md). The engine in
 §7.1 knows the session: mode, rules, grants, taint. It cannot know the request. If
@@ -1584,7 +1588,7 @@ persisted for inspection [SUB-4], policy narrowing only [PERM-8], taint inherite
 from the parent and propagated back to it, budget from parent remainder with
 partial results on exhaustion [SUB-7], failures as tool errors [SUB-8], depth
 ceiling and cycle detection [SUB-6, SUB-10]. Permission prompts share the parent's
-queue (§4.1). In v2 the child's ticket is the parent's, attenuated, with the child
+queue (§4.1). In v4 the child's ticket is the parent's, attenuated, with the child
 as its subject [CAP-5].
 
 A write-capable subagent with `isolation: worktree` (SUB-11, Should) runs in its own
@@ -1604,7 +1608,7 @@ summary, so parallel writers never edit the same working copy.
 | Transcript | the current session | the loop | Core |
 | Record | all sessions, JSONL, FTS-searchable | the loop, append-only | Core; search v1 |
 | Facts | durable notes in SQLite, markdown-editable | the human; the model only proposes | v1 |
-| Learning | autolearn, error facts, history, telemetry, synthesis | v2 components | v2 |
+| Learning | autolearn, error facts, history, telemetry, synthesis | v3 components | v3 |
 
 ### 10.2 The learning boundary
 
@@ -1628,10 +1632,10 @@ flowchart LR
     end
 
     RM --> ACT[(active facts)]
-    TY -->|v2 learner| ACT
-    ER -->|v2 templates| ACT
+    TY -->|v3 learner| ACT
+    ER -->|v3 templates| ACT
     MOD[model calls remember] --> PEN[(pending facts)]
-    HD["history distill (v2)"] --> PEN
+    HD["history distill (v3)"] --> PEN
     PEN --> OK --> ACT
     ACT -->|pinned + recall| CTXB[context builder]
     TO -.->|never| ACT
@@ -1680,7 +1684,7 @@ through the `Retriever` port (`memory/retriever.py`); a plugin can register a
 vector or graph retriever through `edgar.retrievers`, but core never loads an
 embedding model, and a retriever never creates active facts.
 
-### 10.4 v2 learning
+### 10.4 v3 learning
 
 - **Autolearn** (`learning/learner.py`) runs after a turn on the user's typed text
   only. A cheap deterministic prefilter (correction markers, "always", "never",
@@ -1697,7 +1701,7 @@ embedding model, and a retriever never creates active facts.
   tools, failures, duration, cost, outcome, verification result, skills loaded and
   task shape [MEM-18]
 
-## 11. Controller (v2)
+## 11. Controller (v3)
 
 ```mermaid
 flowchart TB
@@ -1737,7 +1741,7 @@ for `config.toml`. Skill synthesis follows [ADR-0014](adr/0014-verification-and-
 as amended: `propose` by default, `auto` writes only into `skills/learned/` after a
 passing check.
 
-## 12. Scheduling (v2)
+## 12. Scheduling (v4)
 
 ```mermaid
 flowchart LR
@@ -1764,7 +1768,7 @@ clock, no subprocess and no network.
 
 `schedule_self` [SCH-11] writes to the `self_schedules` table, never to
 `schedules.toml`. It is rate-limited, capped on pending count, and depth-guarded so
-a self-rescheduling loop cannot run away. In v2 each row stores the creating
+a self-rescheduling loop cannot run away. In v4 each row stores the creating
 session's ticket, attenuated, so a run the agent scheduled for itself never holds
 more authority than the run that scheduled it [CAP-5]. On Windows, Task Scheduler runs
 `pythonw`-based entry points so a console window does not flash every minute.
@@ -1803,8 +1807,8 @@ Read once at session start [CFG-8].
 [model]
 default = "openai/gpt-5"
 compactor = "openai/gpt-5-mini"      # S2 summaries
-controller = "openai/gpt-5-mini"     # v2 [CTRL-9]
-condenser = "openai/gpt-5-mini"      # v2 history condensing [MEM-14]
+controller = "openai/gpt-5-mini"     # v3 [CTRL-9]
+condenser = "openai/gpt-5-mini"      # v3 history condensing [MEM-14]
 
 [providers.lmstudio]                  # any OpenAI-compatible server [PRV-12]
 kind = "openai-compatible"
@@ -1832,7 +1836,7 @@ model = "openai/gpt-5-mini"
 [model.fallback]                      # availability, sideways (v1) [ROUTE-7]
 "openai/gpt-5" = ["azure/gpt-5", "openrouter/openai/gpt-5"]
 
-[model.escalation]                    # capability failure, upward, capped (v2) [ROUTE-5]
+[model.escalation]                    # capability failure, upward, capped (v3) [ROUTE-5]
 enabled = true
 chain = ["openai/gpt-5-mini", "openai/gpt-5", "anthropic/claude-opus-5"]
 max_escalations = 1
@@ -1886,7 +1890,7 @@ keep_last_turns = 4
 pinned_max = 20
 scope_cap = 500
 retriever = "fts5"                    # plugins via edgar.retrievers [MEM-24]
-autolearn = true                      # (v2)
+autolearn = true                      # (v3)
 
 [subagents]                           # (v1)
 max_depth = 2
@@ -1910,7 +1914,7 @@ url = "https://mcp.example.com/mcp"
 headers = { Authorization = "Bearer ${env:DOCS_TOKEN}" }
 timeout_s = 60.0
 
-[controller]                          # (v2)
+[controller]                          # (v3)
 enabled = true
 always = false
 [controller.triggers]
@@ -1918,7 +1922,7 @@ token_fraction = 0.70
 error_streak = 3
 burn_rate_multiplier = 3.0
 
-[history]                             # (v2)
+[history]                             # (v3)
 enabled = true
 condense_over_words = 200
 max_kb = 512
@@ -2016,7 +2020,7 @@ written to stdout.
 8. `providers/routing.py` — routing kept apart from fallback and escalation
 9. `tools/custom.py` — command and HTTP tools, the tinkerer's surface
 10. `agents/spawn.py` (v1) — subagents as a re-entrant loop
-11. `controller/` and `learning/` (v2) — self-management and learning with guardrails
+11. `controller/` and `learning/` (v3) — self-management and learning with guardrails
 
 [A Tour of the Harness](https://vespassassina.github.io/edgar/) (source in `docs/tour/`)
 narrates this path with a diagram at each

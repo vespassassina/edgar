@@ -82,6 +82,12 @@ extension formats freeze.
   outside edgar, with `rclone config` and `gws auth setup`.
 
 ### Changed
+- The roadmap after 1.0 is re-tiered ([ADR-0057](docs/adr/0057-daily-driver-before-learning.md)):
+  2.0 is now the daily driver (tour pages, `@path`, plan mode and `todo`, images,
+  web search and git as extensions, worktrees and sandboxes, the inspection
+  commands); learning and the controller move to 3.0, the broker and scheduling
+  to 4.0. Nothing in the running code changes; `/plan` still says it arrives in v2,
+  which is now true again.
 - A `[[route]]` rule with a key edgar does not recognise is now a config error
   naming the rule. A misspelt condition used to be dropped, so the rule matched
   every turn.

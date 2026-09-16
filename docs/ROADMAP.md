@@ -1,26 +1,39 @@
 # Roadmap
 
-Eighteen milestones in three tiers ([ADR-0015](adr/0015-release-tiers.md)). Each
-milestone ships something that works, is tested, and is documented. Nothing is
-"done later". Each tier ends in a release.
+Twenty-three milestones in five tiers ([ADR-0015](adr/0015-release-tiers.md),
+re-tiered by [ADR-0057](adr/0057-daily-driver-before-learning.md)). Each
+milestone ships something that works, is tested, is documented, **and has its
+tour**: the last item of every milestone is the tour page or stops for what it
+built. Nothing is "done later". Each tier ends in a release.
 
-| Tier | Milestones | Release | Promise | Source budget |
-|---|---|---|---|---|
-| **Core** | M0–M6 | 0.x | Read it in an afternoon, use it every day | ≤ 5,000 LOC |
-| **v1** | M7–M11 | 1.0 | Extensible and remembers; extension formats frozen | ≤ 8,000 LOC |
-| **v2** | M12–M17 | 2.0 | Learns and runs unattended; removable | ≤ 11,000 LOC |
+| Tier | Name | Milestones | Release | Promise | Source budget |
+|---|---|---|---|---|---|
+| **Core** | | M0–M6 | 0.x | Read it in an afternoon, use it every day | ≤ 5,000 LOC |
+| **v1** | | M7–M11 | 1.0 | Extensible and remembers; extension formats frozen | ≤ 8,000 LOC |
+| **v2** | the daily driver | M18–M22 | 2.0 | Work in it all day: code, git, subagents, tools, search, images | ≤ 9,500 LOC |
+| **v3** | learning | M12–M15 | 3.0 | Learns from what you type and what breaks; removable | ≤ 12,000 LOC |
+| **v4** | unattended | M17, M16 | 4.0 | Runs unattended under a signed scope; removable | ≤ 13,000 LOC |
 
 LOC means lines of code: non-blank lines that are not only a comment. Docstrings
 count; comments do not ([ADR-0040](adr/0040-written-to-be-read.md)).
 
+**Why this order.** v1 is finished and has never been used for a day's work. The
+tier ADR-0015 planned next learns from corrections and verified runs, and an
+unused tool has nothing to learn from. So the daily driver comes first, the
+learning layer after it, and the parts that run unattended last
+([ADR-0057](adr/0057-daily-driver-before-learning.md)). v2 extends Core and v1
+packages and is not removable; v3 and v4 are, and CI proves it [NFR-12].
+
 ## Status
 
 Milestone IDs keep their numbers; the order of work is **M0, M1, M2, M4, M3, M5,
-M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)). In v2 the order is M12,
-M13, M14, M15, M17, M16: the capability broker comes before scheduling, which
-carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day record is
+M6**, then v1 ([ADR-0033](adr/0033-replan-after-m2.md)), then **M18, M19, M20,
+M21, M22** (v2), then **M12, M13, M14, M15** (v3), then **M17, M16** (v4): the
+capability broker comes before scheduling, which carries the 4.0 release
+([ADR-0039](adr/0039-capability-broker.md)). The day-by-day record is
 [`JOURNAL.md`](JOURNAL.md); user-visible changes are in
-[`CHANGELOG.md`](../CHANGELOG.md).
+[`CHANGELOG.md`](../CHANGELOG.md); the coder's starting point is
+[`HANDOFF.md`](HANDOFF.md).
 
 | Milestone | Status | Shipped in |
 |---|---|---|
@@ -35,8 +48,14 @@ carries the release ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day 
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
 | M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
 | M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
-| M11 Init, doctor, docs | Done ([ADR-0056](adr/0056-m11-as-built.md)) — pending outside verification | 1.0 |
-| M12–M17 | Planned | 2.0 |
+| M11 Init, doctor, docs | Done ([ADR-0056](adr/0056-m11-as-built.md)) — code-complete; 1.0 not yet tagged; PRD §11's two human criteria open | 1.0 |
+| M18 Tours for v1 and the map | Next | 2.0 |
+| M19 Working state | Planned | 2.0 |
+| M20 Seeing and searching | Planned | 2.0 |
+| M21 Isolation | Planned | 2.0 |
+| M22 Inspection, 2.0 release | Planned | 2.0 |
+| M12–M15 Learning, controller, synthesis, escalation | Planned | 3.0 |
+| M17, M16 Broker, scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three
@@ -497,11 +516,282 @@ until someone does that.*
 
 ---
 
-# v2 — 2.0
+# v2 — 2.0, the daily driver
 
-v2 code lives in `edgar.learning`, `edgar.controller`, `edgar.schedule`,
-`edgar.broker` and `providers/escalation.py`. From M12 on, CI also deletes those packages and runs
-the v1 suite [NFR-12].
+Everything a person needs to work in edgar all day, on real code, with git,
+subagents, tools, web search and images ([ADR-0057](adr/0057-daily-driver-before-learning.md)).
+v2 extends Core and v1 packages, so it is not removable; its budget is
+**≤ 9,500 lines of code** for all of `src/`, about 1,250 more than v1's 8,000.
+Every estimate below is an order of magnitude, measured against subsystems
+already built; if the total does not fit, the last items of M22 move to v3, the
+number stays.
+
+| Milestone | Adds to `src/` (est.) | Running total |
+|---|---|---|
+| M18 Tours for v1 and the map | 0 | 8,000 |
+| M19 Working state | ~340 | ~8,340 |
+| M20 Seeing and searching | ~200 | ~8,540 |
+| M21 Isolation | ~350 | ~8,890 |
+| M22 Inspection, 2.0 release | ~440 | ~9,330 |
+
+**How to read a v2 milestone.** Each item names the files it touches, the
+requirement IDs it closes, the test that proves it and its size. Items are
+ordered so a coding session can take the first unchecked one, build it with its
+test, update the tour stop named in the last item, and stop. The friction list
+from the dogfood week ([`HANDOFF.md`](HANDOFF.md), step 0) reorders items
+inside a milestone; it does not add to the budget.
+
+**Before M18, two tasks that are not milestones** (details in
+[`HANDOFF.md`](HANDOFF.md)): tag v1.0 and watch the first real release run, since
+the `pyapp` and `docker` jobs have never executed; then a week of using edgar on
+edgar with a real model, journalling every friction.
+
+---
+
+## M18 — Tours for v1, and the map
+
+**Goal:** a student can learn every v1 feature by following a tour, and see the
+whole harness on one map. Writes no `src/` code; changes `docs/tour/`, `tests/`
+and a generator script.
+
+The Core tour ([`docs/tour/index.html`](tour/index.html)) has 19 stops in six
+stages. v1 has one summary stop per milestone (s20–s24), and 32 of the 78 source
+files under `src/edgar` (excluding `__init__.py`) have no stop at all, the whole
+`auth/` package among them.
+
+- **Shared tour assets.** Move the tour's page CSS and the small script that
+  builds the contents list out of `index.html` into `docs/tour/tour.css` and
+  `docs/tour/tour.js`; every tour page links them relatively. The artifactkit
+  theme block stays where it is. `test_tour.py`'s "page loads its own files"
+  check runs over every page.
+- **One tour page per v1 feature, in Core's format** (stages, stops with
+  `data-files`, a "look for" list per stop, one diagram, a size table):
+  - `docs/tour/memory.html` (M7): the boundary (`memory/store.py`,
+    `memory/redact.py`), recall (`memory/retriever.py`, `memory/recall.py`),
+    the markdown round trip (`memory/markdown.py`), the commands
+    (`cli/memory.py`), forks and saves (`storage/transcript.py` records)
+  - `docs/tour/mcp.html` (M8): lazy start (`tools/mcp/client.py`,
+    `tools/mcp/stdio.py`, `tools/mcp/http.py`, `tools/mcp/schema.py`), deferred
+    schemas (`tools/builtin/tool_search.py`), signing in (`auth/oauth.py`,
+    `auth/store.py`, `auth/keys.py`, `auth/mcp.py`)
+  - `docs/tour/agents.html` (M9): re-entering the loop (`tools/builtin/task.py`,
+    `agents/definition.py`, `agents/discovery.py`, `agents/spawn.py`), fan-out
+    (`tools/execute.py::execute_many`), the multi-row status bar, three model
+    mechanisms kept apart (`providers/routing.py`, `providers/fallback.py`)
+  - `docs/tour/extensions.html` (M10): the manifest (`extensions/manifest.py`,
+    `extensions/discovery.py`), hooks that veto (`extensions/hooks.py`),
+    provider plugins (`providers/registry.py` entry points), skill activation
+    (`skills/discovery.py`), `edgar.run()` (`__init__.py`)
+  - `docs/tour/index.html`: Part II's five stops become short summaries that
+    link to the pages; Part III's heading and pills read v3 and v4 per ADR-0057
+- **Core's own missing stops**, added to `index.html` in the stage they belong
+  to: `core/aside.py`, `core/errors.py`, `context/prompts.py`,
+  `context/tokens.py`, `permissions/control.py`, `config/schema.py`,
+  `config/init.py`, `config/doctor.py`, `storage/db.py`, `tools/spill.py`,
+  `tools/registry.py`, `providers/registry.py`, `providers/http.py`,
+  `providers/pricing.py`, `providers/fake.py`, `cli/main.py`, `cli/admin.py`,
+  `cli/models.py`, `cli/trust.py`, `__main__.py`. Files that exist under other
+  names are named as they are; this list was taken from the tree at `05b1ab2`.
+- **The no-orphan test.** `tests/unit/test_tour.py` collects `data-files` from
+  every `docs/tour/*.html`, takes the set difference against every `.py` under
+  `src/edgar` except `__init__.py`, and asserts it is empty. From here on a new
+  module without a stop fails CI, like the size budget does.
+- **The map.** `scripts/tour_map.py` walks `src/edgar` and writes
+  `docs/tour/map.json`: one node per tier, package and file with `path`,
+  `kind`, `loc` (from `tests/support/budget.py::count_loc`), `summary` (the first
+  line of the file's opening `#` comment block), `stop` (the tour page and
+  anchor whose `data-files` names it), `status` (`built`, or `planned` for a
+  file named only by a planned stop) and `port` (true for `providers/base.py`,
+  `tools/base.py`, `skills/discovery.py`, `sandbox/base.py`,
+  `memory/retriever.py`, `cli/render.py`, ADR-0022's six ports).
+  `docs/tour/map.html` renders it as an exploded tree, root to tiers to packages
+  to files, inline SVG and CSS, no library, tree only and no flows: hover shows
+  the summary and size, click opens the stop, planned nodes are dashed, ports
+  are marked, chip width follows `loc`, and the tree collapses to one column on
+  a phone. `just map` regenerates the JSON; `test_tour.py` regenerates it in
+  memory and asserts the committed file is identical.
+- **Stale lines fixed**: the tour header's "Planned M9 to M17", Part II's pill,
+  README's status paragraph and "Coming in 1.0" section, all of which still say
+  M9–M11 are unbuilt.
+- **Tour delivery for M18 itself:** the map is it; and `index.html`'s header
+  links every page.
+
+**Done when:** the no-orphan test passes; every page opens from GitHub Pages
+with no console error; `map.json` is current in CI; a reader can go from the map
+to any file's stop in one click.
+
+---
+
+## M19 — Working state
+
+**Goal:** the things a person reaches for in the first hour of real work and
+does not find. About 340 lines of code.
+
+- **`@path` attachments** [CLI-3], ~60. In the REPL and `-p`, a token `@path`
+  in a typed prompt attaches that file's text to the user message as `attached`
+  content (the field exists in `core/message.py`, §3.1), which by type never
+  reaches the learning path [MEM-9]. Text files only in this milestone (images
+  arrive in M20); a directory or a binary is refused with a message naming the
+  path and what is accepted; content over `tools.max_output_tokens` spills like
+  tool output (S0). Test: a prompt with `@README.md` produces one user message
+  whose `attached` text is the file, `@missing` is a user-facing error not an
+  exception, and `@.edgar/config.toml` obeys the control-file rule in the
+  current mode.
+- **Plan mode and the `todo` tool** [CLI-20, TOOL-14, CTX-18], ~160.
+  `context/working.py` holds the plan and the todo list as pinned working state
+  just above the current turn, surviving compaction ([ADR-0025](adr/0025-working-state.md));
+  `tools/builtin/todo.py` writes it; `/plan` and `--plan` enter plan mode
+  (`read-only` policy plus `sessions/<id>/plan.md`), `/go` returns to the mode
+  the session had and keeps the plan pinned; `TodoUpdated` on the bus, rendered
+  by the status bar. Test: a 60-turn session with compaction keeps the todo
+  list byte-identical in every request; `/plan` then `write` is denied; `/go`
+  restores the mode. Its third move (ADR-0037, ADR-0053); this is where it lands.
+- **`edgar context show`** [CTX-2], ~40. Prints the assembled prompt for a
+  session in order, one row per section with its token count, and marks the
+  cache breakpoint, from `context/builder.py` without a provider call. Test:
+  the rows sum to the builder's own count.
+- **`edgar sessions compact ID`** [CTX-10], ~40. Runs the same stages `/compact`
+  runs, on a stored session, appending a compaction record; never rewrites
+  history. Test: the pairing invariant holds after it and `--resume` shows the
+  compacted view.
+- **`edgar config show --resolved`** [CFG-2], ~40. Every effective key with the
+  file and layer it came from, secrets redacted. Test: an env override shows
+  its provenance; an API key shows as `***`.
+- **Tour delivery:** `docs/tour/working.html` with stops for
+  `context/working.py`, `tools/builtin/todo.py`, the `@path` parser and the
+  three commands; `just map`.
+
+**Done when:** the five items above pass their tests on three platforms, and a
+day of dogfooding with `@path` and `/plan` produces no journal entry about
+either.
+
+---
+
+## M20 — Seeing and searching
+
+**Goal:** the agent can look at an image, search the web and use git properly.
+About 200 lines of code; web search and git cost none.
+
+- **Images** ([ADR-0052](adr/0052-media-input-in-v2.md)), ~200, in this order:
+  1. `core/message.py`: `ImageBlock(media_type, ref)`, frozen and slotted like
+     the other four blocks; nothing else joins the vocabulary. Test: the pairing
+     invariant and compaction properties still hold with images in a unit.
+  2. `tools/spill.py`: image bytes go to `sessions/<id>/blobs/` and the block
+     carries the reference, never base64 in the JSONL.
+  3. `providers/quirks.py`: an `images` capability row per provider; a model
+     without it is refused where it is chosen, never mid-turn [ROUTE-6].
+  4. `providers/openai_compat.py` and `providers/anthropic.py` serialise the
+     block; `providers/fake.py` accepts it; the contract suite gains one image
+     case per provider.
+  5. `context/tokens.py`: cost by image geometry, per provider, so compaction
+     and the caps stay right.
+  6. `context/compact.py`: S1 elides an old image to a stub like a tool result.
+  7. Inputs: `@photo.png` in a prompt (extends M19's parser) and the `read`
+     tool on an image file both produce an `ImageBlock`; `--events` gains the
+     reference.
+- **Web search as an extension**, 0 lines. `examples/tools/web_search.toml`:
+  an HTTP tool with the host fixed and the key from the environment, in three
+  documented variants the user picks from (Brave, Tavily, a self-hosted
+  SearXNG); no default host, per PRV-15. `examples/skills/web-research/SKILL.md`:
+  search, then `fetch` the top hits, then answer with sources. A Cookbook recipe
+  and a docs-coverage row. Verified the way the weather tool was: a cold
+  subagent adds it from the docs alone.
+- **Git as an extension**, 0 lines. `examples/tools/git-status.toml`,
+  `git-diff.toml`, `git-log.toml`, `git-commit.toml` as command tools (argv
+  templates, `git-commit` takes the message as one argument);
+  `examples/skills/git/SKILL.md` with the etiquette from AGENTS.md (branch per
+  topic, small commits after the check passes, imperative subject, never
+  force-push, check before push); a `post_tool` hook example running the
+  formatter after `edit`. A Cookbook recipe, "working with git".
+- **Tour delivery:** `docs/tour/media.html` with stops for the seven image
+  steps in order, and a stop each for the search and git example folders as
+  files, not code; `just map`.
+
+**Done when:** the fake provider round-trips an image through a turn and
+`--resume`; a provider without `images` refuses at selection; the search and
+git examples pass the examples-in-CI test; a dogfood day of research and
+committing produces no journal entry about either.
+
+---
+
+## M21 — Isolation
+
+**Goal:** a write-capable subagent cannot damage the working copy, and `shell`
+can run in a sandbox. About 350 lines of code.
+
+- **Worktree subagents** [SUB-11], ~150. `agents/worktree.py`: for an agent
+  whose frontmatter says `isolation: worktree`, `git worktree add` under
+  `.edgar/worktrees/<agent>-<session>` on a new branch, the subagent's `cwd` and
+  path rules rebased there, the branch name and a diff stat in the returned
+  summary, and cleanup on return (`remove` when the tree is clean, `keep`
+  otherwise, both announced). Refused with a clear message outside a git repo.
+  Test: two subagents writing the same file finish on two branches and the
+  parent's tree is untouched; a dirty worktree is kept and named.
+- **Sandbox backends** [PERM-15], ~200. The `Sandbox` port is designed
+  ([BLUEPRINT §7.5](BLUEPRINT.md)) but `sandbox/` does not exist yet; create
+  `sandbox/base.py` (the protocol and detection) and `sandbox/none.py`, then add `sandbox/bwrap.py` (Linux, bubblewrap: project read-write, home
+  read-only, network per the permission decision) and `sandbox/seatbelt.py`
+  (macOS, a generated `sandbox-exec` profile with the same shape), plus
+  detection and the `doctor` line recommending the best available backend.
+  `container` stays deferred (Past v4) unless the budget allows it at the end
+  of M22. Core tests use the fake sandbox and run everywhere; backend tests run
+  only where the backend exists, and are the one place a platform condition is
+  allowed, because they test the platform. Test: with a backend on, a `shell`
+  call cannot read outside the allowed roots and cannot reach the network when
+  the decision says no.
+- **Tour delivery:** `docs/tour/isolation.html` with stops for
+  `agents/worktree.py`, `sandbox/base.py`, `sandbox/bwrap.py`,
+  `sandbox/seatbelt.py` and the `doctor` line; `just map`.
+
+**Done when:** the four tests above pass; on macOS and Linux a dogfood day with
+a write-capable subagent leaves the main tree clean.
+
+---
+
+## M22 — Inspection commands · **v2.0 release**
+
+**Goal:** the commands that explain what edgar is doing, cut from 1.0 by
+ADR-0053, and the release. About 440 lines of code; the last items yield first
+if the budget is short.
+
+- **The rest of `edgar doctor`** [CFG-5], ~140: each configured MCP server
+  reachable, each extension's required commands present, the project's trust
+  state, `PRAGMA integrity_check` on the DB, tick installation once M16 exists,
+  and `--network` to try each provider endpoint. Every line says what it
+  checked, what it found and what to do.
+- **`edgar route explain [PROMPT]`** [ROUTE-9], ~35: which rule matched and why,
+  from `routing.select_model()`, no provider call.
+- **`edgar agents list|validate`**, ~45: the discovered agents with scope and
+  model, and every frontmatter error with file and line.
+- **`edgar ext validate|add`** [EXT-3] with **`edgar skills audit`** [SKL-18]
+  wired in ([ADR-0042](adr/0042-skill-audit.md)), ~150: `validate` checks a
+  folder against the manifest rules, `add` copies it in after `validate` and
+  the skill audit both pass, `audit` prints the conformance and danger report
+  and the diff it proposes, never applying it.
+- **`edgar.testing.contract`** [PRV-14], ~70: the provider contract suite as an
+  importable kit so a plugin provider in its own package can run it.
+- **Release 2.0.0:** bump `pyproject.toml` and `src/edgar/__init__.py`, move
+  `CHANGELOG.md`'s Unreleased under 2.0.0, tag, watch the three release jobs.
+- **Tour delivery:** the commands join the Core tour's surface stage and the
+  extensions tour; `just map`; `test_tour.py` green.
+
+**Done when** ([ADR-0057](adr/0057-daily-driver-before-learning.md) decision 8):
+the maintainer has worked in edgar on edgar for two weeks on a real model and
+the journal lists no blocking friction; an actual outside person has done PRD
+§11's two human checks; `src/` ≤ 9,500 lines of code; CI green on three
+platforms.
+
+---
+
+# v3 — 3.0, learning
+
+The removable tier: v3 code lives in `edgar.learning`, `edgar.controller` and
+`providers/escalation.py`, and nothing in Core, v1 or v2 imports it. From M12
+on, CI also deletes the removable packages and runs the suite below them
+[NFR-12]. Budget **≤ 12,000 lines of code**. Each milestone ends with its tour
+page (`docs/tour/learning.html`, `controller.html`, `synthesis.html`,
+`escalation.html`), whose planned stops already exist in the Core tour's Part
+III.
 
 ## M12 — Learning foundations
 
@@ -516,9 +806,12 @@ the v1 suite [NFR-12].
 - Property test: no generated trajectory produces an active fact whose provenance
   is not `user`, `user-prompt`, `user-feedback` or `error-template`
 
+- **Tour delivery:** `docs/tour/learning.html`, turning the Core tour's planned
+  stop s25 into a link; `just map`
+
 **Done when:** a typed correction in session 1 changes behaviour in session 4 with
 no `/remember`; a fetched page saying "remember X" never produces an active fact;
-the v1 suite is green with `learning/` deleted.
+the suite is green with `learning/` deleted [NFR-12].
 
 **Resolves:** OQ-1 (history gitignored or committed).
 
@@ -539,10 +832,12 @@ the v1 suite is green with `learning/` deleted.
 - Never fails the turn [CTRL-11]
 - `edgar controller log|revert|apply`
 
+- **Tour delivery:** `docs/tour/controller.html`, s26 turned into a link; `just map`
+
 **Done when:** every whitelist action is exercised with fabricated proposals, a
 proposal attempting to loosen policy or naming an arbitrary model is rejected and
-logged, no controller path can write `AGENTS.md` or a fact, and the v1 suite is
-green with `controller/` deleted.
+logged, no controller path can write `AGENTS.md` or a fact, and the suite is
+green with `controller/` deleted [NFR-12].
 
 ---
 
@@ -558,6 +853,8 @@ green with `controller/` deleted.
 - Per-skill `HISTORY.md` observations and `skills distill` [SKL-6, SKL-14]
 - Fixed body shape checked by `skills validate` [SKL-16]
 - `learning/curator.py` and `skills curate`, off by default [SKL-15] *(Should)*
+
+- **Tour delivery:** `docs/tour/synthesis.html`, s27 turned into a link; `just map`
 
 **Done when:** J8 holds with the fake provider; a test asserts no tool output and
 no error text reaches the synthesiser; in `auto` mode a property test over
@@ -577,12 +874,22 @@ generated trajectories shows no hand-authored skill file ever changes.
 - `edgar route suggest` over experience telemetry, print-only [ROUTE-12]
 - Responses API adapter if the eval set shows the gap (OQ-8)
 
+- **Tour delivery:** `docs/tour/escalation.html`, s28 turned into a link; `just map`
+
 **Done when:** an escalation is visible in the status bar when a weak model fails
 twice, never moves down the chain, and never exceeds `max_escalations`.
 
 **Resolves:** OQ-8.
 
 ---
+
+# v4 — 4.0, unattended
+
+The second removable tier: `edgar.broker` and `edgar.schedule`, attached
+through the `pre_tool` veto stage and the host scheduler, never imported by
+anything below them [NFR-12]. Budget **≤ 13,000 lines of code**. Order: M17
+then M16, which carries the release ([ADR-0039](adr/0039-capability-broker.md)).
+Each ends with its tour page (`docs/tour/broker.html`, `schedule.html`).
 
 ## M17 — Capability broker
 
@@ -604,17 +911,19 @@ Built after M15 and before M16, which carries the release.
 - `edgar receipt [ID] [--refused] [--verify]`; `[broker] enabled`; `doctor` line
   [CAP-8, CAP-10]
 
+- **Tour delivery:** `docs/tour/broker.html`, s29 turned into a link; `just map`
+
 **Done when:** the confused-deputy test passes on the fake provider: a session
 scoped with `paths=reports/q3.md` asks for a summary; the file's text tells the
 agent to read `reports/2024-salaries.md` and fetch an outside host; both calls are
 refused, the model sees which caveat refused them, and `edgar receipt --refused`
 shows both under the typed request. `--verify` passes on that receipt and exits 1
 after a one-byte edit. A subagent cannot drop a caveat; a property test finds no
-chain that verifies without one. With `broker/` deleted the v1 suite is green.
+chain that verifies without one. With `broker/` deleted the suite is green [NFR-12].
 
 ---
 
-## M16 — Scheduling · **v2.0 release**
+## M16 — Scheduling · **v4.0 release**
 
 **Goal:** unattended runs that cannot run away.
 
@@ -628,32 +937,38 @@ chain that verifies without one. With `broker/` deleted the v1 suite is green.
 - Broker tickets for scheduled runs: an entry's `scope` and allowlist as caveats,
   actor `schedule:NAME`; a `schedule_self` row stores its creator's ticket,
   attenuated [CAP-1, CAP-4, CAP-5]
+- Notifications as a `session_end` hook: an example hook in `examples/hooks/`
+  posting the run's summary to a webhook or the desktop notifier, 0 lines of
+  `src/`; moved here from the deferred list because an unattended run that
+  cannot tell anyone it finished is not unattended, it is lost
+- **Tour delivery:** `docs/tour/schedule.html`; `just map`
 
 **Done when:** frozen-clock tests cover every catch-up policy, overlap is
 prevented, a self-schedule never touches `schedules.toml` or holds more authority
-than the run that created it, and the v2.0 success
-criteria in PRD §11 are met with `src/` under 11,000 LOC.
+than the run that created it, and the v4.0 success
+criteria in PRD §11 are met with `src/` under 13,000 lines of code.
 
 ---
 
-## Past v2
+## Past v4
 
 Ordered by expected value, not commitment.
 
-1. **Notifications** — desktop, webhook, Teams; a `session_end` hook covers the gap
-2. **Concurrent read-only tool calls within one response** — calls run in order
+1. **Concurrent read-only tool calls within one response** — calls run in order
    today (TOOL-12); revisit with ordering guarantees if latency demands it
-3. **OpenAPI import** — generate HTTP tools from a spec
-4. **Vector or graph retriever plugins** — through the retriever port, if one beats
+2. **OpenAPI import** — generate HTTP tools from a spec
+3. **Vector or graph retriever plugins** — through the retriever port, if one beats
    multi-term FTS on the eval set (ADR-0024)
-5. **TUI mode** — behind a flag, never replacing line-oriented output
-6. **Shared or remote memory** — team-level facts
-7. **`git` and language-server tools** — `shell` and command tools cover the common cases
-8. **Homebrew and Scoop manifests** — when someone asks
-9. **Prompt-caching optimisation** across providers, not just Anthropic
+4. **TUI mode** — behind a flag, never replacing line-oriented output
+5. **Shared or remote memory** — team-level facts
+6. **Language-server tools** — `shell` and command tools cover the common cases
+7. **Homebrew and Scoop manifests** — when someone asks
+8. **Prompt-caching optimisation** across providers, not just Anthropic
+9. **The `container` sandbox backend** — if M21 did not have room for it
 
-Image and multimodal input left this list for v2 scope
-([ADR-0052](adr/0052-media-input-in-v2.md)); it has no milestone yet.
+Images moved into M20 ([ADR-0052](adr/0052-media-input-in-v2.md),
+[ADR-0057](adr/0057-daily-driver-before-learning.md)); web search and git tools
+into M20 as extensions; notifications into M16.
 
 ## Never
 

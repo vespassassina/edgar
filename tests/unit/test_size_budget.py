@@ -37,9 +37,12 @@ def test_comments_in_the_loop_are_free(tmp_path: Path) -> None:
     assert _loop_limit(tmp_path, source).ok
 
 
-def test_v2_tier_also_checks_the_v1_remainder(tmp_path: Path) -> None:
+def test_removable_tiers_also_check_the_remainder(tmp_path: Path) -> None:
+    # v3 and v4 are removable [NFR-12, ADR-0057]: what is left without them must
+    # still fit v2's budget, and the count excludes only the removable packages.
     (tmp_path / "learning").mkdir()
     (tmp_path / "learning" / "learner.py").write_text("x = 1\n")
     (tmp_path / "cli.py").write_text("y = 2\n")
-    remainder = next(lim for lim in limits(tmp_path, "v2") if "without v2" in lim.label)
+    remainder = next(lim for lim in limits(tmp_path, "v3") if "without removable" in lim.label)
     assert remainder.loc == 1
+    assert not any("without removable" in lim.label for lim in limits(tmp_path, "v2"))

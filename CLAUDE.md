@@ -26,7 +26,10 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built at
 5,000 lines of code. **0.1.0 is released**: cut from `main` on 2026-09-14 with M0
 to M8 in it, published to PyPI by the `v0.1.0` GitHub release, so
-`uvx edgar-harness` now runs it. 1.0 is still where v1 ends (M11). M7 is done: facts,
+`uvx edgar-harness` now runs it. **v1.0 is code-complete** (M7 to M11, ADR-0056) at
+exactly 8,000 of 8,000 lines of code, not yet tagged. **What comes next is v2, the
+daily driver** (M18 to M22, ADR-0057), not learning: read `docs/HANDOFF.md` before
+anything else. M7 is done: facts,
 `recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
 `/history`, the daily cap and `edgar cost` (ADR-0046). M8 is done: MCP servers over stdio and
 Streamable HTTP, started only when a tool is called, deferred schemas through
@@ -146,14 +149,19 @@ the same rules.
 `docs/BLUEPRINT.md` has the full module map, data model and interfaces. The shape worth
 holding in your head:
 
-**Three tiers with a hard seam.** Core (M0–M6, ≤ 5,000 LOC) is the smallest honest
+**Five tiers with a hard seam.** Core (M0–M6, ≤ 5,000 LOC) is the smallest honest
 harness; v1 (M7–M11, ≤ 8,000) adds memory, MCP, subagents, extensions and freezes the
-extension formats; v2 (M12–M17, ≤ 11,000) adds learning, the controller, the
-capability broker and scheduling. v2 lives in `edgar.learning`, `edgar.controller`,
-`edgar.schedule`, `edgar.broker` and `providers/escalation.py`, and nothing in Core or
-v1 may import it: v2 attaches through the loop's post-turn gate and the tool
-pipeline's `pre_tool` vetoes (both filled by name with `importlib`) and the event bus
-(ADR-0015, NFR-12). PRD §5.1 maps every requirement ID to its tier.
+extension formats; v2, the daily driver (M18–M22, ≤ 9,500), adds tours for v1 and a
+map, `@path`, plan mode and `todo`, images, web search and git as extensions,
+worktrees and sandboxes, and the inspection commands, all inside Core and v1
+packages, so it is not removable; v3, learning (M12–M15, ≤ 12,000), adds learning,
+the controller, synthesis and escalation; v4, unattended (M17 then M16, ≤ 13,000),
+adds the capability broker and scheduling. v3 and v4 live in `edgar.learning`,
+`edgar.controller`, `edgar.schedule`, `edgar.broker` and `providers/escalation.py`,
+and nothing in Core, v1 or v2 may import them: they attach through the loop's
+post-turn gate and the tool pipeline's `pre_tool` vetoes (both filled by name with
+`importlib`) and the event bus (ADR-0015, ADR-0057, NFR-12). PRD §5.1 maps every
+requirement ID to its tier.
 
 **One loop.** `core/loop.py` is under 200 lines of code and pushes every concern into a
 collaborator: context assembly, provider resolution, tool execution, the verify gate.
@@ -228,7 +236,7 @@ Retriever plugins (ADR-0024).
 calling tools, only after turns that ran a non-read tool. Failure output goes back to
 the model, capped attempts, exit 9 when exhausted (§7.14, ADR-0014).
 
-**Skills are learned from verified work only (v2).** Synthesis triggers are
+**Skills are learned from verified work only (v3).** Synthesis triggers are
 deterministic checks in the controller's post-turn gate. The synthesiser sees the
 outline of a run (typed prompt, corrections, tool calls in order, `ErrorRecord`s,
 verify result), never tool output or error text.
@@ -266,8 +274,8 @@ These cost the most when violated:
    without a passing verification, and writes only into `learned/`. Machine-writable
    locations are listed in PRD §9.5; everything else is hand-authored (ADR-0014,
    ADR-0017).
-6. **Tier isolation.** Core and v1 code never imports v2 packages; CI deletes them and
-   runs the v1 suite (NFR-12).
+6. **Tier isolation.** Core, v1 and v2 code never imports the v3 and v4 packages; CI
+   deletes them and runs the suite below them (NFR-12).
 7. **Byte-stable prefix and no implicit hosts.** A `datetime.now()` in the prompt
    builder or a helpful default model for an auxiliary role silently breaks the
    prompt cache or sends prompts somewhere the user never chose. Both have tests
@@ -283,9 +291,13 @@ REPL, streams and the model picker, M3 tools, permissions, the verify gate, comm
 and HTTP tools and project trust, M5 context and sessions, M6 skills, `edgar login`
 and the Core release. **v1** M7 memory
 and session search, M8 MCP, M9 subagents, routing rules and fallback, M10 extensions,
-hooks, plugins and `edgar.run()`, M11 init, doctor and docs (1.0). **v2** M12 learning
-foundations, M13 controller, M14 skill synthesis, M15 escalation and route suggest,
-M17 capability broker (ADR-0039, built before M16), M16 scheduling (2.0). Each ships something tested and documented; docs are updated in
+hooks, plugins and `edgar.run()`, M11 init, doctor and docs (1.0). **v2, the daily
+driver** (ADR-0057) M18 tours for v1 and the map (no `src/` code), M19 working state,
+M20 seeing and searching, M21 isolation, M22 inspection and the 2.0 release. **v3,
+learning** M12 learning foundations, M13 controller, M14 skill synthesis, M15
+escalation and route suggest (3.0). **v4, unattended** M17 capability broker
+(ADR-0039, built before M16), M16 scheduling (4.0). Each milestone's last item is
+its tour page or stops; a milestone with code and no tour is not done. Each ships something tested and documented; docs are updated in
 the same commit, never later. If a milestone pushes its tier over the LOC budget,
 something moves to a later tier; the budget does not move.
 

@@ -10,7 +10,7 @@ fails the build when a budget is exceeded.
 # What this measures:
 #   for each tier: every .py file under src/edgar, in lines of code
 #   core/:         the core package alone, capped at 2,000
-#   v2 tier only:  everything but the v2 packages must still fit v1's budget
+#   v3, v4 only:   everything but the removable packages must still fit v2's budget
 #   core/loop.py:  the loop alone, capped at 200
 
 from __future__ import annotations
@@ -21,13 +21,15 @@ from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[2] / "src" / "edgar"
 
-# The tier being built. Moves to "v1" when M7 starts and "v2" when M12 starts; the
-# numbers themselves never move (ADR-0015).
+# The tier being built. Moved to "v1" when M7 started; moves to "v2" when M19
+# starts (M18 writes no code), "v3" at M12 and "v4" at M17. The numbers themselves
+# never move (ADR-0015, ADR-0057).
 TARGET_TIER = "v1"
-TIER_BUDGETS = {"core": 5_000, "v1": 8_000, "v2": 11_000}
+TIER_BUDGETS = {"core": 5_000, "v1": 8_000, "v2": 9_500, "v3": 12_000, "v4": 13_000}
 
-# Where v2 lives. Nothing outside these may import them (NFR-12).
-V2_PATHS = ("learning", "controller", "schedule", "broker", "providers/escalation.py")
+# Where the removable tiers live: v3 is learning, controller and escalation, v4 is
+# schedule and broker. Nothing outside these may import them (NFR-12).
+REMOVABLE_PATHS = ("learning", "controller", "schedule", "broker", "providers/escalation.py")
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,26 +49,28 @@ def count_loc(path: Path) -> int:
     return sum(1 for line in lines if line.strip() and not line.lstrip().startswith("#"))
 
 
-def _is_v2(path: Path, root: Path) -> bool:
-    # "learning/x.py" is v2 because it sits under "learning"; so is the one file
-    # "providers/escalation.py" itself.
+def _is_removable(path: Path, root: Path) -> bool:
+    # "learning/x.py" is removable because it sits under "learning"; so is the one
+    # file "providers/escalation.py" itself.
     rel = path.relative_to(root).as_posix()
-    return any(rel == p or rel.startswith(p + "/") for p in V2_PATHS)
+    return any(rel == p or rel.startswith(p + "/") for p in REMOVABLE_PATHS)
 
 
 def limits(root: Path = SRC, tier: str = TARGET_TIER) -> list[Limit]:
     # 1. Count every file once.
     files = sorted(root.rglob("*.py"))
     total = sum(count_loc(f) for f in files)
-    without_v2 = sum(count_loc(f) for f in files if not _is_v2(f, root))
+    without_removable = sum(count_loc(f) for f in files if not _is_removable(f, root))
     core = sum(count_loc(f) for f in files if f.relative_to(root).parts[0] == "core")
     # 2. Compare each total with its budget.
     result = [
         Limit(f"src/ total ({tier} tier)", total, TIER_BUDGETS[tier]),
         Limit("core/", core, 2_000),
     ]
-    if tier == "v2":
-        result.append(Limit("src/ without v2 packages", without_v2, TIER_BUDGETS["v1"]))
+    if tier in ("v3", "v4"):
+        result.append(
+            Limit("src/ without removable packages", without_removable, TIER_BUDGETS["v2"])
+        )
     # 3. The loop, in lines of code like everything else: its comments are free.
     loop = root / "core" / "loop.py"
     if loop.exists():

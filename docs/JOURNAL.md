@@ -7,29 +7,31 @@ top of [`ROADMAP.md`](ROADMAP.md).
 
 ## Pick up here
 
-M11 and v1.0 are code-complete as of 2026-09-15 ([ADR-0056](adr/0056-m11-as-built.md)).
-What is left is not code:
+The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md),
+2026-09-16): v2 is the daily driver (M18–M22), v3 learning (M12–M15), v4
+unattended (M17, M16). The coder's starting file is [`HANDOFF.md`](HANDOFF.md).
+In order:
 
-1. **PRD §11's two human-verification criteria for v1.0 are still open**: "a
-   developer unfamiliar with the codebase can add a provider in under an
-   hour using only `docs/`, verified by trying it on someone", and "a
-   non-Python user can add a custom tool, a subagent, a skill and an
-   extension without opening `src/`". `docs/EXTENDING.md` is written for
-   exactly this, but nothing in this session can substitute for an actual
-   outside person doing it. Find someone and time them.
-2. **The release workflow's two new jobs (`pyapp`, `docker` in
-   `.github/workflows/release.yml`) have never run.** They parse and their
-   pinned actions resolve to real commits, but the first real tagged release
-   is the actual test. Watch it; fix forward with its own ADR entry if
-   something in PyApp's or Docker's build step does not hold up.
+1. **Tag v1.0.** The version is still `0.1.0` in `pyproject.toml` and
+   `src/edgar/__init__.py`; bump both, the maintainer tags and publishes the
+   release, and someone watches the `pyapp` and `docker` jobs, which have never
+   run.
+2. **A dogfood week.** Use edgar on edgar with a real model (the Ollama command is
+   in the handoff), journal every friction under a `## Dogfood` heading in this
+   file. The list is M19–M22's real specification.
+3. **M18, tours for v1 and the map**, item by item from `ROADMAP.md`. It writes
+   no `src/` code, so it can start before or during the dogfood week.
+4. **PRD §11's two human-verification criteria** stay open until an actual
+   outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 
-v1 sits exactly at 8,000/8,000 `src/` lines of code — any new `.py` growth,
-in v1 or by mistake in v2 work that leaks into v1 packages, needs a matching
-cut. ADR-0053 already cut plan mode, the `todo` tool, `edgar route explain`,
-`edgar agents list|validate`, `ext validate`, `ext add`, the
-`edgar.testing.contract` kit, `config show --resolved` and `edgar context
-show` from 1.0 — do not build any of them. The next real work is v2 (M12
-onward), per `docs/ROADMAP.md`.
+v1 sits exactly at 8,000/8,000 `src/` lines of code. M18 must not add a line to
+`src/`; M19 flips `TARGET_TIER` to `"v2"` in `tests/support/budget.py` and works
+inside 9,500. ADR-0053's cuts are no longer forbidden: they are M19 (plan mode,
+`todo`, `context show`), M21 (worktrees, sandboxes) and M22 (`route explain`,
+`agents list|validate`, `ext validate|add`, the contract kit, `config show
+--resolved`, the rest of `doctor`). `AGENTS.md` rule 10 and its size table still
+say "v2" for the removable tier; the proposed diff is in the handoff and waits
+for the maintainer's hand.
 
 ## Open items
 
@@ -45,15 +47,16 @@ Carried forward until done. Newest first.
   "Never" list still says no server, no HTTP API, no GUI, and none of that changes.
   Open before anyone starts: whether that project is AGPL too, and whether it
   depends on `edgar-harness` as a library or drives the CLI.
-- **Media input is v2 scope with no milestone.**
+- **Media input is M20** (assigned by [ADR-0057](adr/0057-daily-driver-before-learning.md)
+  on 2026-09-16; kept here until built).
   [ADR-0052](adr/0052-media-input-in-v2.md) moved image and multimodal input out of
   "deferred past v2", because models read images and documents now and a phone
   client makes it structural. **Desired result:** one `ImageBlock` in
   `core/message.py` and nothing else; PDF, PPTX, audio and video converted to text
   and images by a tool at the boundary; images spilled to blobs like tool output; a
   provider that cannot take one failing loudly; token counting that knows image
-  geometry. Estimated 150–250 lines of code against v2's 11,000, which does not
-  move. Give it a slot when v2 is planned.
+  geometry. Estimated 150–250 lines of code against v2's 9,500, which does not
+  move.
 - **Four capabilities the v1.0 pitch ("extensible and remembers") implies don't
   ship at 1.0.** Trimmed from M9–M11 up front, before writing the code, to fit
   the fixed 8,000-LOC v1 budget with 1,144 lines left when the cut was made
@@ -64,7 +67,8 @@ Carried forward until done. Newest first.
   runs anything), `edgar skills audit` (SKL-18 — `ext add` copies a skill in
   unaudited), and `edgar sessions compact ID` outside the REPL (CTX-10 —
   in-REPL `/compact` is unaffected). Each is a real gap, not a rounding error;
-  all four move to v2.
+  all four are now v2 milestones ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
+  `sessions compact` in M19, worktrees and sandboxes in M21, `skills audit` in M22.
 - **The cost table is stale and needs a live check, not a guess.**
   `providers/pricing.py`'s `BUILTIN` table says `CHECKED = "2026-09-13"` in its own
   header and its docstring already admits it is "small and dated" — that self-
@@ -137,6 +141,56 @@ Carried forward until done. Newest first.
   is set, or Ollama if it answers; it needs a few lines of code Core does not have.
 - **Which style guide?** The sensible-defaults rule went into PRD §4, CLAUDE.md and
   the `AGENTS.md` patch. If "my style guide" meant another file, name it.
+
+## 2026-09-16 · Re-tiering after 1.0: the daily driver first
+
+**Asked**
+- A status review of the project after v1.0 went code-complete, delivered as
+  a page; then the question it raised: what comes next, learning as
+  ADR-0015 planned, or a tier that makes edgar usable all day first.
+- Once the choice was made ("daily driver before learning"): amend every
+  document so a simpler coding session can pick the plan up and deliver it,
+  with a tour-stop delivery after every major feature, decisions annotated,
+  and a small starting file for the coder.
+
+**Done**
+- [ADR-0057](adr/0057-daily-driver-before-learning.md): five tiers. v2 the
+  daily driver (M18–M22, ≤ 9,500 LOC, not removable), v3 learning (M12–M15,
+  ≤ 12,000, removable), v4 unattended (M17 then M16, ≤ 13,000, removable).
+  Milestone IDs keep their numbers; media input (ADR-0052) is M20; web search
+  and git are extensions in `examples/`; every milestone's last item is its
+  tour; v2's done test is two weeks of real use plus PRD §11's two human
+  checks done by an outside person.
+- `ROADMAP.md`: M18–M22 written to the level of files, requirement IDs, tests
+  and estimates (M18 tours for v1 and the map; M19 working state; M20 seeing
+  and searching; M21 isolation; M22 inspection and 2.0). v3 and v4 sections
+  added in front of M12 and M17; M12–M17 each got a tour delivery item;
+  "Past v2" is "Past v4".
+- `PRD.md` §5.1 (five tier bullets, a five-column requirement map), §5.3, §6
+  journey headings, §7.16, §9.5 markers, §11 criteria for 2.0, 3.0 and 4.0.
+  `BLUEPRINT.md` tier markers, seam paragraph, port table, package tree
+  (`context/working.py`, `tools/builtin/todo.py`, `agents/worktree.py`,
+  `sandbox/` as v2; `container.py` past v4), events, diagrams, section
+  headings and config comments. The tour's header and Part III; README's
+  status, tier table and feature list; `tests/support/budget.py`
+  (`REMOVABLE_PATHS`, five budgets) and its test; the ADR index (0056 was
+  missing too); `EXTENDING.md`'s contract-kit note; a Changed line in the
+  changelog.
+- [`HANDOFF.md`](HANDOFF.md) for the coder: what to read, tag v1.0, the
+  dogfood week, M18 item by item, the proposed `AGENTS.md` diff.
+
+**Decided**
+- Option B of ADR-0057 over "learning next" and over v1.1 point releases:
+  the tool has never been used, so there is nothing to learn from yet, and
+  v1's budget is spent to the line.
+- The tour grows from one page to a set of sibling pages sharing one CSS and
+  the same stop shape, so `test_tour.py` covers all of them with one regex
+  and a no-orphan check can be added in M18.
+
+**Pending**
+- Everything under "Pick up here". The `AGENTS.md` diff needs the
+  maintainer's hand. The maintainer decides whether to push this branch and
+  open a PR, or merge locally.
 
 ## 2026-09-15 · Wrapping OAuth CLIs instead of writing them
 

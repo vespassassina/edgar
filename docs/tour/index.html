@@ -99,8 +99,8 @@
     Nothing is done until it's verified.</p>
   </div>
   <div class="ak-meta">
-    <span class="ak-pill ak-pill-ok">Built</span> M0 to M8<br>
-    <span class="ak-pill ak-pill-warn">Planned</span> M9 to M17<br>
+    <span class="ak-pill ak-pill-ok">Built</span> M0 to M11<br>
+    <span class="ak-pill ak-pill-warn">Planned</span> M12 to M17, as v3 and v4<br>
     Kept in sync by a test
   </div>
 </header>
@@ -139,7 +139,7 @@
     <li><a href="#s23"><span class="n">23</span>Extensions, hooks, plugins, embedding (M10)</a></li>
     <li><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
   </ol>
-  <p class="ak-eyebrow toc-part"><a href="#v2">III. v2</a><span class="count" data-count="v2"></span></p>
+  <p class="ak-eyebrow toc-part"><a href="#v2">III. v3 and v4</a><span class="count" data-count="v2"></span></p>
   <ol class="ak-nav">
     <li class="planned"><a href="#s25"><span class="n">25</span>Learning (M12)</a></li>
     <li class="planned"><a href="#s26"><span class="n">26</span>The controller (M13)</a></li>
@@ -158,11 +158,14 @@ it. Keep the code open beside this page. The numbered steps in the diagrams matc
 the numbered comments in the code.</p>
 
 <p>The tour comes in three parts, one per tier, so you can read it a tier at a time.
-<strong>Core</strong> is built: read it now. In <strong>v1</strong>, memory and
-MCP (M7, M8) are built too; the rest of v1 and all of <strong>v2</strong> are
-planned. A planned stop names the files it will be, the milestone that brings it,
-and the seam in Core where it will attach. As each milestone lands, its stop gets
-links like the rest.</p>
+<strong>Core</strong> and <strong>v1</strong> are built: read them now. Part III
+is the removable tiers, <strong>v3</strong> learning and <strong>v4</strong>
+unattended, still planned. A planned stop names the files it will be, the
+milestone that brings it, and the seam in Core where it will attach. As each
+milestone lands, its stop gets links like the rest. Between v1 and v3 comes
+<strong>v2</strong>, the daily driver (M18 to M22, ADR-0057): it extends the
+files in Parts I and II and gets a tour page per feature next to this one, so
+it has no part here.</p>
 
 <ol class="ak-stepper" aria-label="The six stages of Core">
   <li class="ak-step"><a href="#stage-1"><span class="ak-t">1. The spine</span>45 minutes</a></li>
@@ -744,15 +747,16 @@ flowchart LR
 
 <!-- ─────────────────────────────── Part III ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v2</h2><span class="ak-pill ak-pill-warn">Planned, M12 to M17</span></div>
-<p class="part-intro">It learns, and runs unattended: learning, the controller,
-escalation, the capability broker and scheduling. At most 11,000 lines of code in
-all. v2 is removable. Nothing in Core or v1 imports it, and CI deletes the v2
-packages and runs the v1 suite to prove it.</p>
+<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v3 and v4</h2><span class="ak-pill ak-pill-warn">Planned, M12 to M17</span></div>
+<p class="part-intro">v3 learns: learning, the controller, skill synthesis and
+escalation, at most 12,000 lines of code in all. v4 runs unattended: the
+capability broker and scheduling, at most 13,000. Both are removable. Nothing in
+Core, v1 or v2 imports them, and CI deletes the packages and runs the suite
+below them to prove it.</p>
 
 <div class="diagram"><pre class="mermaid">
 flowchart LR
-    subgraph v1["Core and v1: never import v2"]
+    subgraph v1["Core, v1 and v2: never import v3 or v4"]
         loop["core/loop.py<br/>post-turn gate"]
         exe["tools/execute.py<br/>pre_tool vetoes"]
         bus["core/events.py<br/>EventBus"]

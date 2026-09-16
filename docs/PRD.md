@@ -108,8 +108,9 @@ enterprise audit story, or anyone who wants a GUI.
 
 ### 5.1 Scope by release tier
 
-Three tiers, each a release with its own size budget. Rationale in
-[ADR-0015](adr/0015-release-tiers.md).
+Five tiers, each a release with its own size budget. Rationale in
+[ADR-0015](adr/0015-release-tiers.md); the order after 1.0 and the split of the
+old v2 into v2, v3 and v4 in [ADR-0057](adr/0057-daily-driver-before-learning.md).
 
 **Core (0.x)** — a harness you can read in an afternoon and use every day. ≤ 5,000 LOC.
 
@@ -142,55 +143,77 @@ Three tiers, each a release with its own size budget. Rationale in
   plus `recall`, `memory edit`, session search
 - MCP client (stdio and Streamable HTTP, OAuth for remote servers); `edgar login`
   for providers that issue keys by OAuth
-- Plan mode and a todo list kept as pinned session state; `/save`, `/load` of a
-  saved file and `edgar --load`; a daily cost cap ([ADR-0037](adr/0037-core-fits-in-5000.md))
+- `/save`, `/load` of a saved file and `edgar --load`; a daily cost cap
+  ([ADR-0037](adr/0037-core-fits-in-5000.md)); plan mode and the todo list moved
+  on to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md))
 - Subagents as markdown + frontmatter, parallel fan-out, per-agent model and tools
 - Declarative routing rules and provider fallback
 - Hooks, extension bundles, provider plugins, `edgar.run()` embedding API
-- Ports for sandboxes (bubblewrap, Seatbelt, containers) and retrievers
+- Ports for sandboxes (only the `none` backend in 1.0, [ADR-0050](adr/0050-trim-should-items-from-v1.md)) and retrievers
 - Session forks; deferred tool schemas; deterministic skill triggers
-- `edgar init`, `edgar doctor`, `config show --resolved`
+- `edgar init`, `edgar doctor` (credentials, connectivity, cloud-synced folders)
 - Documentation: guided tour, cookbook, extending guide, per-concept explainers
 
-**v2.0** — learns and runs unattended. ≤ 11,000 LOC total, and removable: v1
-passes its suite with the v2 packages deleted [NFR-12].
+**v2.0, the daily driver** — work in it all day. ≤ 9,500 LOC total. Extends Core
+and v1 packages, so it is not removable ([ADR-0057](adr/0057-daily-driver-before-learning.md)).
+
+- A tour page per v1 feature, a stop for every source file, and a clickable map
+  of the harness; every later milestone ends with its tour
+- `@path` attachments; plan mode and the `todo` tool as pinned working state;
+  `context show`, `sessions compact`, `config show --resolved`
+- Media input: one `ImageBlock` in the message vocabulary, images spilled to blobs
+  like tool output, a provider that cannot take one failing loudly, and every other
+  format converted to text and images by a tool at the boundary
+  ([ADR-0052](adr/0052-media-input-in-v2.md))
+- Web search and git as extensions in `examples/`: an HTTP tool with the host
+  fixed, command tools over `git`, a `git` skill, cookbook recipes
+- Worktree isolation for write-capable subagents; `bwrap` and `seatbelt`
+  sandbox backends
+- The inspection commands cut from 1.0: the rest of `doctor`, `route explain`,
+  `agents list|validate`, `ext validate|add` with `skills audit`, the
+  `edgar.testing.contract` kit
+
+**v3.0, learning** — learns from what you type and what breaks. ≤ 12,000 LOC
+total, and removable: the suite below it passes with `learning/`, `controller/`
+and `providers/escalation.py` deleted [NFR-12].
 
 - Autolearn from typed text and templated error facts; `history.md` with
   out-of-band condensing; experience telemetry and `stats`
 - Controller on deterministic triggers with typed proposals
 - Skill synthesis from verified work, distill, optional curator
 - Escalation, `route suggest`, budget-aware downgrade
-- Scheduling via `tick`, host installers, `schedule_self`
+
+**v4.0, unattended** — runs unattended under a signed scope. ≤ 13,000 LOC total,
+removable like v3.
+
 - A capability broker: each tool call checked against a ticket bound to what
   the human typed, with a signed receipt of every allow and refusal
-- Media input: one `ImageBlock` in the message vocabulary, images spilled to blobs
-  like tool output, a provider that cannot take one failing loudly, and every other
-  format converted to text and images by a tool at the boundary. Not yet assigned
-  to a milestone ([ADR-0052](adr/0052-media-input-in-v2.md))
+- Scheduling via `tick`, host installers, `schedule_self`; notifications through
+  a `session_end` hook
 
 **Requirement map.** IDs keep their numbers; this table says which tier delivers
 them. A constraint (for example MEM-9) applies from the tier in which its mechanism
 first lands.
 
-| Area | Core | v1.0 | v2.0 |
-|---|---|---|---|
-| CLI | 1–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 22, 29; the rest of 25; rest of 14 (`/save /history /fork /remember /memory /skills /agents /tools /init /browser`) | 20 (`/plan /go --plan`) and `/plan`, `/go` in 14 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); `/scope` and `--scope` (CAP-4) |
-| Providers | 1–13, 15–17, 20 | 14 (the `edgar.providers` entry point), 18, 19 | 14's `edgar.testing.contract` kit ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) |
-| Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | 14 (`todo`) ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); `schedule_self` |
-| Permissions | 1–14 | — | 15 |
-| Context | 1, 3–9, 11–17, 19 | — | 2, 10, 18 ([ADR-0053](adr/0053-what-1-0-actually-ships.md) moves 2 and 18) |
-| Subagents | — | 1–10 | 11 |
-| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 6, 7 (rest), 8–16, 18 |
-| Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | 8, 12–14, 16–19, 22 |
-| Controller | — | — | 1–13 |
-| Routing | 1 (static roles) | 2–4, 6, 7, 10 | 5, 8, 9 (`route explain`, [ADR-0053](adr/0053-what-1-0-actually-ships.md)), 11, 12 |
-| Scheduling | — | — | 1–12 |
-| Broker | — | — | 1–10 |
-| Budget | 1, 2 (turn and session), 3, 5, 6 (`/cost`) | 2 (daily), 4, 6 (`edgar cost`) | — |
-| Config | 1–3, 6–8 | 4; 5 for credentials, connectivity and the cloud-synced directory warning | 2 (`config show --resolved`); 5's MCP, extension, trust, tick and DB-integrity checks and `--network` ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) |
-| Verification | 1–7 (sources arrive with their features) | VER-1's skill source, with SKL-1's `verify` ([ADR-0041](adr/0041-skills-as-built.md)) | — |
-| Extensions | 11 (the ports rule holds from M0) | 1, 2, 3 (`ext list` only), 4–10 | 3's `ext validate` and `ext add` ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) |
-| Non-functional | 1–3, 6, 9, 13, 14 | 4, 5, 7, 8, 10, 11 | 12 |
+| Area | Core | v1.0 | v2.0 daily driver | v3.0 learning | v4.0 unattended |
+|---|---|---|---|---|---|
+| CLI | 1, 2, 4–13, 15–19, 21, 23–28, 30; CLI-25 without `/save`, saved files and `/history`; CLI-14 subset `/help /status /model /mode /compact /cost /thinking /queue /steer /btw /stop /pause /resume /new /reset /clear /undo /retry /title /sessions /load /quit` | 22, 29; the rest of 25; rest of 14 (`/save /history /fork /remember /memory /skills /agents /tools /init /browser`) | 3 (`@path`, never built in Core); 20 (`/plan /go --plan`) and `/plan`, `/go` in 14 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | — | `/scope` and `--scope` (CAP-4) |
+| Providers | 1–13, 15–17, 20 | 14 (the `edgar.providers` entry point), 18, 19 | 14's `edgar.testing.contract` kit ([ADR-0053](adr/0053-what-1-0-actually-ships.md)); the `images` capability row (ADR-0052) | — | — |
+| Tools | 1–6, 9 (without MCP), 10–13; TOOL-5 built-ins listed above | 7, 8, 15; `task` `remember` `recall` | 14 (`todo`) ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | — | `schedule_self` |
+| Permissions | 1–14 | — | 15 (`bwrap`, `seatbelt`) | — | — |
+| Context | 1, 3–9, 11–17, 19 | — | 2, 10, 18 ([ADR-0053](adr/0053-what-1-0-actually-ships.md) moves 2 and 18) | — | — |
+| Subagents | — | 1–10 | 11 | — | — |
+| Skills | 1–5 (SKL-1 without `verify`), 7 (`list`, `validate`) | 17; SKL-1's `verify` field ([ADR-0041](adr/0041-skills-as-built.md)) | 18 (`skills audit`) | 6, 7 (rest), 8–16 | — |
+| Memory | — | 1–7, 10, 11, 15, 20, 21, 23, 24 | — | 8, 12–14, 16–19, 22 | — |
+| Controller | — | — | — | 1–13 | — |
+| Routing | 1 (static roles) | 2–4, 6, 7, 10 | 9 (`route explain`, [ADR-0053](adr/0053-what-1-0-actually-ships.md)) | 5, 8, 11, 12 | — |
+| Scheduling | — | — | — | — | 1–12 |
+| Broker | — | — | — | — | 1–10 |
+| Budget | 1, 2 (turn and session), 3, 5, 6 (`/cost`) | 2 (daily), 4, 6 (`edgar cost`) | — | — | — |
+| Config | 1–3, 6–8 | 4; 5 for credentials, connectivity and the cloud-synced directory warning | 2 (`config show --resolved`); 5's MCP, extension, trust and DB-integrity checks and `--network` ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | — | 5's tick check |
+| Verification | 1–7 (sources arrive with their features) | VER-1's skill source, with SKL-1's `verify` ([ADR-0041](adr/0041-skills-as-built.md)) | — | — | — |
+| Extensions | 11 (the ports rule holds from M0) | 1, 2, 3 (`ext list` only), 4–10 | 3's `ext validate` and `ext add` ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | — | — |
+| Non-functional | 1–3, 6, 9, 13, 14 | 4, 5, 7, 8, 10, 11 | — | 12 (first bites here) | 12 |
 
 ### 5.2 Explicit non-goals
 
@@ -213,19 +236,18 @@ Written down so scope creep has something to argue with.
 | User modelling (Honcho-style profiles) | A model of the user built by a model is invisible state. Facts with provenance are the visible version. |
 | Memory nudges in the system prompt | Turns autolearn back into model judgement. Learning is triggered deterministically from the three sources in MEM-8. |
 
-### 5.3 Deferred past v2
+### 5.3 Deferred past v4
 
-Notifications (desktop/Teams/webhook; a `session_end` hook covers the gap),
-concurrent execution of independent read-only tool calls within one response
+Concurrent execution of independent read-only tool calls within one response
 (calls run in order; consecutive `task` calls already fan out, TOOL-12),
 remote/shared memory, embedding or graph retrievers in core (a retriever port
-exists for plugins, ADR-0024), a TUI mode, `git` and language-server tools,
-generating HTTP tools from an OpenAPI spec, Homebrew and Scoop manifests.
+exists for plugins, ADR-0024), a TUI mode, language-server tools, generating
+HTTP tools from an OpenAPI spec, Homebrew and Scoop manifests, prompt-caching
+optimisation across providers, the `container` sandbox backend.
 
-Image and multimodal input moved from here into v2 scope
-([ADR-0052](adr/0052-media-input-in-v2.md)): one `ImageBlock` in the message
-vocabulary and nothing else, every other format converted to text and images by a
-tool at the boundary.
+Image input moved from here into v2's M20 ([ADR-0052](adr/0052-media-input-in-v2.md),
+[ADR-0057](adr/0057-daily-driver-before-learning.md)); web search and `git`
+tools into M20 as extensions; notifications into M16 as a `session_end` hook.
 
 ## 6. User journeys
 
@@ -288,11 +310,11 @@ then hands the synthesis to the reviewer. No Python written.
 respecting its own allowlist, with the status line showing all three concurrently
 and total cost attributed per agent.
 
-### J5 — Memory over time (v1, autolearn in v2)
+### J5 — Memory over time (v1, autolearn in v3)
 
 Session one, in v1, you type `/remember we use pytest, not unittest`. Or the agent
 calls `remember` after you say it, and at the end of the turn edgar asks
-`1 fact proposed: "tests use pytest, not unittest" — save? [y/N]`. In v2 you do
+`1 fact proposed: "tests use pytest, not unittest" — save? [y/N]`. In v3 you do
 not need either: you correct the agent, and autolearn records the correction from
 the text you typed with provenance `user-feedback`. Session four, the fact is in
 the pinned set and the agent gets it right unprompted. You run `edgar memory edit`,
@@ -304,7 +326,7 @@ via `memory undo`. A proposal the user declines is never injected. In v2, a fact
 learned from a typed correction does the same, and no fact becomes active from
 tool output, piped stdin or an attached file.
 
-### J6 — Scheduled run (v2)
+### J6 — Scheduled run (v4)
 
 ```
 $ edgar schedule add nightly --cron "0 3 * * *" --prompt "audit deps for CVEs" \
@@ -320,7 +342,7 @@ non-interactively, writes a transcript to `.edgar/runs/`, and fires the entry's
 does not fire it again in the same window, and catches up correctly after a
 simulated 6-hour sleep according to the configured catch-up policy.
 
-### J7 — Controller intervention (v2)
+### J7 — Controller intervention (v3)
 
 Context crosses 70% of the window. The deterministic check trips. A cheap model is
 invoked, sees the session summary, and proposes `compact` with a reason. In `auto`
@@ -330,7 +352,7 @@ the proposal first.
 **Acceptance:** the controller never executes an action outside the whitelist, and
 every mutation it makes appears in `edgar controller log` with a working revert.
 
-### J8 — A verified procedure becomes a skill (v2)
+### J8 — A verified procedure becomes a skill (v3)
 
 ```
 $ edgar -p "bump the httpx pin and fix whatever breaks" --mode auto --verify "just check"
@@ -463,7 +485,7 @@ Requirements are numbered for traceability. Each milestone in
 | TOOL-2 | Arguments validated against schema before execution; validation errors return to the model as a tool error, not an exception | Must |
 | TOOL-3 | Per-tool timeout; timeout returns a tool error and cancels the underlying work | Must |
 | TOOL-4 | Output over `tools.max_output_tokens` is head/tail truncated with an explicit marker, and the full output is spilled to `.edgar/sessions/<id>/blobs/<tool_use_id>.txt`, named in the marker so the model can `read` it with an offset (CTX-13) | Must |
-| TOOL-5 | Built-ins: `read` `write` `edit` `ls` `glob` `grep` `shell` `fetch` `skill` (Core); `task` `remember` `recall` (v1); `schedule_self` (v2) | Must |
+| TOOL-5 | Built-ins: `read` `write` `edit` `ls` `glob` `grep` `shell` `fetch` `skill` (Core); `task` `remember` `recall` (v1); `schedule_self` (v4) | Must |
 | TOOL-6 | Custom tools declared in TOML, of two kinds: **command** (an `argv` template; arguments substituted as whole argv elements, never through a shell) and **HTTP** (method, URL and body templates; the host is fixed by the template; `${env:NAME}` resolves only in base URL and headers, never from model arguments, and is redacted everywhere). Both carry a JSON Schema, a timeout and an optional `read_only` flag ([ADR-0018](adr/0018-extension-model.md)) | Must |
 | TOOL-7 | MCP client: stdio and Streamable HTTP transports, discovery, namespacing as `mcp__server__tool`. Legacy HTTP+SSE is not supported; remote servers take static headers from env or OAuth 2.1 with PKCE, tokens in the keyring ([ADR-0032](adr/0032-oauth-keys-and-mcp.md)). Server annotations never drive permission decisions | Must |
 | TOOL-8 | MCP servers spawn lazily on first use, not at startup | Must |
@@ -714,7 +736,7 @@ event; an **extension** is a folder bundling any of them.
 | EXT-10 | The formats in EXT-1 to EXT-9, TOOL-6, SKL-1, SUB-1, the `--json` and `--events` output and the `Provider`, `Sandbox` and `Retriever` protocols are frozen at 1.0 and change only additively within a major version | Must |
 | EXT-11 | **Ports.** Core modules (`core/`, `context/`, `permissions/`, `tools/execute.py`) import no adapter, and adapters import only core types. Third-party implementations of the Provider, Sandbox and Retriever ports register through entry points, read lazily. One distribution ships the core and all built-in adapters ([ADR-0022](adr/0022-ports-and-adapters.md)) | Must |
 
-### 7.16 Capability broker (v2)
+### 7.16 Capability broker (v4)
 
 The permission engine decides what a session may do; the broker decides what one
 request may do. Each typed request gets a ticket: authority bound to that intent,
@@ -750,7 +772,7 @@ of the engine's decision and the ticket. Rationale in
 | NFR-9 | **Type coverage** | `mypy --strict` clean on `src/` |
 | NFR-10 | **Docs currency.** Every public command and config key documented | Enforced by a docs-coverage test |
 | NFR-11 | **Cold install** from zero to first successful run | ≤ 2 minutes including reading the README |
-| NFR-12 | **Tier isolation.** Core and v1 modules never import `edgar.controller`, `edgar.learning`, `edgar.schedule`, `edgar.broker` or `edgar.providers.escalation` | An import-graph test, plus a CI job that deletes the v2 packages and runs the v1 suite green |
+| NFR-12 | **Tier isolation.** Core and v1 modules never import `edgar.controller`, `edgar.learning`, `edgar.schedule`, `edgar.broker` or `edgar.providers.escalation` | An import-graph test, plus a CI job that deletes the removable packages (v3 and v4) and runs the suite below them green |
 | NFR-13 | **Prompt budget.** Base system prompt, and the schemas of all Core built-in tools together | ≤ 1,500 and ≤ 2,500 tokens, measured in CI with the approximate counter |
 | NFR-14 | **Supply chain.** How releases and dependencies are protected | Releases through trusted publishing with attestations; lockfile pinned with hashes; no install-time hooks; `SECURITY.md` and `/.well-known/security.txt` with a monitored contact from M0 |
 
@@ -864,15 +886,15 @@ executable config in a non-interactive run exits 3 (PERM-13).
   config.toml                 hand-authored
   agents/  skills/  tools/  extensions/
   skills/learned/             machine-owned: synthesised skills (SKL-11, v2)
-  proposals/                  machine-owned: diffs awaiting `controller apply` (v2)
-  schedules.toml              hand-authored; `schedule add` appends (v2)
+  proposals/                  machine-owned: diffs awaiting `controller apply` (v3)
+  schedules.toml              hand-authored; `schedule add` appends (v4)
   sessions/<id>.jsonl         machine-owned: append-only transcripts
   sessions/<id>/blobs/        machine-owned: spilled tool output (CTX-13)
   sessions/<id>/receipt.jsonl machine-owned: signed record of authority (CAP-7, v2)
-  runs/                       machine-owned: scheduled run transcripts (v2)
+  runs/                       machine-owned: scheduled run transcripts (v4)
   edgar.db                    machine-owned: sessions index, grants, facts,
                               self-schedules, telemetry, control-file hashes
-  history.md                  machine-owned (v2)
+  history.md                  machine-owned (v3)
 
 ./AGENTS.md                   hand-authored instructions, never machine-written
 ```
@@ -901,7 +923,7 @@ model's own `write` and `edit` calls on control files always go through a prompt
 | `auto` mode reads a page with injected instructions and exfiltrates data | Data leaves the machine | Taint tightens `auto` defaults for shell and network egress after untrusted content arrives (PERM-11); the docs recommend a container for untrusted work |
 | A `fetch` call, model-directed or injected, reaches the cloud instance-metadata endpoint | Cloud credential theft, before the session is even tainted | A literal link-local URL is denied in the hard layer, in every mode including `yolo` (PERM-16); a hostname that merely resolves there is not caught, so this is a floor, not a sandboxed network policy |
 | The agent edits its own config to widen its policy | Silent privilege growth | Control files are always-ask and read once per session (PERM-12, CFG-8); grants live in the DB, not in config (PERM-6) |
-| Scope grows past "lightweight" | Unreadable codebase, never ships | Per-tier size budgets (NFR-4) and a removable v2 (NFR-12) |
+| Scope grows past "lightweight" | Unreadable codebase, never ships | Per-tier size budgets (NFR-4) and removable v3 and v4 (NFR-12) |
 | A dependency or release is compromised (as LiteLLM's was in 2026) | Malware on users' machines | Five required dependencies, hash-pinned lockfile, trusted publishing with attestations, one distribution to secure (NFR-5, NFR-14, ADR-0022) |
 | A default quietly sends prompts to a host the user never chose | Broken trust, data leaves the machine | No implicit models or hosts, auxiliary roles default to the main model, `doctor --network` (PRV-15) |
 | A synthesised skill carries a wrong procedure or an injected instruction | Future sessions follow it as instructions | Synthesiser never sees tool output (SKL-9); `auto` needs a passing verification (SKL-11) and is opt-in with a disclaimer (SKL-13); writes confined to `learned/`, each one revertible (SKL-12) |
@@ -933,8 +955,18 @@ model's own `write` and `edit` calls on control files always go through a prompt
   runnable code at each step
 - The formats listed in EXT-10 are documented as stable
 
-**v2.0 ships when:** all Must requirements are met, `src/` ≤ 11,000 LOC, J5 to J8
-pass, and NFR-12 holds (v1 suite green with v2 deleted).
+**v2.0 ships when** ([ADR-0057](adr/0057-daily-driver-before-learning.md)): every
+source file has a tour stop and the map is current in CI; the maintainer has
+worked in edgar on edgar for two weeks on a real model and the journal lists no
+blocking friction; the two human criteria above have been done by an actual
+outside person; `src/` ≤ 9,500 LOC; CI green on three platforms.
+
+**v3.0 ships when:** J5, J7 and J8 pass, `src/` ≤ 12,000 LOC, and NFR-12 holds
+(the suite green with `learning/`, `controller/` and `providers/escalation.py`
+deleted).
+
+**v4.0 ships when:** J6 passes, the confused-deputy test in M17 passes, `src/`
+≤ 13,000 LOC, and NFR-12 holds with `broker/` and `schedule/` deleted as well.
 
 **Health signals after ship:** issues that are questions rather than bug reports;
 forks that modify rather than merely star; a provider or tool contributed by
