@@ -6,15 +6,20 @@ list is done. Read it first, then the three documents under "Read".
 
 ## Where things stand
 
-- v1.0 is code-complete: M0–M11, `src/` at exactly 8,000 of 8,000 lines of
-  code, 670 tests green, `just check` passes. Not tagged: the version is still
-  `0.1.0`.
-- The plan after 1.0 was re-tiered on 2026-09-16
-  ([ADR-0057](adr/0057-daily-driver-before-learning.md)): **v2 is the daily
-  driver**, M18–M22, ≤ 9,500 lines of code. Learning (M12–M15) is v3, the
-  broker and scheduling (M17, M16) are v4. Milestone numbers did not change;
-  the order of work is M18, M19, M20, M21, M22, then M12.
-- The branch `docs/re-tier-v2-v3-v4` carries every document amendment.
+- **v1.0 is tagged and released.** `v1.0.0` is published on PyPI, `ghcr.io`
+  and as GitHub release binaries for all three platforms. Step 0 below is
+  done, including the fix-forward: `docker` raced `publish` on the first real
+  run and was fixed in [`.github/workflows/release.yml`](../.github/workflows/release.yml)
+  (`needs: [build, publish]`); see `JOURNAL.md`'s 2026-09-16 "docker raced
+  publish" entry.
+- The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
+  **v2 is the daily driver**, M18–M22, ≤ 9,500 lines of code. Learning
+  (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
+  numbers did not change; the order of work is M18, M19, M20, M21, M22, then
+  M12.
+- The re-tiering docs landed on `main` (branch `docs/re-tier-v2-v3-v4`,
+  merged). Next up: Step 0b (the dogfood week, the maintainer's own task) and
+  Step 1 (M18), which can run in parallel since M18 writes no `src/` code.
 
 ## Read, in this order
 
