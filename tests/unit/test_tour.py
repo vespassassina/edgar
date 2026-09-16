@@ -4,8 +4,9 @@ It fails when a linked file is gone, when a name under "Look for" is no longer
 defined in its stop's files, when a package's size in the table drifts more than
 100 lines of code, when a package has no row, when a file's own size on a feature
 page drifts more than 25, when a planned file has landed while its stop still says
-planned, or when the turn diagram's steps stop matching the loop's numbered
-comments. It cannot tell when a description has gone stale.
+planned, when a new module under src/edgar has no stop on any page, or when the
+turn diagram's steps stop matching the loop's numbered comments. It cannot tell
+when a description has gone stale.
 """
 
 # How the pages are read. Every tour page is hand-written HTML with a few fixed
@@ -133,6 +134,20 @@ def test_a_per_file_size_row_matches_its_file(page: str) -> None:
         assert target.exists(), f"{page}: size row for a file that is gone: {path}"
         drift = abs(count_loc(target) - int(size.replace(",", "")))
         assert drift <= FILE_TOLERANCE, f"{page}: {path} says ~{size}, code has {count_loc(target)}"
+
+
+def test_no_source_file_is_missing_from_the_tour() -> None:
+    # Every .py under src/edgar is named by some stop, on some page. A module no stop
+    # mentions is a milestone that was never finished: its last item is its tour stop.
+    # `__init__.py` is exempt because most of them are empty; edgar's own, which is not,
+    # has a stop anyway.
+    claimed = covered_files()
+    orphans = sorted(
+        f.relative_to(ROOT).as_posix()
+        for f in SRC.rglob("*.py")
+        if f.name != "__init__.py" and f.relative_to(ROOT).as_posix() not in claimed
+    )
+    assert not orphans, f"no stop on any tour page names: {orphans}"
 
 
 def test_the_turn_diagram_follows_the_loop() -> None:
