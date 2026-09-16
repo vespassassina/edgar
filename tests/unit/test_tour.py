@@ -162,6 +162,18 @@ def test_the_turn_diagram_follows_the_loop() -> None:
 
 
 @pytest.mark.parametrize("page", sorted(PAGES), ids=sorted(PAGES))
+def test_the_header_links_every_other_page(page: str) -> None:
+    # The tour is one document in several files, so every page's header carries the same
+    # list of all of them. A page added without touching the others is unreachable from
+    # them, which is how a reader ends up never finding the map.
+    nav = re.search(r'<ul class="pages">(.*?)</ul>', PAGES[page], re.S)
+    assert nav, f"{page}: no page list in the header"
+    linked = set(re.findall(r'<a href="([^"#]+\.html)"', nav[1]))
+    assert linked == set(PAGES), f"{page}: header misses {sorted(set(PAGES) - linked)}"
+    assert f'href="{page}" aria-current="page"' in nav[1], f"{page}: own entry not marked"
+
+
+@pytest.mark.parametrize("page", sorted(PAGES), ids=sorted(PAGES))
 def test_the_page_loads_its_own_files(page: str) -> None:
     # Every relative href or src (tour.css, tour.js, the vendored artifactkit, another
     # tour page) is on disk. A link to a stop on another page carries a #fragment: the
