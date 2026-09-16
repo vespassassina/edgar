@@ -19,8 +19,10 @@ In order:
 2. **A dogfood week.** Use edgar on edgar with a real model (the Ollama command is
    in the handoff), journal every friction under a `## Dogfood` heading in this
    file. The list is M19–M22's real specification.
-3. **M18, tours for v1 and the map**, item by item from `ROADMAP.md`. It writes
-   no `src/` code, so it can start before or during the dogfood week.
+3. ~~**M18, tours for v1 and the map.**~~ Done 2026-09-16
+   ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)). **M19,
+   working state**, is next: it flips `TARGET_TIER` to `"v2"` and is the first
+   milestone since 1.0 that writes `src/` code.
 4. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 
@@ -32,6 +34,42 @@ inside 9,500. ADR-0053's cuts are no longer forbidden: they are M19 (plan mode,
 --resolved`, the rest of `doctor`). `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-16 · M18 — the tour covers all of v1, and has a map
+
+**Asked:** build M18 in seven ordered pieces, each with its test and its own
+commit: shared tour assets, a page per v1 feature, Core's missing stops, a
+no-orphan test, the map and its generator, the stale status lines, and a header
+that links every page. No line added to `src/`; `just loc` must still read
+8,000/8,000.
+
+**Done:** all seven, in seven commits. `docs/tour/tour.css` and `tour.js` came
+out of `index.html` so every page shares them. Four feature pages —
+`memory.html`, `mcp.html`, `agents.html`, `extensions.html` — follow Core's
+format: stages, stops with `data-files`, a "look for" list per stop read off the
+real source, a diagram and a size table. `index.html` gained a seventh stage with
+six stops covering the seventeen files nothing named, its v1 stops became short
+summaries linking out, and Part III's pills now read v3 (learning, M12–M15) and
+v4 (unattended, M17/M16) per ADR-0057. `scripts/tour_map.py` (`just map`) writes
+`docs/tour/map.json` and `map.data.js`; `map.html` draws them as an exploded tree
+in inline SVG, no JS library, width by size, hover for the summary, click for the
+stop. Three new tests: no source file without a stop, the map byte-matches what
+the generator writes, and every header links every page — each checked by making
+it fail first. Stale lines fixed in the tour's Part II pill and in `README.md`,
+which still said 1.0 was untagged. `just check` green (723 tests), `just loc`
+exactly 8,000/8,000.
+
+**Decided:** [ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md) —
+the map is generated rather than hand-written; it ships twice (`map.json` and
+`map.data.js` setting `window.EDGAR_MAP`) because `fetch()` cannot read a sibling
+under `file://` and the tour must open as a local file; tree only, no flow arrows
+and no JS library; empty package `__init__.py` files get no node, which is why
+the map totals 7,998 and says so; and a file's tier is derived from the tour
+itself rather than from git history.
+
+**Next:** M19, working state. The dogfood week and PRD §11's two
+human-verification criteria are still open, and `AGENTS.md`'s stale "v2" for the
+removable tier still waits for the maintainer's hand.
 
 ## 2026-09-16 · docker raced publish on the first real release
 

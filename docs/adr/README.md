@@ -69,6 +69,7 @@ that did not need an ADR.
 | [0055](0055-m10-extensions-as-built.md) | M10 as built: a per-turn verify override mirroring the daily cap, verify authorisation moved down to `core/verify.py`, `edgar.run()` with every heavy import deferred, and the last three slash commands | Accepted · completes M10; refines ADR-0006, ADR-0041; implements EXT-9, SKL-17, VER-1 in part, CLI-14 |
 | [0056](0056-m11-as-built.md) | M11 as built: Cookbook, EXTENDING, DEPENDENCIES, examples in CI, the docs-coverage test, release automation | Accepted · completes M11 and 1.0; implements NFR-10 in part |
 | [0057](0057-daily-driver-before-learning.md) | The daily driver comes before learning: v2 (M18–M22) is the daily driver, v3 (M12–M15) learning, v4 (M17, M16) unattended; every milestone ends with its tour | Accepted · supersedes ADR-0015's tier contents and v2 budget; assigns ADR-0052 to M20 |
+| [0058](0058-m18-the-tour-pages-and-the-map-as-built.md) | M18 as built: a tour page per v1 feature, the Core stops that were missing, a test that fails on a source file with no stop, and a generated map of the harness (tree only, no flow arrows, no JS library) | Accepted · completes M18; implements ADR-0057's tour condition; adds nothing to `src/` |
 
 ## Writing a new ADR
 
