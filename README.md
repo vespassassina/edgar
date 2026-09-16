@@ -12,13 +12,14 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** 0.1 is on PyPI. Core is built (M0 to M6): the REPL and one-shot runs
-> against real models, with file, shell and web tools behind the permission engine,
-> the verify gate, your own CLI and HTTP tools, skills, sessions you can resume
-> (`edgar --continue`), compaction and cost caps. v1 is code-complete (M7 to M11):
-> memory, session forks, MCP servers and signing in, subagents, routing and
-> fallback, extensions, hooks, `edgar.run()`, `init` and `doctor`. 1.0 is not
-> tagged yet. Next is v2, the daily driver
+> **Status:** **1.0 is released and on PyPI.** Core is built (M0 to M6): the REPL
+> and one-shot runs against real models, with file, shell and web tools behind the
+> permission engine, the verify gate, your own CLI and HTTP tools, skills, sessions
+> you can resume (`edgar --continue`), compaction and cost caps. v1 is built
+> (M7 to M11) at exactly 8,000 of 8,000 lines of code: memory, session forks, MCP
+> servers and signing in, subagents, routing and fallback, extensions, hooks,
+> `edgar.run()`, `init` and `doctor`. The tour now has a page per v1 feature and a
+> [map of the harness](https://vespassassina.github.io/edgar/map.html). Next is v2, the daily driver
 > ([ADR-0057](docs/adr/0057-daily-driver-before-learning.md)). The documents in
 > `docs/` are the spec being built against.
 
@@ -72,7 +73,7 @@ against OpenAI, Azure, Anthropic, OpenRouter, Ollama or any OpenAI-compatible
 server. It has permissions, a verify-before-done gate, context compression,
 custom tools for CLIs and APIs, skills, subagents, memory, MCP and extensions.
 
-It ships in three tiers, each with a size budget in lines of code (blank lines and
+It ships in five tiers, each with a size budget in lines of code (blank lines and
 comments don't count):
 
 | Tier | What you get | Size |
@@ -211,9 +212,10 @@ model calls, and fallback kept apart from it because "not capable enough" and
 "not reachable" want different responses. Hooks that can veto a tool call, and
 extension folders that bundle any of the above and share it by copying.
 
-**Coming in 2.0, the daily driver (M18 to M22).** A tour page per feature and a
-map of the harness. `@path` attachments, plan mode and a `todo` list that survive
-compaction. Images in the conversation. Web search and git as extensions you can
+**Coming in 2.0, the daily driver (M18 to M22).** The tour pages per v1 feature
+and the [map of the harness](https://vespassassina.github.io/edgar/map.html) are
+built, and were M18. Still to come: `@path` attachments, plan mode and a `todo`
+list that survive compaction. Images in the conversation. Web search and git as extensions you can
 read. A git worktree per subagent that writes, and a sandboxed shell. The
 inspection commands: `context show`, `route explain`, `config show --resolved`,
 the rest of `doctor`.
@@ -274,7 +276,7 @@ something to argue with.
 | [FAQ](docs/FAQ.md) | AGPL, Python, "another harness", the docs-to-code ratio, the AI-agent build, the name |
 | [Field review](docs/research/hn-2026-09.md) | What 11,647 Hacker News comments say about agent harnesses |
 | [Cookbook](docs/COOKBOOK.md) | Recipes: a local model, pipes, your own tools and skills, a container for untrusted work, a check that decides done |
-| [Roadmap](docs/ROADMAP.md) | Eighteen milestones in three tiers, each one shippable |
+| [Roadmap](docs/ROADMAP.md) | Twenty-three milestones in five tiers, each one shippable |
 | [Testing](docs/TESTING.md) | How you test something nondeterministic |
 | [Brainstorm](docs/BRAINSTORM.md) | The original design conversation |
 | [AGENTS.md](AGENTS.md) | Instructions for AI agents working on the code |
