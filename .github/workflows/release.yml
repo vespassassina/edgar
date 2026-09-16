@@ -8,8 +8,11 @@ name: release
 # ADR-0001's Secondary and Tertiary tiers ride the same trigger: `pyapp` attaches
 # one self-installing binary per platform to the release (each one `pip install`s
 # this same PyPI release the first time it runs, so it needs no wheel of its own
-# and no ordering against `publish`); `docker` builds and pushes the Dockerfile's
-# image, pinned to this release's version, to ghcr.io.
+# and no ordering against `publish`); `docker` builds the Dockerfile's image,
+# pinned to this release's version, and pushes it to ghcr.io — its own `pip
+# install edgar-harness==$VERSION` needs that version already on PyPI, so unlike
+# `pyapp` it must run after `publish`, not just after `build` (v1.0.0's first
+# real release run raced `publish` and failed on this before the fix).
 
 on:
   release:
@@ -94,7 +97,7 @@ jobs:
         run: gh release upload "$GITHUB_REF_NAME" "dist-bin/${{ matrix.asset }}"
 
   docker:
-    needs: build
+    needs: [build, publish]
     runs-on: ubuntu-latest
     permissions:
       contents: read

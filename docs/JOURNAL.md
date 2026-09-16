@@ -33,6 +33,30 @@ inside 9,500. ADR-0053's cuts are no longer forbidden: they are M19 (plan mode,
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
 
+## 2026-09-16 · docker raced publish on the first real release
+
+**Asked:** HANDOFF's step 0 said watch the `pyapp` and `docker` jobs on the
+`v1.0.0` release — they had never run — and fix forward with a journal entry
+if either failed.
+
+**Done:** `build`, `publish` and all three `pyapp` platform builds passed.
+`docker` failed: its Dockerfile runs `pip install edgar-harness==$VERSION`,
+and PyPI did not have `1.0.0` indexed yet. `docker` only declared
+`needs: build`, so it ran in parallel with `publish` and lost the race.
+Confirmed the theory by checking PyPI (`1.0.0` was live moments later) and
+re-running just the failed job — it passed in 36s. Fixed the ordering in
+[`.github/workflows/release.yml`](../.github/workflows/release.yml):
+`docker` now declares `needs: [build, publish]`, with a comment explaining
+why (`pyapp`'s binaries self-install from PyPI at first run, so they don't
+need this; `docker`'s build step needs the version on PyPI before it starts).
+
+**Decided:** no ADR — this changes when a job runs, not what the release
+ships. All `v1.0.0` artifacts (PyPI package, 3 `pyapp` binaries, the
+`ghcr.io` image) ended up published correctly.
+
+**Next:** HANDOFF's remaining steps: the dogfood week, M18 (tours), and
+PRD §11's two human-verification criteria.
+
 ## Open items
 
 Carried forward until done. Newest first.
