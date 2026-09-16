@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory · A Tour of the Harness</title>
+<meta name="description" content="How edgar remembers: the security boundary on what becomes a fact, lexical recall, the markdown round trip, and forks and saves.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<!-- Styled with artifactkit, vendored in artifactkit/. Only its theme block is ours. -->
+<link rel="stylesheet" href="artifactkit/theme.css">
+<link rel="stylesheet" href="artifactkit/components.css">
+<link rel="stylesheet" href="artifactkit/print.css">
+<link rel="stylesheet" href="tour.css">
+</head>
+<body>
+<div class="ak-wrap" id="top">
+
+<header class="ak-pagehead">
+  <div>
+    <p class="ak-eyebrow"><a href="index.html">A Tour of the Harness</a> · v1 · M7</p>
+    <h1>Memory</h1>
+    <p class="ak-lede">What edgar keeps between sessions, and the line it will not cross to
+    get it. Four stops, about half an hour.</p>
+    <ul class="pages">
+      <li><a href="index.html">Core and v1</a></li>
+      <li><a href="memory.html" aria-current="page">Memory</a></li>
+      <li><a href="mcp.html">MCP</a></li>
+      <li><a href="agents.html">Subagents</a></li>
+      <li><a href="extensions.html">Extensions</a></li>
+    </ul>
+  </div>
+  <div class="ak-meta">
+    <span class="ak-pill ak-pill-ok">Built</span> M7, shipped in 1.0<br>
+    Kept in sync by a test
+  </div>
+</header>
+
+<main class="tour-main">
+
+<p>Read <a href="index.html#s15">stop 15</a> and <a href="index.html#s17">stop 17</a> of the
+Core tour first: memory hangs off the prompt builder's pinned sections and off the
+append-only session file, and neither changes shape to make room for it.</p>
+
+<p>The claim to test as you read: <strong>an active fact comes only from text a human
+typed, or from an error record the harness computed itself</strong>. Everything else —
+the model's own <code>remember</code> call included — can become a pending fact at
+most, and a pending fact is never in the prompt and never in the search index
+(MEM-8, MEM-9, <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0017-learning-boundary.md">ADR-0017</a>).
+It is enforced by what each function accepts, not by a filter you could forget to
+call.</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+    typed["text a human typed<br/>provenance = user"] --> near{"near an existing<br/>active fact?"}
+    model["the model's remember call<br/>provenance = model-proposed"] --> pend["pending"]
+    near -->|no| act["active"]
+    near -->|yes| pend
+    pend -->|"a human runs confirm"| act
+    pend -->|"a human declines"| gone["forgotten"]
+    act --> idx[("the FTS5 index<br/>= exactly the active facts")]
+    act --> prompt["pinned into the prompt,<br/>frozen at session start"]
+    pend -.->|never| idx
+    pend -.->|never| prompt
+</pre></div>
+
+<h3 class="stage" id="stage-1">Stage 1. The boundary <small>about 15 minutes</small></h3>
+
+<article class="stop" id="m1" data-files="src/edgar/memory/store.py src/edgar/memory/redact.py">
+  <h4><span class="n">1</span>What becomes a fact</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/store.py"><code>memory/store.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/redact.py"><code>memory/redact.py</code></a></p>
+  <p class="look">Look for: <code>add</code> <code>confirm</code> <code>_Op</code> <code>pinned</code> <code>overlap</code> <code>NEAR</code> <code>redact</code> <code>ASSIGNED</code></p>
+  <p>The whole boundary is one line inside <code>add</code>: a fact is active only when
+  its <code>provenance</code> is <code>"user"</code> <em>and</em> nothing already active
+  says nearly the same thing. <code>overlap</code> is the word-level Jaccard measure and
+  <code>NEAR</code> the threshold, so even a human's near-duplicate lands pending,
+  carrying the id of the fact it would supersede — because a contradiction is for a
+  person to settle, not for the newest writer to win (MEM-10).</p>
+  <p>Read <code>_Op</code> next, and notice what it does not do. It never rewrites a
+  fact's text: an edit is a new fact plus a <code>supersedes</code> link, and every
+  confirm, forget and replace is a status change logged under one operation number,
+  which is the only reason <code>edgar memory undo</code> can always put things back.
+  The index invariant is worth finding for yourself: the same function drops the fact
+  from both FTS5 tables and re-inserts it only when the new status is exactly
+  <code>"active"</code>, so "a pending fact can never be recalled" is true by
+  construction rather than by a check somewhere downstream.</p>
+  <p><code>pinned</code> is the one read that writes: it bumps each returned fact's use
+  count. The set it returns is chosen once at session start and sits above the cache
+  breakpoint (MEM-6, CTX-17), which is why a fact you add now first shows up in the
+  <em>next</em> session — a surprise worth understanding rather than fixing.</p>
+  <p><code>redact.py</code> is twenty-five lines and runs on the way in and on the way
+  out. Whole-secret shapes go first and vanish entirely; <code>ASSIGNED</code> then
+  handles <code>token = …</code>, keeping the name and dropping only the value, so the
+  fact still reads. The docstring is honest that this is best-effort: the real
+  guarantee is that secrets come from the environment (CFG-6), not that a regex
+  catches them.</p>
+  <p class="take"><strong>Take with you:</strong> the boundary is a type signature, not a
+  filter. Nothing on this path accepts tool output, error text, fetched content or an
+  attached file in the first place.</p>
+</article>
+
+<h3 class="stage" id="stage-2">Stage 2. Getting it back <small>about 10 minutes</small></h3>
+
+<article class="stop" id="m2" data-files="src/edgar/memory/retriever.py src/edgar/memory/recall.py">
+  <h4><span class="n">2</span>Recall, without an embedding model</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/retriever.py"><code>memory/retriever.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/recall.py"><code>memory/recall.py</code></a></p>
+  <p class="look">Look for: <code>Retriever</code> <code>Hit</code> <code>retriever</code> <code>Fts5Retriever</code> <code>search</code> <code>index</code> <code>SNIPPET</code></p>
+  <p><code>retriever.py</code> is one of the six ports
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0022-ports-and-adapters.md">ADR-0022</a>):
+  a <code>Protocol</code> with a single method, so a vector or graph plugin never has to
+  import anything from edgar. The factory resolves the built-in name inside the
+  function — the startup budget again — and otherwise looks in an entry point group,
+  failing with a message that lists what is actually installed.</p>
+  <p>Core carries no embedding model on purpose
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0024-lexical-memory.md">ADR-0024</a>).
+  <code>Fts5Retriever</code> runs the same query twice, once over a porter-stemmed
+  index and once over a trigram one, and merges them so a porter hit always beats the
+  trigram hit for the same item. That is what lets a fragment like
+  <code>config/lo</code> find a path, which stemming alone never would.</p>
+  <p><code>index</code> is where the care is. It seeks to a stored byte offset, reads
+  the rest of the session file, and then throws away everything after the last
+  newline, because the file is append-only and a line may still be half-written. It
+  indexes only text blocks that are not <code>attached</code>, so tool results and
+  attached files stay out of the index exactly as they stay out of the facts.</p>
+</article>
+
+<article class="stop" id="m3" data-files="src/edgar/memory/markdown.py src/edgar/cli/memory.py">
+  <h4><span class="n">3</span>The markdown round trip</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/markdown.py"><code>memory/markdown.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/memory.py"><code>cli/memory.py</code></a></p>
+  <p class="look">Look for: <code>render</code> <code>parse</code> <code>edit</code> <code>HEADER</code> <code>command</code> <code>said</code> <code>_review</code></p>
+  <p>Facts are rendered to markdown, opened in your editor, and read back: what you
+  save <em>is</em> the new active set, so deleting a section means everything in it is
+  gone rather than unchanged. <code>parse</code> strips HTML comments before it reads
+  anything, which is how <code>HEADER</code> can explain the contract in the buffer
+  without becoming a fact.</p>
+  <p>Two details in <code>edit</code> are worth the detour. The editor setting is split
+  with <code>shlex</code> so <code>code --wait</code> works, and it is still never run
+  through a shell; and the program is resolved with <code>which</code> first, which is
+  what makes <code>code.cmd</code> work on Windows. A non-zero exit from the editor
+  changes nothing at all.</p>
+  <p>In <code>cli/memory.py</code>, <code>said</code> exists so that
+  <code>edgar memory add</code> and <code>/remember</code> word the same outcome
+  identically, including the pending case. <code>_review</code> is the human
+  confirmation gate, and its default is the safe one: the prompt is
+  <code>[y/N]</code>, and no terminal to ask means the facts stay pending rather than
+  being guessed either way.</p>
+</article>
+
+<h3 class="stage" id="stage-3">Stage 3. Branching a session <small>about 10 minutes</small></h3>
+
+<article class="stop" id="m4" data-files="src/edgar/storage/transcript.py">
+  <h4><span class="n">4</span>Forks and saves</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/storage/transcript.py"><code>storage/transcript.py</code></a></p>
+  <p class="look">Look for: <code>fork</code> <code>chain</code> <code>_upto</code> <code>save</code> <code>_inline</code> <code>_scrub</code> <code>forks</code> <code>adopt</code></p>
+  <p>M7 added three moves to sessions and broke none of Core's append-only rule
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0046-forks-saves-and-the-daily-cap.md">ADR-0046</a>).
+  A fork costs exactly one line: a new file whose second line names its parent and a
+  turn. The parent is never copied and never touched. <code>chain</code> walks up
+  while the second line is a fork record, then reassembles downwards with a loop, not
+  recursion, and <code>_upto</code> finds the cut by looking for the turn's own
+  finish record.</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+    p[("parent.jsonl<br/>head · turns 1-9")] -->|"read up to turn 4"| c
+    c[("fork.jsonl<br/>head · fork line · its own turns")] --> v["the view<br/>chain(path)"]
+    v -->|"save: inline blobs, then redact"| out[("one portable file")]
+    out -->|adopt| new[("a new session of this project,<br/>with a new id")]
+</pre></div>
+  <p><code>save</code> is the opposite move: the chain flattened into one file that
+  travels. <code>_inline</code> reads spilled tool output back off disk so the file is
+  self-contained, and <code>_scrub</code> then walks the whole JSON structure — with
+  an explicit stack, not recursion — redacting string by string, deliberately, so a
+  pattern can never match across JSON syntax and corrupt the shape. Notice that the
+  original session file is never rewritten by any of this.</p>
+  <p><code>forks</code> is the reverse lookup and shows what the layout buys: it reads
+  exactly two lines of each sibling file to find the children of one session.
+  <code>adopt</code> deliberately makes a loaded file a <em>new</em> session of this
+  project rather than a fork, so a file someone sent you can never claim a parent you
+  do not have.</p>
+</article>
+
+<p class="check"><strong>Before you go:</strong> trace one path by hand. The model calls
+<code>remember</code> mid-turn — where does that text end up, what can retrieve it, and
+what exactly has to happen before it is ever in a prompt?</p>
+
+<h3 class="stage">Sizes</h3>
+<p>Lines of code: blank lines and comments do not count, docstrings do.
+<code>just loc</code> prints the current totals.</p>
+
+<div class="ak-tblwrap">
+<table class="ak-table sizes">
+  <thead><tr><th>File</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr data-file="src/edgar/memory/store.py"><td><code>memory/store.py</code></td><td class="loc">~205</td><td>The facts table, the operation log, and the boundary</td></tr>
+    <tr data-file="src/edgar/memory/recall.py"><td><code>memory/recall.py</code></td><td class="loc">~73</td><td>The FTS5 adapter: two indexes, and the incremental catch-up</td></tr>
+    <tr data-file="src/edgar/memory/markdown.py"><td><code>memory/markdown.py</code></td><td class="loc">~52</td><td>Facts to a buffer and back</td></tr>
+    <tr data-file="src/edgar/memory/retriever.py"><td><code>memory/retriever.py</code></td><td class="loc">~36</td><td>The Retriever port and its factory</td></tr>
+    <tr data-file="src/edgar/memory/redact.py"><td><code>memory/redact.py</code></td><td class="loc">~25</td><td>Best-effort secret shapes, in and out</td></tr>
+    <tr data-file="src/edgar/cli/memory.py"><td><code>cli/memory.py</code></td><td class="loc">~73</td><td>The verbs, and the review gate</td></tr>
+    <tr data-file="src/edgar/storage/transcript.py"><td><code>storage/transcript.py</code></td><td class="loc">~188</td><td>The session file, and what forks and saves add to it</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="ak-source">Source: <code>just loc</code>, which counts with
+<code>tests/support/budget.py</code>. Rounded; the tour's test fails if a figure drifts
+more than 25 lines of code from the code.</p>
+
+<footer class="ak-footer">
+  <p><strong>Where next:</strong> <a href="mcp.html">MCP and signing in</a>, or back to
+  the <a href="index.html">Core tour</a>.</p>
+  <p><strong>Keeping this page honest.</strong> It changes in the same commit as the
+  code it describes, and
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_tour.py"><code>tests/unit/test_tour.py</code></a>
+  fails when a linked file is gone, when a name under "Look for" is no longer defined
+  in its files, or when a size here drifts from the real one. It cannot tell when a
+  description has gone stale, so reread a stop whenever you change its code. The
+  source of this page is
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/tour/memory.html"><code>docs/tour/memory.html</code></a>.</p>
+</footer>
+
+</main>
+</div>
+
+<!-- Diagrams are Mermaid text above, readable as plain text if this never loads.
+     The classic (UMD) build, so the page also works opened as a local file. -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="tour.js"></script>
+</body>
+</html>

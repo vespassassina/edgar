@@ -527,86 +527,48 @@ flowchart LR
   <h4><span class="n">20</span>Memory and session search</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/store.py"><code>memory/store.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/recall.py"><code>memory/recall.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/memory_tools.py"><code>tools/builtin/memory_tools.py</code></a></p>
   <p class="look">Look for: <code>add</code> <code>confirm</code> <code>_Op</code> <code>pinned</code> <code>Fts5Retriever</code> <code>Remember</code></p>
-  <p>Look for the security boundary in <code>add</code>: only text a human typed
-  goes straight to active. The model's own <code>remember</code> call makes a pending
-  fact, and the REPL asks at the end of the turn whether to save it; Enter forgets
-  it. A pending fact is never in the prompt and never in the search index, so it can
-  never be recalled. A fact's text never changes: every edit, confirm or forget is a
-  status change logged under one operation number, which is why
+  <p>M7 has a tour of its own: <a href="memory.html">Memory</a>, four stops on the
+  boundary, recall, the markdown round trip, and forks and saves. What to carry from
+  here: an active fact comes only from text a human typed, the model's own
+  <code>remember</code> call makes a pending fact, and a pending fact is never in the
+  prompt and never in the search index. A fact's text never changes — every confirm
+  or forget is a status change under one operation number, which is why
   <code>edgar memory undo</code> can always put it back. The pinned set is chosen once
-  in <code>setup()</code> and sits above the cache breakpoint, so a fact added now
-  shows from the next session. <code>Fts5Retriever</code> searches facts and past
-  sessions' turns twice, by word (porter) and by fragment (trigram), which is what
-  finds <code>config/lo</code> inside a path.</p>
+  at session start, above the cache breakpoint, so a fact added now shows from the
+  next session.</p>
 </article>
 
 <article class="stop" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py src/edgar/tools/builtin/tool_search.py">
   <h4><span class="n">21</span>MCP</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/client.py"><code>tools/mcp/client.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/schema.py"><code>tools/mcp/schema.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/tool_search.py"><code>tools/builtin/tool_search.py</code></a></p>
   <p class="look">Look for: <code>Server</code> <code>discover</code> <code>McpTool</code> <code>to_schema</code> <code>ToolSearch</code></p>
-  <p>An MCP server is one more tool source: its tools go through the same
-  <code>execute()</code> as the built-ins (stop 6), and nothing outside
-  <code>tools/mcp/</code> knows the protocol exists. Two things are worth reading
-  for. The first is that a session starts no server at all: <code>Server.tools</code>
-  <code>tools</code> reads what the server listed last time from a cache in <code>~/.edgar/edgar.db</code>,
-  keyed by a hash of its config block, and the process starts on the first call.
-  A server no session has run yet has nothing cached, so <code>tool_search</code>
-  names it and starts it when the model looks for something. The second is in
-  <code>to_schema</code>: a server's tool is always <code>untrusted_output</code>,
-  its category is <code>shell</code> when it is a local program and
-  <code>network</code> when it is a URL, and whatever the server claims about its
-  own tools (<code>readOnlyHint</code> and friends) is shown to you by
-  <code>edgar mcp list</code> and never read by <code>decide()</code>. When forty
-  tool schemas cost more than the conversation, the MCP ones are deferred:
-  <code>tool_search</code>'s own description lists them by name and a line, and a
-  search loads the full schemas of what matches.</p>
-  <p>A remote server that wants a token is the one case where a turn stops and asks
-  for a human: the call fails with <code>edgar mcp login NAME</code> to run, and that
-  command, not the turn, opens a browser. What it runs is in <code>auth/</code>:
-  authorization code with PKCE, a redirect caught on a loopback port the OS picked,
-  and the token in your keyring. The same three steps serve <code>edgar login
-  openrouter</code>, where the key a provider issues is yours, not edgar's.</p>
+  <p>M8 has a tour of its own: <a href="mcp.html">MCP and signing in</a>, four stops on
+  the lazy start, deferred schemas and the loopback dance. What to carry from here: an
+  MCP server is one more tool source, nothing outside <code>tools/mcp/</code> knows the
+  protocol exists, a session starts no server until one of its tools is called, and a
+  turn never opens a browser — <code>edgar mcp login NAME</code> does, because a human
+  ran it.</p>
+  <p>One detail that belongs to Core rather than to M8: whatever a server claims about
+  its own tools (<code>readOnlyHint</code> and friends) is shown by
+  <code>edgar mcp list</code> and never read by <code>decide()</code>. An MCP tool is
+  always <code>untrusted_output</code>, and its category is <code>shell</code> for a
+  local program, <code>network</code> for a URL.</p>
 </article>
 
 <article class="stop" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/tools/execute.py">
   <h4><span class="n">22</span>Subagents, routing rules and fallback</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/task.py"><code>tools/builtin/task.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/spawn.py"><code>agents/spawn.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/execute.py"><code>tools/execute.py</code></a></p>
   <p class="look">Look for: <code>TaskTool</code> <code>spawn</code> <code>narrow_mode</code> <code>SpawnLimits</code> <code>execute_many</code></p>
-  <p>A subagent is not a second engine (ADR-0006): <code>spawn()</code> builds a
-  second <code>Runtime</code> and calls the very same <code>run_turn</code> from
-  stop 1, with a fresh <code>Session</code>, a model picked by
-  <code>select_model()</code>'s <code>role="subagent"</code> case (stop 14, or the
-  agent's own <code>model:</code> frontmatter), and its tool registry filtered to
-  the agent's <code>tools:</code> list. The <code>task</code> tool is the only
-  caller: its schema lists every agent
-  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/discovery.py"><code>agents/discovery.py</code></a>
-  found by name and description, and <code>TaskTool.run()</code> looks one up and
-  hands off to <code>spawn()</code>. Four checks keep it inside the parent's
-  policy: <code>narrow_mode()</code> never widens the calling session's
-  <code>mode</code>; a depth counter refuses past <code>[subagents] max_depth</code>
-  (read by <code>subagents_config()</code>, capped at <code>HARD_DEPTH</code> no
-  matter what config says); <code>Session.agent_chain</code> refuses an agent
-  already running above itself; and its budget is the smaller of its own
-  <code>budget.cost</code> and whatever the parent has left to give. Guard is not
-  recreated: a subagent shares its parent's, so its permission prompts share the
-  same asking lock and are labelled with the agent's name. Sideways fallback on a
-  <code>ProviderError</code> lives in
-  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/fallback.py"><code>providers/fallback.py</code></a>,
-  whose <code>next_provider()</code> is what <code>core/loop.py</code>'s
-  <code>_ask()</code> (stop 1) retries with, for a subagent's own <code>Runtime</code>
-  same as the main one. Consecutive <code>task</code> calls fan out together
-  (TOOL-12): <code>core/loop.py</code>'s own <code>_run_tools()</code> stayed one
-  call at a time, so the grouping and the <code>asyncio.gather</code> live in
-  <code>execute_many()</code> here instead, bounded by an
-  <code>asyncio.Semaphore</code> sized from the <code>task</code> tool's own
-  <code>SpawnLimits.max_parallel</code>; results still come back in call order
-  regardless of which subagent finishes first, so the loop's bookkeeping never
-  races. Before <code>spawn()</code> resolves a model it calls
-  <code>check_capabilities()</code> (stop 14): a model with no tool support is a
-  <code>ToolResult(error="validation")</code> the parent model reads, not a
-  confusing failure on its first tool call (ROUTE-6). The status bar's own row per
-  running subagent is stop 18; <code>edgar agents list|validate</code> is cut from
-  1.0 (ADR-0053), not planned work still owed.
+  <p>M9 has a tour of its own: <a href="agents.html">Subagents</a>, four stops on what
+  an agent file is, how <code>spawn()</code> narrows, how consecutive <code>task</code>
+  calls fan out, and why routing, escalation and fallback stay three things. What to
+  carry from here: a subagent is not a second engine (ADR-0006). <code>spawn()</code>
+  builds a second <code>Runtime</code> and calls the very same <code>run_turn</code>
+  from stop 1, with a fresh <code>Session</code>, a narrowed policy and a slice of the
+  parent's remaining budget. Its permission prompts share the parent's guard, so they
+  share the same asking lock and carry the agent's name.
+  <code>edgar agents list|validate</code> is cut from 1.0 (ADR-0053), not planned work
+  still owed.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
 </article>
 
@@ -614,37 +576,22 @@ flowchart LR
   <h4><span class="n">23</span>Extensions, hooks, plugins, embedding</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/discovery.py"><code>extensions/discovery.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/hooks.py"><code>extensions/hooks.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/activate.py"><code>skills/activate.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__init__.py"><code>__init__.py</code></a></p>
   <p class="look">Look for: <code>discover</code> <code>Hook</code> <code>veto</code> <code>matching</code> <code>verify_command</code> <code>run</code></p>
-  <p>An extension is a folder of files: tools, skills, agents and one
-  <code>hooks.toml</code> (<code>extensions/discovery.py</code>), found under
-  <code>.edgar/extensions/</code> the same way skills and agents are found under
-  their own folders, and <code>edgar ext list</code> is the whole CLI surface 1.0
-  ships for them — <code>ext validate</code> and <code>ext add</code> moved to v2
-  (ADR-0053). A hook can observe or veto, never allow (EXT-4..7): every kind
-  fires as an event <code>listener()</code> subscribes to the bus for, but
-  <code>pre_tool</code> alone runs through <code>tools/execute.py</code>'s
-  pipeline (stop 6) just before the permission check, and <code>veto()</code>
-  fails closed — a hook that errors, times out or exits non-zero denies the call
-  rather than letting it through. Python is a plugin surface only for providers
-  (ADR-0018): <code>providers/registry.py</code> tries an <code>edgar.providers</code>
-  entry point only once a name is neither built in nor a configured server, so a
-  session that names no third-party provider imports none.</p>
-  <p>Two more things close out v1's own promises. Deterministic skill activation
-  [SKL-17] means the model never has to call the <code>skill</code> tool for a
-  keyword the user typed or a path the last round touched:
-  <code>skills/activate.py</code>'s <code>matching()</code> finds them,
-  <code>bodies()</code> loads them straight into the turn's <code>attached</code>
-  context, and the same matches feed VER-1's precedence chain —
-  <code>verify_command()</code> chains a loaded skill's own <code>verify:</code>
-  command when nothing higher ranked (<code>--verify</code>, then an agent's own
-  frontmatter) claims the turn. <code>edgar.run()</code> (EXT-9, ADR-0051) is the
-  one obligation a program embedding edgar is owed: a thin async wrapper in
-  <code>__init__.py</code> — kept out of the startup path, so a bare
-  <code>import edgar</code> stays as light as <code>edgar.cli.main</code> — that
-  builds a session the same way <code>-p</code> does and calls the very same
-  <code>run_turn()</code> from stop 1, with the event bus and the permission
-  <code>asker</code> the caller supplies, so a supervisor holding a human's
-  attention elsewhere can answer a prompt out of band instead of nobody being
-  there to answer it.
+  <p>M10 has a tour of its own: <a href="extensions.html">Extensions</a>, five stops on
+  the manifest, hooks that veto, provider plugins, skill activation and
+  <code>edgar.run()</code>. What to carry from here: an extension is a folder of
+  files, a hook can observe or veto but never allow (EXT-4..7), and Python is a plugin
+  surface only for providers, retrievers and sandboxes (ADR-0018). These are the
+  formats 1.0 freezes. <code>edgar ext list</code> is the whole CLI surface 1.0 ships
+  for them — <code>ext validate</code> and <code>ext add</code> moved to v2
+  (ADR-0053).</p>
+  <p>One piece belongs here rather than on that page, because it closes Core's verify
+  gate (stop 12): deterministic skill activation [SKL-17] means the model never has to
+  call the <code>skill</code> tool for a keyword the user typed or a path the last
+  round touched. <code>matching()</code> finds those skills,
+  <code>bodies()</code> loads them into the turn's <code>attached</code> context, and
+  the same matches feed VER-1's precedence chain — <code>verify_command()</code>
+  chains a loaded skill's own <code>verify:</code> command when nothing higher ranked
+  (<code>--verify</code>, then an agent's frontmatter) claims the turn.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
 </article>
 
@@ -673,7 +620,7 @@ flowchart LR
 
 <!-- ─────────────────────────────── Part III ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v3 and v4</h2><span class="ak-pill ak-pill-warn">Planned, M12 to M17</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v3 and v4</h2><span class="ak-pill ak-pill-warn">v3 learning, M12 to M15</span> <span class="ak-pill ak-pill-warn">v4 unattended, M17 then M16</span></div>
 <p class="part-intro">v3 learns: learning, the controller, skill synthesis and
 escalation, at most 12,000 lines of code in all. v4 runs unattended: the
 capability broker and scheduling, at most 13,000. Both are removable. Nothing in

@@ -148,9 +148,12 @@ def test_the_turn_diagram_follows_the_loop() -> None:
 
 @pytest.mark.parametrize("page", sorted(PAGES), ids=sorted(PAGES))
 def test_the_page_loads_its_own_files(page: str) -> None:
-    # Every relative href or src (tour.css, tour.js, the vendored artifactkit) is on disk.
+    # Every relative href or src (tour.css, tour.js, the vendored artifactkit, another
+    # tour page) is on disk. A link to a stop on another page carries a #fragment: the
+    # file has to exist, the anchor inside it is the browser's problem.
     for ref in re.findall(r'(?:href|src)="(?!https?:|#|data:)([^"]+)"', PAGES[page]):
-        assert (TOUR / ref).exists(), f"{page}: missing next to the page: {ref}"
+        target = ref.split("#")[0]
+        assert (TOUR / target).exists(), f"{page}: missing next to the page: {target}"
 
 
 @pytest.mark.parametrize("page", sorted(PAGES), ids=sorted(PAGES))
