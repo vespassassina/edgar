@@ -49,8 +49,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
 | M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
 | M11 Init, doctor, docs | Done · 1.0 ([ADR-0056](adr/0056-m11-as-built.md)) — PRD §11's two human criteria still open | 1.0 |
-| M18 Tours for v1 and the map | Next | 2.0 |
-| M19 Working state | Planned | 2.0 |
+| M18 Tours for v1 and the map | Done ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)) | 2.0 |
+| M19 Working state | Next | 2.0 |
 | M20 Seeing and searching | Planned | 2.0 |
 | M21 Isolation | Planned | 2.0 |
 | M22 Inspection, 2.0 release | Planned | 2.0 |
@@ -549,6 +549,11 @@ edgar with a real model, journalling every friction.
 ---
 
 ## M18 — Tours for v1, and the map
+
+**Done**, 2026-09-16 ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)).
+The tour now has a page per v1 feature, six new Core stops, a generated
+[map](tour/map.html) refreshed by `just map`, and a test that fails when a file
+under `src/edgar` has no stop on any page. `src/` is untouched at 8,000/8,000.
 
 **Goal:** a student can learn every v1 feature by following a tour, and see the
 whole harness on one map. Writes no `src/` code; changes `docs/tour/`, `tests/`

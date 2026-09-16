@@ -7,25 +7,30 @@ list is done. Read it first, then the three documents under "Read".
 ## Where things stand
 
 - **v1.0 is tagged and released.** `v1.0.0` is published on PyPI, `ghcr.io`
-  and as GitHub release binaries for all three platforms. Step 0 below is
-  done, including the fix-forward: `docker` raced `publish` on the first real
-  run and was fixed in [`.github/workflows/release.yml`](../.github/workflows/release.yml)
+  and as GitHub release binaries for all three platforms, 723 tests green,
+  `just check` passes. Step 0 below is done, including the fix-forward:
+  `docker` raced `publish` on the first real run and was fixed in
+  [`.github/workflows/release.yml`](../.github/workflows/release.yml)
   (`needs: [build, publish]`); see `JOURNAL.md`'s 2026-09-16 "docker raced
   publish" entry.
+- **M18 is done** (2026-09-16,
+  [ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)): the tour has
+  a page per v1 feature, Core's missing stops, a [map](tour/map.html) behind
+  `just map`, and a test that fails on a source file with no stop. It added no
+  line to `src/`. **M19, working state, is next.**
 - The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
   **v2 is the daily driver**, M18–M22, ≤ 9,500 lines of code. Learning
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
   numbers did not change; the order of work is M18, M19, M20, M21, M22, then
   M12.
-- The re-tiering docs landed on `main` (branch `docs/re-tier-v2-v3-v4`,
-  merged). Next up: Step 0b (the dogfood week, the maintainer's own task) and
-  Step 1 (M18), which can run in parallel since M18 writes no `src/` code.
+- The re-tiering docs and M18 landed on `main`. Next up: Step 0b (the dogfood
+  week, the maintainer's own task) and Step 2 (M19).
 
 ## Read, in this order
 
 1. [ADR-0057](adr/0057-daily-driver-before-learning.md): why, and the eight
    decisions. Ten minutes.
-2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M18.
+2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M19.
    Every item names its files, requirement IDs, test and size.
 3. [`AGENTS.md`](../AGENTS.md): the standing rules. Lines mean lines of code;
    pseudocode comments in every file you touch; shallow functions; the tour
@@ -33,27 +38,17 @@ list is done. Read it first, then the three documents under "Read".
    journal, changelog, roadmap status and an ADR when a decision could go
    another way.
 
-## Step 0 — tag v1.0
+## Step 0 — tag v1.0 · DONE 2026-09-16
 
-Nothing in v2 starts until 1.0 is a tag, so the budget line is fixed.
-
-1. Bump the version to `1.0.0` in both `pyproject.toml` and
-   `src/edgar/__init__.py`.
-2. Move the "Unreleased" section of `CHANGELOG.md` under `## 1.0.0 — <date>`,
-   leaving an empty "Unreleased" above it.
-3. Set M11's row in `ROADMAP.md`'s status table to "Done · 1.0".
-4. `just check`; commit `release: 1.0.0`.
-5. **Stop and ask the maintainer** to push, tag `v1.0.0` and publish the
-   GitHub release. Pushing, tagging and releasing are theirs, never yours.
-6. When the release runs, watch the `pyapp` and `docker` jobs in
-   `.github/workflows/release.yml`; they have never executed. If one fails,
-   fix forward with its own journal entry, and an ADR if the fix changes what
-   the release ships.
+`1.0.0` is tagged, released and on PyPI, with the `pyapp` binaries and the
+`ghcr.io` image. The `docker` job raced `publish` on the way and was fixed
+forward; the journal entry for that day has the detail.
 
 ## Step 0b — the dogfood week
 
-Run in parallel with M18, which writes no `src/` code. The friction list is
-M19–M22's real specification; the roadmap items are the best guess without it.
+Still open. It was meant to run in parallel with M18, which is now done, so it
+is the last thing standing between here and M19. The friction list is M19–M22's
+real specification; the roadmap items are the best guess without it.
 
 ```bash
 OLLAMA_CONTEXT_LENGTH=16384 ollama serve
@@ -71,39 +66,27 @@ what happened, which M19–M22 item covers it, or "none". At the end of the week
 reorder the items inside M19–M22 by that list. Do not add items; the budget
 does not move.
 
-## Step 1 — M18, tours for v1 and the map
+## Step 1 — M18, tours for v1 and the map · DONE 2026-09-16
 
-Take the items in `ROADMAP.md` M18 in order. For each one:
+Built in seven commits, `65033a2..d44f7ed`, one per roadmap item. The pages are
+`docs/tour/{index,memory,mcp,agents,extensions,map}.html`, sharing `tour.css`
+and `tour.js`; `scripts/tour_map.py` (`just map`) writes `map.json` and
+`map.data.js`. Three tests hold it: no source file without a stop, the map
+byte-matches what the generator writes, and every page's header links every
+other page. `just loc` still reads 8,000 / 8,000. The decisions are in
+[ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md).
 
-1. Read the item and the files it names.
-2. Write or extend the test first (`tests/unit/test_tour.py`, or the map test).
-3. Build the page, stops or script.
-4. `just check`. The tour test must pass for every `docs/tour/*.html`.
-5. Commit with the item's name as the subject, requirement IDs in brackets.
+What a later milestone needs to know:
 
-Facts you need and might otherwise re-derive:
-
-- `tests/unit/test_tour.py` finds stops with the regex
-  `<article class="stop( planned)?" id="(\w+)" data-files="([^"]+)">`. Keep
-  that exact shape on every page so one test covers all of them. The test
-  also requires at least one planned stop to exist; s25–s30 in `index.html`
-  stay planned until v3 and v4 build them.
-- `docs/tour/index.html` is the only page today; `docs/tour/artifactkit/`
-  holds the kit it links. Sibling pages link the same kit relatively.
-- The map: `scripts/tour_map.py` writes `docs/tour/map.json` (one node per
-  tier, package and file: `path`, `kind`, `loc` from
-  `tests/support/budget.py::count_loc`, `summary` from the file's opening `#`
-  comment, `stop` anchor, `status`), and `docs/tour/map.html` draws it as
-  inline SVG, tree only, no flows. `just map` regenerates both; a test asserts
-  the JSON matches the tree, so a new file without a regenerated map fails CI.
-- The no-orphan test is the last item, after the pages exist; otherwise it
-  fails on 32 files at once and tells you nothing.
-- M18 adds no line to `src/`. `just loc` must still read 8,000 / 8,000.
-
-M18 is done when: every `.py` under `src/edgar` (except `__init__.py`) appears
-in some page's `data-files`; the map is current in CI; `just check` is green;
-the roadmap status table says "Done" for M18 and "Next" for M19; the journal
-has the entry; the changelog has a "Docs" line.
+- Every page uses the same stop shape,
+  `<article class="stop( planned)?" id="(\w+)" data-files="([^"]+)">`, so one
+  test covers all of them. A new `.py` under `src/edgar` fails the suite until
+  some stop names it; `__init__.py` is exempt except `src/edgar/__init__.py`.
+- Run `just map` after changing `src/edgar` or any stop's `data-files`, or the
+  byte-match test fails. The generator's `V1_PREFIXES` / `V1_FILES` table is
+  hand-maintained: a file a new milestone adds lands in Core unless listed.
+- `map.html` reads `window.EDGAR_MAP` from `map.data.js`, not `map.json`, so it
+  works opened as a local file. Both are generated from the same function.
 
 ## Step 2 — M19 onward
 

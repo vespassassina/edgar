@@ -41,3 +41,7 @@ fmt:
 # Size against the tier budget [NFR-4].
 loc:
     uv run python tests/support/budget.py
+
+# Regenerate the tour's map of the harness (docs/tour/map.json and map.data.js).
+map:
+    uv run python scripts/tour_map.py

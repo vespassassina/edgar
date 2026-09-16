@@ -8,6 +8,20 @@ extension formats freeze.
 
 ## Unreleased
 
+### Docs
+- The tour covers all of v1 and now has a map. Four new pages —
+  [memory](docs/tour/memory.html), [MCP and signing in](docs/tour/mcp.html),
+  [subagents](docs/tour/agents.html) and [extensions](docs/tour/extensions.html)
+  — walk each v1 feature the way the Core tour walks the loop, and six new Core
+  stops cover the seventeen source files that had none. [The
+  map](docs/tour/map.html) draws every tier, package and file at a size
+  proportional to its lines of code; hover for what a file does, click to open
+  its stop. `just map` regenerates it, and a test fails if the committed copy has
+  drifted. Every page's header links every other page, and a source file with no
+  stop anywhere now fails the test suite (M18,
+  [ADR-0058](docs/adr/0058-m18-the-tour-pages-and-the-map-as-built.md)). No
+  change to `src/`.
+
 ## 1.0.0 — 2026-09-16
 
 v1 whole: memory and session search, MCP and signing in (already in 0.1.0),

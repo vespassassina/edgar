@@ -11,81 +11,7 @@
 <link rel="stylesheet" href="artifactkit/theme.css">
 <link rel="stylesheet" href="artifactkit/components.css">
 <link rel="stylesheet" href="artifactkit/print.css">
-<style>
-  /* The tour's own pieces, built from artifactkit tokens only: no literal colours. */
-  html { scroll-behavior: smooth; scroll-padding-top: var(--ak-s4); }
-  [hidden] { display: none !important; }
-  body { line-height: 1.6; }
-  .tour-layout { grid-template-columns: 250px minmax(0, 1fr); gap: var(--ak-s7); }
-  @media (max-width: 960px) {
-    .tour-layout { grid-template-columns: minmax(0, 1fr); gap: var(--ak-s5); }
-    .ak-toc { position: static; max-height: none; }
-    .ak-pagehead { flex-direction: column; align-items: flex-start; }
-    .ak-meta { text-align: left; }
-  }
-  .ak-toc { max-height: calc(100vh - var(--ak-s6)); overflow-y: auto; padding-right: var(--ak-s2); scrollbar-width: thin; }
-  .ak-toc .toc-part { display: flex; justify-content: space-between; margin-top: var(--ak-s5); }
-  .ak-toc .toc-part a { color: inherit; text-decoration: none; }
-  .ak-toc .count { letter-spacing: 0; text-transform: none; font-weight: 500; }
-  .ak-nav a { display: flex; gap: var(--ak-s2); }
-  .ak-nav .n { min-width: 1.6em; color: var(--ak-ink-soft); }
-  .ak-nav li.planned a { color: var(--ak-ink-soft); font-style: italic; }
-  .ak-nav li.read a { color: var(--ak-accent); border-left-color: var(--ak-accent); }
-  .ak-nav li.read .n::after { content: " ✓"; }
-
-  .tour-main { max-width: 760px; min-width: 0; }
-  .tour-main > p, .stop > p { max-width: 70ch; }
-  .part-head { margin-top: var(--ak-s8); border-bottom-color: var(--ak-rule-mid); }
-  .part-head h2 { font-size: 28px; margin: 0; }
-  .part-head .ak-pill { margin-left: auto; }
-  .part-intro { color: var(--ak-ink-muted); font-size: 17px; }
-  h3.stage { font-size: 19px; margin: var(--ak-s7) 0 var(--ak-s2); }
-  h3.stage small { font-size: 13px; font-weight: 500; color: var(--ak-ink-soft); margin-left: var(--ak-s2); }
-
-  /* A stop is an artifactkit exhibit; a planned one is its dashed outline. */
-  article.stop { position: relative; background: var(--ak-surface); border: 1px solid var(--ak-rule);
-    border-radius: var(--ak-radius); padding: var(--ak-s5) var(--ak-s5) var(--ak-s2); margin: var(--ak-s5) 0; }
-  article.stop.planned { background: transparent; border-style: dashed; border-color: var(--ak-rule-mid); }
-  article.stop h4 { font-size: 18px; margin: 0 0 var(--ak-s2); padding-right: 6rem; }
-  article.stop h4 .n { display: block; font-size: 11px; font-weight: 700; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--ak-accent); margin-bottom: var(--ak-s1); }
-  article.stop h4 .n::before { content: "Stop "; }
-  article.stop.planned h4 .n { color: var(--ak-warn); }
-  .files { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ak-s2) var(--ak-s3); font-size: 14px; }
-  .files a code, .look code { background: var(--ak-fill-2); border: 1px solid var(--ak-rule); padding: 1px 6px; border-radius: 3px; }
-  .files a { text-decoration: none; }
-  .files a:hover code { border-color: var(--ak-accent); }
-  p.look { font-size: 13px; line-height: 2; color: var(--ak-ink-muted); }
-  code { overflow-wrap: anywhere; }
-  label.done { position: absolute; top: var(--ak-s5); right: var(--ak-s5); display: flex; align-items: center;
-    gap: var(--ak-s1); font-size: 12px; color: var(--ak-ink-muted); cursor: pointer; user-select: none; }
-  label.done input { accent-color: var(--ak-accent); margin: 0; }
-
-  .take { border-left: 3px solid var(--ak-accent); background: var(--ak-accent-wash);
-    padding: var(--ak-s3) var(--ak-s4); border-radius: 0 var(--ak-radius) var(--ak-radius) 0; }
-  .check { border: 1px solid var(--ak-rule-mid); border-left: 3px solid var(--ak-accent-2);
-    background: var(--ak-fill); padding: var(--ak-s3) var(--ak-s4); border-radius: var(--ak-radius);
-    margin: var(--ak-s6) 0; font-size: 15px; }
-  .check strong { color: var(--ak-accent-2); }
-
-  .diagram { margin: var(--ak-s4) 0 var(--ak-s5); padding: var(--ak-s4); background: var(--ak-bg);
-    border: 1px solid var(--ak-rule); border-radius: var(--ak-radius); overflow-x: auto; }
-  pre.mermaid { margin: 0; font-size: 12.5px; color: var(--ak-ink-muted); white-space: pre; }
-  pre.mermaid[data-processed] { text-align: center; white-space: normal; }
-
-  #sizes td.loc, #sizes th.loc { text-align: right; white-space: nowrap; padding-right: var(--ak-s4); }
-
-  .ak-stepper .ak-step a { color: inherit; text-decoration: none; }
-  .clock { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ak-s3); }
-  .clock output { font: 600 22px/1 var(--ak-mono); min-width: 6.5rem; color: var(--ak-ink); }
-  .clock .ak-small { margin: 0; }
-  .ak-footer p { max-width: 80ch; }
-  @media print {
-    .ak-toc, label.done, .clock { display: none !important; }
-    .tour-layout { display: block; }
-    article.stop, .diagram, .check { break-inside: avoid; }
-  }
-</style>
+<link rel="stylesheet" href="tour.css">
 </head>
 <body>
 <div class="ak-wrap" id="top">
@@ -97,6 +23,14 @@
     <p class="ak-lede">Which files to open, in which order, and what to look for in each.
     The agent harness you can read in an afternoon. Any model. No hidden calls.
     Nothing is done until it's verified.</p>
+    <ul class="pages">
+      <li><a href="index.html" aria-current="page">Core and v1</a></li>
+      <li><a href="memory.html">Memory</a></li>
+      <li><a href="mcp.html">MCP</a></li>
+      <li><a href="agents.html">Subagents</a></li>
+      <li><a href="extensions.html">Extensions</a></li>
+      <li><a href="map.html">The map</a></li>
+    </ul>
   </div>
   <div class="ak-meta">
     <span class="ak-pill ak-pill-ok">Built</span> M0 to M11<br>
@@ -130,23 +64,29 @@
     <li><a href="#s17"><span class="n">17</span>Sessions on disk</a></li>
     <li><a href="#s18"><span class="n">18</span>The surface</a></li>
     <li><a href="#s19"><span class="n">19</span>Skills</a></li>
+    <li><a href="#s20"><span class="n">20</span>Errors and the aside</a></li>
+    <li><a href="#s21"><span class="n">21</span>The schema is the config</a></li>
+    <li><a href="#s22"><span class="n">22</span>Prompt, counting, spill</a></li>
+    <li><a href="#s23"><span class="n">23</span>Names, and what outlives a session</a></li>
+    <li><a href="#s24"><span class="n">24</span>What the adapters share</a></li>
+    <li><a href="#s25"><span class="n">25</span>The command line</a></li>
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v1">II. v1</a><span class="count" data-count="v1"></span></p>
   <ol class="ak-nav">
-    <li><a href="#s20"><span class="n">20</span>Memory (M7)</a></li>
-    <li><a href="#s21"><span class="n">21</span>MCP (M8)</a></li>
-    <li><a href="#s22"><span class="n">22</span>Subagents (M9)</a></li>
-    <li><a href="#s23"><span class="n">23</span>Extensions, hooks, plugins, embedding (M10)</a></li>
-    <li><a href="#s24"><span class="n">24</span>Init and doctor (M11)</a></li>
+    <li><a href="#s26"><span class="n">26</span>Memory (M7)</a></li>
+    <li><a href="#s27"><span class="n">27</span>MCP (M8)</a></li>
+    <li><a href="#s28"><span class="n">28</span>Subagents (M9)</a></li>
+    <li><a href="#s29"><span class="n">29</span>Extensions, hooks, plugins, embedding (M10)</a></li>
+    <li><a href="#s30"><span class="n">30</span>Init and doctor (M11)</a></li>
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v2">III. v3 and v4</a><span class="count" data-count="v2"></span></p>
   <ol class="ak-nav">
-    <li class="planned"><a href="#s25"><span class="n">25</span>Learning (M12)</a></li>
-    <li class="planned"><a href="#s26"><span class="n">26</span>The controller (M13)</a></li>
-    <li class="planned"><a href="#s27"><span class="n">27</span>Skill synthesis (M14)</a></li>
-    <li class="planned"><a href="#s28"><span class="n">28</span>Escalation (M15)</a></li>
-    <li class="planned"><a href="#s29"><span class="n">29</span>Capability broker (M17)</a></li>
-    <li class="planned"><a href="#s30"><span class="n">30</span>Scheduling (M16)</a></li>
+    <li class="planned"><a href="#s31"><span class="n">31</span>Learning (M12)</a></li>
+    <li class="planned"><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
+    <li class="planned"><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
+    <li class="planned"><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
+    <li class="planned"><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
+    <li class="planned"><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
   </ol>
 </nav>
 
@@ -167,13 +107,14 @@ milestone lands, its stop gets links like the rest. Between v1 and v3 comes
 files in Parts I and II and gets a tour page per feature next to this one, so
 it has no part here.</p>
 
-<ol class="ak-stepper" aria-label="The six stages of Core">
+<ol class="ak-stepper" aria-label="The seven stages of Core">
   <li class="ak-step"><a href="#stage-1"><span class="ak-t">1. The spine</span>45 minutes</a></li>
   <li class="ak-step"><a href="#stage-2"><span class="ak-t">2. The hands</span>45 minutes</a></li>
   <li class="ak-step"><a href="#stage-3"><span class="ak-t">3. The mouth</span>45 minutes</a></li>
   <li class="ak-step"><a href="#stage-4"><span class="ak-t">4. The memory</span>30 minutes</a></li>
   <li class="ak-step"><a href="#stage-5"><span class="ak-t">5. The surface</span>skim, 15 minutes</a></li>
   <li class="ak-step"><a href="#stage-6"><span class="ak-t">6. The know-how</span>10 minutes</a></li>
+  <li class="ak-step"><a href="#stage-7"><span class="ak-t">7. The rest of it</span>reference</a></li>
 </ol>
 
 <p>The promise is that Core can be read in an afternoon, so time yourself. If it
@@ -573,9 +514,146 @@ valid as it is compacted, cancelled and resumed? Any file you could not follow i
 readability bug: <a href="https://github.com/vespassassina/edgar/issues">open an
 issue</a>.</p>
 
+<h3 class="stage" id="stage-7">Stage 7. The rest of it <small>reference, dip in as needed</small></h3>
+<p>Six stops that finish the map of Core. Nothing here is on the critical path of a
+turn, which is why it comes last — but every file in <code>src/edgar</code> is now
+named by some stop on this tour, and a test fails if one stops being.</p>
+
+<article class="stop" id="s20" data-files="src/edgar/core/errors.py src/edgar/core/aside.py">
+  <h4><span class="n">20</span>Errors that stop, and a question that does not</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/errors.py"><code>core/errors.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/aside.py"><code>core/aside.py</code></a></p>
+  <p class="look">Look for: <code>EdgarError</code> <code>ContextOverflow</code> <code>VerificationFailed</code> <code>Cancelled</code> <code>ask</code> <code>request</code></p>
+  <p><code>errors.py</code> is the whole taxonomy in under thirty lines, and each class
+  carries the exit code it produces [CLI-10]. The rule it encodes is the one from
+  stop 6: a <em>tool</em> failure never raises, it goes back to the model as an error
+  result. These are only for what the harness cannot proceed through — a budget spent,
+  a context that will not fit even pinned, a verification exhausted.</p>
+  <p><code>aside.py</code> is <code>/btw</code> [CLI-24,
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0028-input-during-a-turn.md">ADR-0028</a>]:
+  a side question that never touches the conversation. <code>request</code> is the
+  interesting half — it takes the request the turn would have sent and cuts it back to
+  the last complete unit, so the aside never ends on unanswered tool calls, which is
+  the pairing invariant again. It shares the cached prefix and sends no tools, and its
+  deltas go to a private bus so the turn in progress keeps the screen.</p>
+</article>
+
+<article class="stop" id="s21" data-files="src/edgar/config/schema.py src/edgar/permissions/control.py">
+  <h4><span class="n">21</span>The schema is the config</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/config/schema.py"><code>config/schema.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/control.py"><code>permissions/control.py</code></a></p>
+  <p class="look">Look for: <code>Config</code> <code>SECTIONS</code> <code>TABLES</code> <code>LATER</code> <code>ProviderSection</code> <code>PermissionsSection</code> <code>control_files</code> <code>is_control</code> <code>_TREES</code></p>
+  <p>Every key edgar accepts is a dataclass field here: the type hint is the validation
+  rule and the default is the default, so "what does this key take" has exactly one
+  answer to read [CFG-3]. Validation itself is hand-written in <code>load.py</code>
+  rather than delegated to a library — that is the dependency budget again
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0019-dependency-budget.md">ADR-0019</a>),
+  and it is what lets a message name the file, the key and the expected type.
+  <code>LATER</code> is worth finding: keys that belong to a tier not built yet are
+  known and ignored, so a config written for v3 does not error on v1.</p>
+  <p><code>control.py</code> is thirty-five lines that decide which files steer edgar
+  itself — the prompts, agents, tools, extensions and skills trees, plus
+  <code>config.toml</code> and its siblings. Writing or editing one is Ask in every
+  mode but <code>yolo</code> [PERM-12], because a model that can rewrite its own
+  instructions can widen its own policy, and only a human may do that
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>).</p>
+</article>
+
+<article class="stop" id="s22" data-files="src/edgar/context/prompts.py src/edgar/context/tokens.py src/edgar/tools/spill.py">
+  <h4><span class="n">22</span>The prompt file, the counting, and the spill</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/prompts.py"><code>context/prompts.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/tokens.py"><code>context/tokens.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/spill.py"><code>tools/spill.py</code></a></p>
+  <p class="look">Look for: <code>Prompt</code> <code>load_prompt</code> <code>choose_profile</code> <code>COMPACT_BELOW</code> <code>SHIPPED</code> <code>approx_tokens</code> <code>CHARS_PER_TOKEN</code> <code>Spilled</code> <code>spill</code></p>
+  <p>The system prompt is a file, not a string in the source [CTX-16,
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0023-no-hidden-behaviour.md">ADR-0023</a>].
+  A project may ship its own, and because it is a control file the model cannot change
+  it without asking. <code>choose_profile</code> is the one piece of behaviour: below
+  <code>COMPACT_BELOW</code> a smaller model gets the shorter prompt [PRV-17].</p>
+  <p><code>tokens.py</code> is twenty lines and honest about it: four characters to a
+  token, used for the compaction thresholds, with exact counts coming from the
+  providers. Read <code>CHARS_PER_TOKEN</code> and then decide whether the approximation
+  can hurt you — the answer is in which direction compaction errs.</p>
+  <p><code>spill</code> is stage S0 of the context pipeline [TOOL-4, CTX-13]. Output
+  over the limit keeps its head and its tail, and the whole text goes to a blob the
+  model can <code>read</code> with an offset, so nothing is lost, only kept out of the
+  prompt. Thirty lines, and the reason the session file never has to be compressed.</p>
+</article>
+
+<article class="stop" id="s23" data-files="src/edgar/tools/registry.py src/edgar/storage/db.py">
+  <h4><span class="n">23</span>Which tool wins a name, and what outlives the session</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/registry.py"><code>tools/registry.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/storage/db.py"><code>storage/db.py</code></a></p>
+  <p class="look">Look for: <code>ToolRegistry</code> <code>core_registry</code> <code>registry_for</code> <code>cost</code> <code>_defers</code> <code>exposed</code> <code>Store</code> <code>SCHEMA</code> <code>grant</code> <code>trusted</code> <code>spend</code></p>
+  <p><code>registry.py</code> answers two questions. Which tool wins a name: sources
+  are added lowest priority first — built-ins, the <code>skill</code> tool, MCP, user,
+  project — and a replacement is <em>reported</em>, never silent [TOOL-9]. And which
+  schemas a request can afford: <code>cost</code> adds them up, and over
+  <code>tools.schema_budget</code> the MCP ones are deferred behind
+  <code>tool_search</code> [TOOL-15]. That is the mechanism <a href="mcp.html#p2">the
+  MCP page</a> builds on.</p>
+  <p><code>db.py</code> is the only SQLite in Core: grants, trust, each day's spend and
+  each MCP server's cached tool list [PERM-6, PERM-13, BUD-2, TOOL-8]. Two files, and
+  which is which is a decision worth reading — grants are the project's, in
+  <code>.edgar/edgar.db</code>; trust and spend are yours across projects, in
+  <code>~/.edgar/edgar.db</code>. Never a config file, because config is what a human
+  edits and these are what the machine records. WAL mode, short transactions and a busy
+  timeout, because the folder may be under a sync client, and the file is created only
+  when there is something to store.</p>
+</article>
+
+<article class="stop" id="s24" data-files="src/edgar/providers/http.py src/edgar/providers/fake.py src/edgar/providers/pricing.py">
+  <h4><span class="n">24</span>What the adapters share</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/http.py"><code>providers/http.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/fake.py"><code>providers/fake.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/pricing.py"><code>providers/pricing.py</code></a></p>
+  <p class="look">Look for: <code>HttpAdapter</code> <code>RETRYABLE</code> <code>Retry</code> <code>TIMEOUT</code> <code>events</code> <code>tool_calls</code> <code>error_message</code> <code>FakeProvider</code> <code>_rules</code> <code>cost_of</code> <code>BUILTIN</code> <code>CHECKED</code></p>
+  <p><code>http.py</code> is the biggest file in <code>providers/</code> and holds
+  everything the two real adapters would otherwise each get slightly wrong: the request
+  and its retries, server-sent events, error mapping, token counting and tool-call
+  assembly. <code>events</code> and <code>tool_calls</code> are where a streamed
+  response becomes whole blocks — the place to look when a provider's stream is
+  fragmented differently from everyone else's. It is imported only by the adapters, so
+  <code>httpx</code> never loads on a run that reaches no provider [PRV-4, NFR-1].</p>
+  <p><code>fake.py</code> is the model that runs nowhere: three fixed rules, offline and
+  deterministic, so <code>edgar</code> does something useful before you have a key and
+  so almost every test in the suite can drive the real loop without a cassette
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0009-testing-strategy.md">ADR-0009</a>).</p>
+  <p><code>pricing.py</code> is thirty-five lines with one opinion in them: unknown
+  pricing is <code>None</code>, shown as "unknown", never a wrong zero [BUD-1, BUD-5].
+  A cap that silently counts nothing is worse than one that admits it cannot count.
+  <code>CHECKED</code> dates the shipped table, and a <code>[pricing]</code> entry in
+  config wins over it.</p>
+</article>
+
+<article class="stop" id="s25" data-files="src/edgar/cli/main.py src/edgar/cli/admin.py src/edgar/cli/models.py src/edgar/cli/trust.py src/edgar/__main__.py">
+  <h4><span class="n">25</span>The command line</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/main.py"><code>cli/main.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/admin.py"><code>cli/admin.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/models.py"><code>cli/models.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/trust.py"><code>cli/trust.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__main__.py"><code>edgar/__main__.py</code></a></p>
+  <p class="look">Look for: <code>main</code> <code>build_parser</code> <code>ADMIN</code> <code>USAGE</code> <code>command</code> <code>describe</code> <code>pick</code> <code>ROLES</code> <code>trusted</code> <code>digest</code> <code>executable</code></p>
+  <p>Read <code>main.py</code> with invariant 3 in your hand: nothing heavy may be
+  imported at module level, because this module is on the path of every run and
+  <code>tests/e2e/test_startup.py</code> fails the build if <code>httpx</code>,
+  <code>rich</code>, <code>prompt_toolkit</code>, <code>jsonschema</code>,
+  <code>yaml</code>, <code>keyring</code> or any <code>edgar.providers</code> module is
+  pulled in (NFR-1,
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0012-startup-budget.md">ADR-0012</a>).
+  The run paths are imported inside <code>main()</code>. <code>__main__.py</code> is
+  three lines so that <code>python -m edgar</code> and the console script are the same
+  program.</p>
+  <p><code>admin.py</code> collects the subcommands that look at a project rather than
+  run a turn, and each is one branch of <code>command()</code>: read what is on disk,
+  print it, return an exit code. None of them contacts a model. Only
+  <code>trust</code>, <code>revoke</code> and <code>sessions rm</code> change anything,
+  and each changes only what it names.</p>
+  <p><code>models.py</code> is <code>edgar models list</code> and the picker
+  [CLI-30, <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0034-model-picker.md">ADR-0034</a>].
+  <code>describe</code> prints where prompts would go — every provider, its endpoint,
+  whether its key variable is set — without contacting anything [PRV-15], and
+  <code>pick</code> is the sensible-defaults rule made concrete: Enter saves the choice
+  for every project, <code>p</code> for this one, <code>n</code> for neither.</p>
+  <p><code>trust.py</code> is why a cloned repository cannot run code on launch
+  [PERM-13, CLI-19]. The executable parts of project config — command and HTTP tools, a
+  <code>verify.command</code>, an <code>[mcp.NAME]</code> server, hooks and extensions —
+  run only once the project is trusted. Trust is keyed by the project's path and a
+  <code>digest</code> of that config, so changing what would run asks again.</p>
+</article>
+
 <!-- ─────────────────────────────── Part II ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-warn">M7 to M11 built; M11's docs and release automation planned</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART II.</span><h2 class="part" id="v1">v1</h2><span class="ak-pill ak-pill-ok">M7 to M11, all shipped in 1.0</span></div>
 <p class="part-intro">Extensible, and it remembers: memory, MCP, subagents,
 extensions and hooks. At most 8,000 lines of code for Core plus v1. Nothing in v1
 changes the shape of the turn: each piece plugs into a seam you have already
@@ -597,133 +675,80 @@ flowchart LR
     fb["providers/fallback.py<br/>sideways on an outage"] --> prov
 </pre></div>
 
-<article class="stop" id="s20" data-files="src/edgar/memory/store.py src/edgar/memory/recall.py src/edgar/tools/builtin/memory_tools.py">
-  <h4><span class="n">20</span>Memory and session search</h4>
+<article class="stop" id="s26" data-files="src/edgar/memory/store.py src/edgar/memory/recall.py src/edgar/tools/builtin/memory_tools.py">
+  <h4><span class="n">26</span>Memory and session search</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/store.py"><code>memory/store.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/recall.py"><code>memory/recall.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/memory_tools.py"><code>tools/builtin/memory_tools.py</code></a></p>
   <p class="look">Look for: <code>add</code> <code>confirm</code> <code>_Op</code> <code>pinned</code> <code>Fts5Retriever</code> <code>Remember</code></p>
-  <p>Look for the security boundary in <code>add</code>: only text a human typed
-  goes straight to active. The model's own <code>remember</code> call makes a pending
-  fact, and the REPL asks at the end of the turn whether to save it; Enter forgets
-  it. A pending fact is never in the prompt and never in the search index, so it can
-  never be recalled. A fact's text never changes: every edit, confirm or forget is a
-  status change logged under one operation number, which is why
+  <p>M7 has a tour of its own: <a href="memory.html">Memory</a>, four stops on the
+  boundary, recall, the markdown round trip, and forks and saves. What to carry from
+  here: an active fact comes only from text a human typed, the model's own
+  <code>remember</code> call makes a pending fact, and a pending fact is never in the
+  prompt and never in the search index. A fact's text never changes — every confirm
+  or forget is a status change under one operation number, which is why
   <code>edgar memory undo</code> can always put it back. The pinned set is chosen once
-  in <code>setup()</code> and sits above the cache breakpoint, so a fact added now
-  shows from the next session. <code>Fts5Retriever</code> searches facts and past
-  sessions' turns twice, by word (porter) and by fragment (trigram), which is what
-  finds <code>config/lo</code> inside a path.</p>
+  at session start, above the cache breakpoint, so a fact added now shows from the
+  next session.</p>
 </article>
 
-<article class="stop" id="s21" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py src/edgar/tools/builtin/tool_search.py">
-  <h4><span class="n">21</span>MCP</h4>
+<article class="stop" id="s27" data-files="src/edgar/tools/mcp/client.py src/edgar/tools/mcp/schema.py src/edgar/tools/builtin/tool_search.py">
+  <h4><span class="n">27</span>MCP</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/client.py"><code>tools/mcp/client.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/schema.py"><code>tools/mcp/schema.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/tool_search.py"><code>tools/builtin/tool_search.py</code></a></p>
   <p class="look">Look for: <code>Server</code> <code>discover</code> <code>McpTool</code> <code>to_schema</code> <code>ToolSearch</code></p>
-  <p>An MCP server is one more tool source: its tools go through the same
-  <code>execute()</code> as the built-ins (stop 6), and nothing outside
-  <code>tools/mcp/</code> knows the protocol exists. Two things are worth reading
-  for. The first is that a session starts no server at all: <code>Server.tools</code>
-  <code>tools</code> reads what the server listed last time from a cache in <code>~/.edgar/edgar.db</code>,
-  keyed by a hash of its config block, and the process starts on the first call.
-  A server no session has run yet has nothing cached, so <code>tool_search</code>
-  names it and starts it when the model looks for something. The second is in
-  <code>to_schema</code>: a server's tool is always <code>untrusted_output</code>,
-  its category is <code>shell</code> when it is a local program and
-  <code>network</code> when it is a URL, and whatever the server claims about its
-  own tools (<code>readOnlyHint</code> and friends) is shown to you by
-  <code>edgar mcp list</code> and never read by <code>decide()</code>. When forty
-  tool schemas cost more than the conversation, the MCP ones are deferred:
-  <code>tool_search</code>'s own description lists them by name and a line, and a
-  search loads the full schemas of what matches.</p>
-  <p>A remote server that wants a token is the one case where a turn stops and asks
-  for a human: the call fails with <code>edgar mcp login NAME</code> to run, and that
-  command, not the turn, opens a browser. What it runs is in <code>auth/</code>:
-  authorization code with PKCE, a redirect caught on a loopback port the OS picked,
-  and the token in your keyring. The same three steps serve <code>edgar login
-  openrouter</code>, where the key a provider issues is yours, not edgar's.</p>
+  <p>M8 has a tour of its own: <a href="mcp.html">MCP and signing in</a>, four stops on
+  the lazy start, deferred schemas and the loopback dance. What to carry from here: an
+  MCP server is one more tool source, nothing outside <code>tools/mcp/</code> knows the
+  protocol exists, a session starts no server until one of its tools is called, and a
+  turn never opens a browser — <code>edgar mcp login NAME</code> does, because a human
+  ran it.</p>
+  <p>One detail that belongs to Core rather than to M8: whatever a server claims about
+  its own tools (<code>readOnlyHint</code> and friends) is shown by
+  <code>edgar mcp list</code> and never read by <code>decide()</code>. An MCP tool is
+  always <code>untrusted_output</code>, and its category is <code>shell</code> for a
+  local program, <code>network</code> for a URL.</p>
 </article>
 
-<article class="stop" id="s22" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/tools/execute.py">
-  <h4><span class="n">22</span>Subagents, routing rules and fallback</h4>
+<article class="stop" id="s28" data-files="src/edgar/tools/builtin/task.py src/edgar/agents/spawn.py src/edgar/tools/execute.py">
+  <h4><span class="n">28</span>Subagents, routing rules and fallback</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/task.py"><code>tools/builtin/task.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/spawn.py"><code>agents/spawn.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/execute.py"><code>tools/execute.py</code></a></p>
   <p class="look">Look for: <code>TaskTool</code> <code>spawn</code> <code>narrow_mode</code> <code>SpawnLimits</code> <code>execute_many</code></p>
-  <p>A subagent is not a second engine (ADR-0006): <code>spawn()</code> builds a
-  second <code>Runtime</code> and calls the very same <code>run_turn</code> from
-  stop 1, with a fresh <code>Session</code>, a model picked by
-  <code>select_model()</code>'s <code>role="subagent"</code> case (stop 14, or the
-  agent's own <code>model:</code> frontmatter), and its tool registry filtered to
-  the agent's <code>tools:</code> list. The <code>task</code> tool is the only
-  caller: its schema lists every agent
-  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/discovery.py"><code>agents/discovery.py</code></a>
-  found by name and description, and <code>TaskTool.run()</code> looks one up and
-  hands off to <code>spawn()</code>. Four checks keep it inside the parent's
-  policy: <code>narrow_mode()</code> never widens the calling session's
-  <code>mode</code>; a depth counter refuses past <code>[subagents] max_depth</code>
-  (read by <code>subagents_config()</code>, capped at <code>HARD_DEPTH</code> no
-  matter what config says); <code>Session.agent_chain</code> refuses an agent
-  already running above itself; and its budget is the smaller of its own
-  <code>budget.cost</code> and whatever the parent has left to give. Guard is not
-  recreated: a subagent shares its parent's, so its permission prompts share the
-  same asking lock and are labelled with the agent's name. Sideways fallback on a
-  <code>ProviderError</code> lives in
-  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/fallback.py"><code>providers/fallback.py</code></a>,
-  whose <code>next_provider()</code> is what <code>core/loop.py</code>'s
-  <code>_ask()</code> (stop 1) retries with, for a subagent's own <code>Runtime</code>
-  same as the main one. Consecutive <code>task</code> calls fan out together
-  (TOOL-12): <code>core/loop.py</code>'s own <code>_run_tools()</code> stayed one
-  call at a time, so the grouping and the <code>asyncio.gather</code> live in
-  <code>execute_many()</code> here instead, bounded by an
-  <code>asyncio.Semaphore</code> sized from the <code>task</code> tool's own
-  <code>SpawnLimits.max_parallel</code>; results still come back in call order
-  regardless of which subagent finishes first, so the loop's bookkeeping never
-  races. Before <code>spawn()</code> resolves a model it calls
-  <code>check_capabilities()</code> (stop 14): a model with no tool support is a
-  <code>ToolResult(error="validation")</code> the parent model reads, not a
-  confusing failure on its first tool call (ROUTE-6). The status bar's own row per
-  running subagent is stop 18; <code>edgar agents list|validate</code> is cut from
-  1.0 (ADR-0053), not planned work still owed.
+  <p>M9 has a tour of its own: <a href="agents.html">Subagents</a>, four stops on what
+  an agent file is, how <code>spawn()</code> narrows, how consecutive <code>task</code>
+  calls fan out, and why routing, escalation and fallback stay three things. What to
+  carry from here: a subagent is not a second engine (ADR-0006). <code>spawn()</code>
+  builds a second <code>Runtime</code> and calls the very same <code>run_turn</code>
+  from stop 1, with a fresh <code>Session</code>, a narrowed policy and a slice of the
+  parent's remaining budget. Its permission prompts share the parent's guard, so they
+  share the same asking lock and carry the agent's name.
+  <code>edgar agents list|validate</code> is cut from 1.0 (ADR-0053), not planned work
+  still owed.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m9--subagents-routing-rules-and-fallback">Roadmap: M9</a></p>
 </article>
 
-<article class="stop" id="s23" data-files="src/edgar/extensions/discovery.py src/edgar/extensions/hooks.py src/edgar/skills/activate.py src/edgar/__init__.py">
-  <h4><span class="n">23</span>Extensions, hooks, plugins, embedding</h4>
+<article class="stop" id="s29" data-files="src/edgar/extensions/discovery.py src/edgar/extensions/hooks.py src/edgar/skills/activate.py src/edgar/__init__.py">
+  <h4><span class="n">29</span>Extensions, hooks, plugins, embedding</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/discovery.py"><code>extensions/discovery.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/hooks.py"><code>extensions/hooks.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/activate.py"><code>skills/activate.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__init__.py"><code>__init__.py</code></a></p>
   <p class="look">Look for: <code>discover</code> <code>Hook</code> <code>veto</code> <code>matching</code> <code>verify_command</code> <code>run</code></p>
-  <p>An extension is a folder of files: tools, skills, agents and one
-  <code>hooks.toml</code> (<code>extensions/discovery.py</code>), found under
-  <code>.edgar/extensions/</code> the same way skills and agents are found under
-  their own folders, and <code>edgar ext list</code> is the whole CLI surface 1.0
-  ships for them — <code>ext validate</code> and <code>ext add</code> moved to v2
-  (ADR-0053). A hook can observe or veto, never allow (EXT-4..7): every kind
-  fires as an event <code>listener()</code> subscribes to the bus for, but
-  <code>pre_tool</code> alone runs through <code>tools/execute.py</code>'s
-  pipeline (stop 6) just before the permission check, and <code>veto()</code>
-  fails closed — a hook that errors, times out or exits non-zero denies the call
-  rather than letting it through. Python is a plugin surface only for providers
-  (ADR-0018): <code>providers/registry.py</code> tries an <code>edgar.providers</code>
-  entry point only once a name is neither built in nor a configured server, so a
-  session that names no third-party provider imports none.</p>
-  <p>Two more things close out v1's own promises. Deterministic skill activation
-  [SKL-17] means the model never has to call the <code>skill</code> tool for a
-  keyword the user typed or a path the last round touched:
-  <code>skills/activate.py</code>'s <code>matching()</code> finds them,
-  <code>bodies()</code> loads them straight into the turn's <code>attached</code>
-  context, and the same matches feed VER-1's precedence chain —
-  <code>verify_command()</code> chains a loaded skill's own <code>verify:</code>
-  command when nothing higher ranked (<code>--verify</code>, then an agent's own
-  frontmatter) claims the turn. <code>edgar.run()</code> (EXT-9, ADR-0051) is the
-  one obligation a program embedding edgar is owed: a thin async wrapper in
-  <code>__init__.py</code> — kept out of the startup path, so a bare
-  <code>import edgar</code> stays as light as <code>edgar.cli.main</code> — that
-  builds a session the same way <code>-p</code> does and calls the very same
-  <code>run_turn()</code> from stop 1, with the event bus and the permission
-  <code>asker</code> the caller supplies, so a supervisor holding a human's
-  attention elsewhere can answer a prompt out of band instead of nobody being
-  there to answer it.
+  <p>M10 has a tour of its own: <a href="extensions.html">Extensions</a>, five stops on
+  the manifest, hooks that veto, provider plugins, skill activation and
+  <code>edgar.run()</code>. What to carry from here: an extension is a folder of
+  files, a hook can observe or veto but never allow (EXT-4..7), and Python is a plugin
+  surface only for providers, retrievers and sandboxes (ADR-0018). These are the
+  formats 1.0 freezes. <code>edgar ext list</code> is the whole CLI surface 1.0 ships
+  for them — <code>ext validate</code> and <code>ext add</code> moved to v2
+  (ADR-0053).</p>
+  <p>One piece belongs here rather than on that page, because it closes Core's verify
+  gate (stop 12): deterministic skill activation [SKL-17] means the model never has to
+  call the <code>skill</code> tool for a keyword the user typed or a path the last
+  round touched. <code>matching()</code> finds those skills,
+  <code>bodies()</code> loads them into the turn's <code>attached</code> context, and
+  the same matches feed VER-1's precedence chain — <code>verify_command()</code>
+  chains a loaded skill's own <code>verify:</code> command when nothing higher ranked
+  (<code>--verify</code>, then an agent's frontmatter) claims the turn.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
 </article>
 
-<article class="stop" id="s24" data-files="src/edgar/cli/init.py src/edgar/cli/doctor.py src/edgar/templates/config.toml">
-  <h4><span class="n">24</span>Init and doctor</h4>
+<article class="stop" id="s30" data-files="src/edgar/cli/init.py src/edgar/cli/doctor.py src/edgar/templates/config.toml">
+  <h4><span class="n">30</span>Init and doctor</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/init.py"><code>cli/init.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/doctor.py"><code>cli/doctor.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/config.toml"><code>templates/config.toml</code></a></p>
   <p class="look">Look for: <code>run</code> <code>_scaffold</code> <code>_gitignore</code> <code>command</code> <code>_connectivity</code></p>
   <p><code>edgar init</code> and <code>/init</code> [CFG-4] scaffold a project's
@@ -747,7 +772,7 @@ flowchart LR
 
 <!-- ─────────────────────────────── Part III ─────────────────────────────── -->
 
-<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v3 and v4</h2><span class="ak-pill ak-pill-warn">Planned, M12 to M17</span></div>
+<div class="ak-sechead part-head"><span class="ak-n">PART III.</span><h2 class="part" id="v2">v3 and v4</h2><span class="ak-pill ak-pill-warn">v3 learning, M12 to M15</span> <span class="ak-pill ak-pill-warn">v4 unattended, M17 then M16</span></div>
 <p class="part-intro">v3 learns: learning, the controller, skill synthesis and
 escalation, at most 12,000 lines of code in all. v4 runs unattended: the
 capability broker and scheduling, at most 13,000. Both are removable. Nothing in
@@ -768,40 +793,40 @@ flowchart LR
     sched["schedule/tick.py"] -->|"runs edgar -p on a clock"| v1
 </pre></div>
 
-<article class="stop planned" id="s25" data-files="src/edgar/learning/learner.py src/edgar/learning/error_facts.py src/edgar/learning/experience.py">
-  <h4><span class="n">25</span>Learning foundations</h4>
+<article class="stop planned" id="s31" data-files="src/edgar/learning/learner.py src/edgar/learning/error_facts.py src/edgar/learning/experience.py">
+  <h4><span class="n">31</span>Learning foundations</h4>
   <p class="files"><span class="ak-pill ak-pill-warn">M12 · planned</span> <code>learning/learner.py</code> <code>learning/error_facts.py</code> <code>learning/experience.py</code></p>
   <p>Learning from what you type and from what breaks. Nothing on this path reads
   tool output, error text or fetched content, and that is enforced by what each
   function accepts, not by filtering. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m12--learning-foundations">Roadmap: M12</a></p>
 </article>
 
-<article class="stop planned" id="s26" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/apply.py">
-  <h4><span class="n">26</span>The controller</h4>
+<article class="stop planned" id="s32" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/apply.py">
+  <h4><span class="n">32</span>The controller</h4>
   <p class="files"><span class="ak-pill ak-pill-warn">M13 · planned</span> <code>controller/triggers.py</code> <code>controller/proposals.py</code> <code>controller/apply.py</code></p>
   <p>Self-management that cannot hurt you. The triggers are pure checks, actions come
   from a whitelist of eight, and every change is dry-run by default, logged and
   revertible. The controller can only tighten policy. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m13--controller">Roadmap: M13</a></p>
 </article>
 
-<article class="stop planned" id="s27" data-files="src/edgar/learning/synthesis.py src/edgar/learning/curator.py">
-  <h4><span class="n">27</span>Skill synthesis</h4>
+<article class="stop planned" id="s33" data-files="src/edgar/learning/synthesis.py src/edgar/learning/curator.py">
+  <h4><span class="n">33</span>Skill synthesis</h4>
   <p class="files"><span class="ak-pill ak-pill-warn">M14 · planned</span> <code>learning/synthesis.py</code> <code>learning/curator.py</code></p>
   <p>Only verified procedures become skills. The synthesiser sees the outline of a
   run, never tool output. It writes only into <code>.edgar/skills/learned/</code>,
   and only after a passing check. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m14--skill-synthesis">Roadmap: M14</a></p>
 </article>
 
-<article class="stop planned" id="s28" data-files="src/edgar/providers/escalation.py">
-  <h4><span class="n">28</span>Escalation</h4>
+<article class="stop planned" id="s34" data-files="src/edgar/providers/escalation.py">
+  <h4><span class="n">34</span>Escalation</h4>
   <p class="files"><span class="ak-pill ak-pill-warn">M15 · planned</span> <code>providers/escalation.py</code></p>
   <p>A weak model that fails gets help from a stronger one, visibly: upward only,
   capped and announced. Compare it with routing (stop 14) and fallback (stop 22).
   Keeping the three apart is the point. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m15--escalation-and-route-suggest">Roadmap: M15</a></p>
 </article>
 
-<article class="stop planned" id="s29" data-files="src/edgar/broker/authorize.py src/edgar/broker/ticket.py src/edgar/broker/receipt.py">
-  <h4><span class="n">29</span>The capability broker</h4>
+<article class="stop planned" id="s35" data-files="src/edgar/broker/authorize.py src/edgar/broker/ticket.py src/edgar/broker/receipt.py">
+  <h4><span class="n">35</span>The capability broker</h4>
   <p class="files"><span class="ak-pill ak-pill-warn">M17 · planned</span> <code>broker/authorize.py</code> <code>broker/ticket.py</code> <code>broker/receipt.py</code></p>
   <p>Every tool call answers to what the human actually asked for. A typed request
   becomes a ticket with caveats. A subagent can only narrow it. A pure
@@ -809,8 +834,8 @@ flowchart LR
   every decision goes into a signed receipt. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m17--capability-broker">Roadmap: M17</a></p>
 </article>
 
-<article class="stop planned" id="s30" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/install.py">
-  <h4><span class="n">30</span>Scheduling</h4>
+<article class="stop planned" id="s36" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/install.py">
+  <h4><span class="n">36</span>Scheduling</h4>
   <p class="files"><span class="ak-pill ak-pill-warn">M16 · planned</span> <code>schedule/due.py</code> <code>schedule/tick.py</code> <code>schedule/install.py</code></p>
   <p>Unattended runs that cannot run away. Working out what is due is a pure function
   tested with a frozen clock. A run the harness schedules for itself never holds
@@ -818,7 +843,8 @@ flowchart LR
 </article>
 
 <footer class="ak-footer">
-  <p><strong>Where next:</strong> the <a href="https://github.com/vespassassina/edgar/blob/main/docs/BLUEPRINT.md">Blueprint</a>
+  <p><strong>Where next:</strong> <a href="map.html">the map</a> for all of it at once,
+  the <a href="https://github.com/vespassassina/edgar/blob/main/docs/BLUEPRINT.md">Blueprint</a>
   for the full module map and interfaces, and the <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/README.md">ADRs</a>
   for why things are the way they are.</p>
   <p><strong>Keeping this tour honest.</strong> The tour changes in the same commit
@@ -835,135 +861,9 @@ flowchart LR
 </div>
 </div>
 
-<script>
-  // Progress, kept in this browser only: a "read" box on each built stop, and the clock.
-  // Keys start with "edgar-tour:" because every page on github.io shares one storage.
-  (function () {
-    var store = {
-      get: function (k) { try { return localStorage.getItem("edgar-tour:" + k); } catch (e) { return null; } },
-      set: function (k, v) {
-        try { v === null ? localStorage.removeItem("edgar-tour:" + k) : localStorage.setItem("edgar-tour:" + k, v); } catch (e) {}
-      }
-    };
-
-    // 1. A "read" box on every built stop; the contents list shows a tick and a count.
-    var parts = { core: [], v1: [], v2: [] };
-    var part = "core";
-    document.querySelectorAll("h2.part, article.stop").forEach(function (el) {
-      if (el.matches("h2.part")) { part = el.id; return; }
-      parts[part].push(el);
-      if (el.classList.contains("planned")) return;
-      var box = document.createElement("label");
-      box.className = "done";
-      box.innerHTML = '<input type="checkbox"> read';
-      var input = box.querySelector("input");
-      input.checked = store.get("read:" + el.id) === "1";
-      input.addEventListener("change", function () {
-        store.set("read:" + el.id, input.checked ? "1" : null);
-        refresh();
-      });
-      el.appendChild(box);
-    });
-
-    // 2. Refresh the ticks in the contents, each part's count, and the stages done.
-    function refresh() {
-      Object.keys(parts).forEach(function (name) {
-        var built = parts[name].filter(function (el) { return !el.classList.contains("planned"); });
-        var read = built.filter(function (el) { return store.get("read:" + el.id) === "1"; });
-        built.forEach(function (el) {
-          var item = document.querySelector('.ak-toc a[href="#' + el.id + '"]');
-          if (item) item.parentElement.classList.toggle("read", read.indexOf(el) >= 0);
-        });
-        var count = document.querySelector('[data-count="' + name + '"]');
-        if (count) count.textContent = built.length ? read.length + " / " + built.length : "planned";
-      });
-      // A stage is done when every stop between its heading and the next one is read.
-      document.querySelectorAll(".ak-stepper .ak-step").forEach(function (step, i) {
-        var heading = document.getElementById("stage-" + (i + 1));
-        var stops = [];
-        for (var el = heading.nextElementSibling; el && !el.matches("h3, .part-head"); el = el.nextElementSibling) {
-          if (el.matches("article.stop")) stops.push(el);
-        }
-        var done = stops.length && stops.every(function (el) { return store.get("read:" + el.id) === "1"; });
-        step.classList.toggle("ak-done", Boolean(done));
-      });
-    }
-    refresh();
-
-    // 3. The clock: the start time is stored, so it survives closing the tab.
-    var out = document.getElementById("clock-time");
-    var start = document.getElementById("clock-start");
-    var reset = document.getElementById("clock-reset");
-    function show() {
-      var began = Number(store.get("clock:start"));
-      var ended = Number(store.get("clock:end")) || Date.now();
-      var s = began ? Math.floor((ended - began) / 1000) : 0;
-      var pad = function (n) { return String(n).padStart(2, "0"); };
-      out.textContent = Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
-      var running = began && !store.get("clock:end");
-      start.textContent = running ? "Stop" : began ? "Finished" : "Start the clock";
-      start.disabled = Boolean(began && !running);
-      reset.hidden = !began;
-    }
-    start.addEventListener("click", function () {
-      if (!store.get("clock:start")) store.set("clock:start", String(Date.now()));
-      else store.set("clock:end", String(Date.now()));
-      show();
-    });
-    reset.addEventListener("click", function () {
-      store.set("clock:start", null);
-      store.set("clock:end", null);
-      show();
-    });
-    show();
-    setInterval(show, 1000);
-  })();
-</script>
 <!-- Diagrams are Mermaid text above, readable as plain text if this never loads.
      The classic (UMD) build, so the page also works opened as a local file. -->
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
-<script>
-  // Colour the diagrams from the artifactkit theme, so they follow its tokens.
-  (function () {
-    if (!window.mermaid) return;
-    // 1. Read the theme's three base colours.
-    var css = getComputedStyle(document.documentElement);
-    var bg = css.getPropertyValue("--t-bg").trim();
-    var ink = css.getPropertyValue("--t-ink").trim();
-    var accent = css.getPropertyValue("--t-accent").trim();
-    // 2. Mix them the way the theme does: a share of one colour over another.
-    function mix(top, share, ground) {
-      var a = parseInt(top.slice(1), 16), b = parseInt(ground.slice(1), 16);
-      var out = [16, 8, 0].map(function (shift) {
-        var x = (a >> shift) & 255, y = (b >> shift) & 255;
-        return Math.round(x * share + y * (1 - share)).toString(16).padStart(2, "0");
-      });
-      return "#" + out.join("");
-    }
-    // 3. Draw.
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: "base",
-      themeVariables: {
-        darkMode: true,
-        background: bg,
-        fontFamily: css.getPropertyValue("--t-font").trim(),
-        fontSize: "14px",
-        primaryColor: mix(ink, 0.08, bg),
-        primaryTextColor: ink,
-        primaryBorderColor: mix(accent, 0.7, bg),
-        secondaryColor: mix(accent, 0.18, bg),
-        tertiaryColor: mix(ink, 0.04, bg),
-        lineColor: mix(ink, 0.5, bg),
-        textColor: ink,
-        clusterBkg: mix(ink, 0.03, bg),
-        clusterBorder: mix(ink, 0.24, bg),
-        edgeLabelBackground: bg,
-        nodeTextColor: ink
-      },
-      flowchart: { htmlLabels: true, nodeSpacing: 28, rankSpacing: 36, padding: 10 }
-    });
-  })();
-</script>
+<script src="tour.js"></script>
 </body>
 </html>

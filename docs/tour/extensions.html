@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Extensions · A Tour of the Harness</title>
+<meta name="description" content="The extension manifest, hooks that may veto but never allow, provider plugins through entry points, skill activation, and edgar.run().">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<!-- Styled with artifactkit, vendored in artifactkit/. Only its theme block is ours. -->
+<link rel="stylesheet" href="artifactkit/theme.css">
+<link rel="stylesheet" href="artifactkit/components.css">
+<link rel="stylesheet" href="artifactkit/print.css">
+<link rel="stylesheet" href="tour.css">
+</head>
+<body>
+<div class="ak-wrap" id="top">
+
+<header class="ak-pagehead">
+  <div>
+    <p class="ak-eyebrow"><a href="index.html">A Tour of the Harness</a> · v1 · M10</p>
+    <h1>Extensions</h1>
+    <p class="ak-lede">Everything you can add without writing Python, the one place you
+    can, and the door for other programs. Five stops, about half an hour.</p>
+    <ul class="pages">
+      <li><a href="index.html">Core and v1</a></li>
+      <li><a href="memory.html">Memory</a></li>
+      <li><a href="mcp.html">MCP</a></li>
+      <li><a href="agents.html">Subagents</a></li>
+      <li><a href="extensions.html" aria-current="page">Extensions</a></li>
+      <li><a href="map.html">The map</a></li>
+    </ul>
+  </div>
+  <div class="ak-meta">
+    <span class="ak-pill ak-pill-ok">Built</span> M10, shipped in 1.0<br>
+    Kept in sync by a test
+  </div>
+</header>
+
+<main class="tour-main">
+
+<p>M10 is what 1.0 actually freezes. The formats on this page — the manifest, the
+agent file, the skill folder, the hook entry, the tool kinds — are a promise that
+someone else's extension will still load in 2.0
+(<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0055-m10-extensions-as-built.md">ADR-0055</a>).
+The rule that keeps them small: extensions are <em>files</em>; Python is a plugin
+surface for providers, retrievers and sandboxes only
+(<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0018-extension-model.md">ADR-0018</a>).</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+    dir["an extension folder<br/>edgar.toml + files"] --> man["manifest: name, version,<br/>what it contributes"]
+    man --> t["tools<br/>command · http · mcp"]
+    man --> s["skills"]
+    man --> a["agents"]
+    man --> h["hooks"]
+    t --> reg["the ordinary registries,<br/>with a source recorded"]
+    s --> reg
+    a --> reg
+    h --> gate["observe, or veto &mdash;<br/>never allow"]
+    ep(["entry points<br/>provider · retriever · sandbox"]) -.->|"the only Python surface"| reg
+</pre></div>
+
+<h3 class="stage" id="stage-1">Stage 1. A folder of files <small>about 12 minutes</small></h3>
+
+<article class="stop" id="x1" data-files="src/edgar/extensions/manifest.py src/edgar/extensions/discovery.py">
+  <h4><span class="n">1</span>The manifest</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/manifest.py"><code>extensions/manifest.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/discovery.py"><code>extensions/discovery.py</code></a></p>
+  <p class="look">Look for: <code>Manifest</code> <code>read</code> <code>_NAME</code> <code>Found</code> <code>discover</code> <code>_one</code> <code>disabled_from_config</code></p>
+  <p>An extension is a directory with an <code>edgar.toml</code> in it and the rest is
+  ordinary files. <code>Manifest</code> is forty lines because it is a description,
+  not a program: a name, a version, and lists of what the folder contributes.
+  <code>_NAME</code> is the character rule, and it is strict on purpose — a name
+  becomes part of a tool name, which the model sees and a permission rule may match.</p>
+  <p><code>discover</code> is the same layering as skills and agents: built in, then
+  user, then project, with the later one winning by name and every find remembering
+  its path. <code>Found</code> carrying that path is what lets an error say
+  <em>which</em> of two files called <code>git</code> it means.</p>
+  <p><code>disabled_from_config</code> is the half worth dwelling on. Turning an
+  extension off is a config edit a human makes; nothing in the running system can
+  enable one. That is the same rule as permissions, applied to code loading.</p>
+</article>
+
+<article class="stop" id="x2" data-files="src/edgar/extensions/hooks.py">
+  <h4><span class="n">2</span>Hooks that veto</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/hooks.py"><code>extensions/hooks.py</code></a></p>
+  <p class="look">Look for: <code>EVENTS</code> <code>Hook</code> <code>from_config</code> <code>from_extension</code> <code>_matches</code> <code>_run</code> <code>veto</code> <code>listener</code> <code>_fire</code></p>
+  <p>A hook is a command line attached to a named event. Read <code>EVENTS</code>
+  first: the list is short and closed, so there is no way to attach to an internal
+  detail that might move. <code>_matches</code> is the filter — a hook usually cares
+  about one tool, or one path pattern — and it runs before the command is spawned, so
+  the common case costs nothing.</p>
+  <p>The important asymmetry is in <code>veto</code>: a hook may <em>refuse</em>, and
+  it may <em>observe</em>, and it can never approve something the permission engine
+  denied (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>).
+  A veto is not an exception either — it becomes an error tool result with a reason,
+  and goes back to the model like any other tool failure, so the model can adapt
+  instead of the run dying.</p>
+  <p><code>_run</code> is where the care is: a timeout, a captured output cap, no
+  shell, and a hook that crashes or times out is treated as a hook that said nothing
+  rather than one that said no. Decide for yourself whether that default is the right
+  one; it is a real trade-off and the comment says so.</p>
+  <p class="take"><strong>Take with you:</strong> <code>listener</code> and
+  <code>_fire</code> keep observe-only hooks off the critical path. Only vetoing
+  events are waited for.</p>
+</article>
+
+<h3 class="stage" id="stage-2">Stage 2. The Python surfaces <small>about 10 minutes</small></h3>
+
+<article class="stop" id="x3" data-files="src/edgar/providers/registry.py">
+  <h4><span class="n">3</span>Provider plugins</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/registry.py"><code>providers/registry.py</code></a></p>
+  <p class="look">Look for: <code>BUILTIN</code> <code>KINDS</code> <code>split</code> <code>resolve</code> <code>_plugin</code></p>
+  <p>Eighty lines that do three things. <code>split</code> parses
+  <code>provider:model</code>. <code>resolve</code> maps a name to an adapter through
+  <code>BUILTIN</code>, importing the module only at that moment — no
+  <code>edgar.providers.*</code> at startup, which is invariant 3
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0012-startup-budget.md">ADR-0012</a>).
+  <code>_plugin</code> is the third-party door: an entry point group, looked in only
+  after the built-ins, and a failure there names the distribution that registered the
+  broken adapter rather than raising somewhere in the loop.</p>
+  <p>This is one of the six ports
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0022-ports-and-adapters.md">ADR-0022</a>).
+  The test worth reading alongside it is the one asserting the core imports no
+  adapter: the seam is enforced, not merely intended.</p>
+</article>
+
+<article class="stop" id="x4" data-files="src/edgar/skills/discovery.py src/edgar/skills/activate.py">
+  <h4><span class="n">4</span>Skill activation</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/discovery.py"><code>skills/discovery.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/activate.py"><code>skills/activate.py</code></a></p>
+  <p class="look">Look for: <code>Skill</code> <code>lint</code> <code>matching</code> <code>activate</code> <code>bodies</code></p>
+  <p>A skill is a markdown file, or a folder with a <code>SKILL.md</code> and whatever
+  else it needs (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0041-skills-as-built.md">ADR-0041</a>).
+  Only the <em>name and description</em> of each skill sit in the prompt; the body is
+  read when the model calls the <code>skill</code> tool. That is the same deferral as
+  <a href="mcp.html#p2">MCP's deferred schemas</a>, and for the same reason.</p>
+  <p><code>matching</code> is the cheap pre-filter and <code>activate</code> the
+  actual load; <code>bodies</code> is what gets handed back. <code>lint</code> is the
+  one that will save someone an afternoon: it is what <code>edgar doctor</code> uses
+  to say a skill's front matter is wrong, in the file, before a session ever sees it.
+  This module is a port too — a skill source, per ADR-0022 — which is why discovery
+  and activation are separable at all.</p>
+</article>
+
+<article class="stop" id="x5" data-files="src/edgar/__init__.py">
+  <h4><span class="n">5</span><code>edgar.run()</code></h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__init__.py"><code>edgar/__init__.py</code></a></p>
+  <p class="look">Look for: <code>run</code> <code>__version__</code></p>
+  <p>The embedding API is one function, and its shape is the argument. It takes a
+  prompt and returns a result; everything else — config, provider, tools, permissions
+  — comes from the same layered resolution a CLI run uses, so a program embedding
+  edgar cannot accidentally get a different harness than the one its user configured.</p>
+  <p>Two details. The imports are inside the function, because
+  <code>import edgar</code> must stay as cheap as <code>import edgar.cli.main</code>.
+  And there is no callback parameter: streaming and progress come off the event bus,
+  which is the same decision as everywhere else
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0011-events-not-callbacks.md">ADR-0011</a>).
+  <code>__version__</code> lives here and is bumped together with
+  <code>pyproject.toml</code> at release.</p>
+</article>
+
+<p class="check"><strong>Before you go:</strong> an extension ships a hook on
+<code>pre_tool</code> and an agent that uses a tool the extension also ships. Trace the
+order in which those two are discovered, and name the point at which a permission
+decision is made.</p>
+
+<h3 class="stage">Sizes</h3>
+<p>Lines of code: blank lines and comments do not count, docstrings do.
+<code>just loc</code> prints the current totals.</p>
+
+<div class="ak-tblwrap">
+<table class="ak-table sizes">
+  <thead><tr><th>File</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr data-file="src/edgar/extensions/manifest.py"><td><code>extensions/manifest.py</code></td><td class="loc">~43</td><td>What a folder declares it contributes</td></tr>
+    <tr data-file="src/edgar/extensions/discovery.py"><td><code>extensions/discovery.py</code></td><td class="loc">~70</td><td>Built-in, user, project; and what is switched off</td></tr>
+    <tr data-file="src/edgar/extensions/hooks.py"><td><code>extensions/hooks.py</code></td><td class="loc">~116</td><td>Named events, filters, and the veto</td></tr>
+    <tr data-file="src/edgar/providers/registry.py"><td><code>providers/registry.py</code></td><td class="loc">~80</td><td>Lazy resolution, and the entry-point door</td></tr>
+    <tr data-file="src/edgar/skills/discovery.py"><td><code>skills/discovery.py</code></td><td class="loc">~91</td><td>The skill source port: find and lint</td></tr>
+    <tr data-file="src/edgar/skills/activate.py"><td><code>skills/activate.py</code></td><td class="loc">~36</td><td>Bodies, loaded only when asked for</td></tr>
+    <tr data-file="src/edgar/__init__.py"><td><code>edgar/__init__.py</code></td><td class="loc">~78</td><td>One function, and the version</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="ak-source">Source: <code>just loc</code>, which counts with
+<code>tests/support/budget.py</code>. Rounded; the tour's test fails if a figure drifts
+more than 25 lines of code from the code.</p>
+
+<footer class="ak-footer">
+  <p><strong>Where next:</strong> that is the last feature page. <a href="map.html">The
+  map</a> shows all of it at once, or back to the <a href="index.html">Core tour</a>.</p>
+  <p><strong>Keeping this page honest.</strong> It changes in the same commit as the
+  code it describes, and
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_tour.py"><code>tests/unit/test_tour.py</code></a>
+  fails when a linked file is gone, when a name under "Look for" is no longer defined
+  in its files, or when a size here drifts from the real one. It cannot tell when a
+  description has gone stale, so reread a stop whenever you change its code. The
+  source of this page is
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/tour/extensions.html"><code>docs/tour/extensions.html</code></a>.</p>
+</footer>
+
+</main>
+</div>
+
+<!-- Diagrams are Mermaid text above, readable as plain text if this never loads.
+     The classic (UMD) build, so the page also works opened as a local file. -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="tour.js"></script>
+</body>
+</html>
