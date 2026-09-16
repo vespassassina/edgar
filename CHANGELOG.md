@@ -8,6 +8,13 @@ extension formats freeze.
 
 ## Unreleased
 
+## 1.0.0 — 2026-09-16
+
+v1 whole: memory and session search, MCP and signing in (already in 0.1.0),
+subagents, routing and fallback, extensions, hooks, provider plugins, `edgar
+init` and `doctor`, and the docs that teach all of it. Extension formats are
+frozen. 8,000 of 8,000 lines of code.
+
 ### Added
 - Subagents. A `task` tool appears once any agent is discovered in
   `.edgar/agents/` or `~/.edgar/agents/`: pick one by name and it runs in a fresh

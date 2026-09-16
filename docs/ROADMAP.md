@@ -48,7 +48,7 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M8 MCP | Done ([ADR-0047](adr/0047-mcp-as-built.md), [ADR-0048](adr/0048-signing-in-as-built.md)) | 0.1.0 |
 | M9 Subagents, routing rules and fallback | Done ([ADR-0054](adr/0054-m9-subagents-as-built.md)) | 1.0 |
 | M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
-| M11 Init, doctor, docs | Done ([ADR-0056](adr/0056-m11-as-built.md)) — code-complete; 1.0 not yet tagged; PRD §11's two human criteria open | 1.0 |
+| M11 Init, doctor, docs | Done · 1.0 ([ADR-0056](adr/0056-m11-as-built.md)) — PRD §11's two human criteria still open | 1.0 |
 | M18 Tours for v1 and the map | Next | 2.0 |
 | M19 Working state | Planned | 2.0 |
 | M20 Seeing and searching | Planned | 2.0 |
