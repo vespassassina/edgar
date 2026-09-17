@@ -45,6 +45,65 @@ rest are M21 (worktrees, sandboxes) and M22 (`route explain`,
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
 
+## 2026-09-17 · M21 — isolation
+
+**Asked:** build M21's three roadmap items on a worktree branch off `main`, one
+commit per item, committing as soon as each item's own tests pass. Do not push,
+merge, tag, open a PR or edit `AGENTS.md` or `config.toml`; do not call a paid
+provider. Where a judgement call arises, prefer a backend that refuses loudly
+over anything that could look like isolation and not be one, write down every
+such call in the ADR, and flag it for extra scrutiny.
+
+**Done:** two commits. `f22463e` builds `agents/worktree.py`: `isolation:
+worktree` in an agent's frontmatter puts the subagent in
+`.edgar/worktrees/<agent>-<session>` on branch `edgar/<agent>-<session>`, and the
+whole rebase is one assignment — `session.cwd = tree.path` — because
+`ToolContext.cwd` follows `Session.cwd` and `Guard.check` rebuilds its `Policy`
+around that `cwd` on every call, so the hard "outside the working directory is an
+Ask" rule aims at the worktree for free. Ten tests drive real `git`.
+`51105ea` builds `sandbox/`: the port, `none`, `bwrap`, `seatbelt`, wired into
+`shell`, command tools and the verify gate, with `network_allowed(mode, tainted)`
+in `permissions/policy.py` computing the network answer and the backend only ever
+enforcing it. `edgar doctor` gained a recommendation line. 23 more tests, of
+which two execute a real `sandbox-exec` sandbox. `just loc` 8,869 of 9,500; 277
+lines of code for the milestone against ~350 estimated. `just check` green on
+macOS (darwin 25.6.0), 858 tests.
+
+**Decided** (all in [ADR-0061](adr/0061-m21-isolation-as-built.md), four of them
+flagged for extra review):
+
+1. The `Sandbox` port is `wrap(argv, …) -> list[str]`, not BLUEPRINT §7.5's
+   `async run(…)`. One launcher keeps one process-group kill, and a command line
+   can be asserted on a machine that cannot run the backend. BLUEPRINT §7.5 is
+   edited in the same commit rather than deviated from silently.
+2. **ROADMAP and BLUEPRINT contradict each other** about reads. The roadmap's
+   test says a confined call "cannot read outside the allowed roots"; the
+   Blueprint's design (`--ro-bind / /`) is a write boundary. Shipped the designed
+   write+network boundary and said so everywhere — the ADR, the roadmap row, the
+   Blueprint and the tour's own stop — rather than fake a read boundary or
+   overclaim. A read boundary, if wanted, is its own milestone.
+3. A dirty worktree is kept, where *dirty* means `git status --porcelain` is
+   non-empty, including a single untracked file. `--force` is never passed. What
+   a human gets is the path, the branch, the diff stat and the `git worktree
+   remove` line in the agent's summary, plus `git worktree list` and `git branch`
+   a week later — no manifest file and no notification, which is the weak point
+   and is written down as such.
+4. A configured backend that is not installed ends the session start. Falling
+   back to `none` with a warning was rejected: the warning scrolls past and the
+   session then runs unconfined under a config that says otherwise.
+
+**Tested for real:** `seatbelt`, on this Mac — a write inside the project
+succeeds, a write outside is refused, a socket cannot be opened when the decision
+said no. **`bwrap` has never been executed here**; its argv is asserted on every
+platform, and that is the whole of its verification. A Linux reviewer should run
+the seatbelt tests' equivalents before relying on it.
+
+**Pending:** `container` was not built (the roadmap allows it only if budget
+remains at the end of M22; 631 lines are left, so it is possible — ask first).
+`templates/config.toml` needs a commented `sandbox` line, which no automated
+process may write; the proposed diff is in the handoff. The Linux half of M21's
+"done when" — a dogfood day with a write-capable subagent — is open.
+
 ## 2026-09-17 · M20 — seeing and searching
 
 **Asked:** build M20 in ten ordered items, one commit each, on a worktree branch

@@ -52,8 +52,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M18 Tours for v1 and the map | Done ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)) | 2.0 |
 | M19 Working state | Done ([ADR-0059](adr/0059-m19-working-state-as-built.md)) | 2.0 |
 | M20 Seeing and searching | Done ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)) | 2.0 |
-| M21 Isolation | Next | 2.0 |
-| M22 Inspection, 2.0 release | Planned | 2.0 |
+| M21 Isolation | Done ([ADR-0061](adr/0061-m21-isolation-as-built.md)) — the sandbox confines writes and the network, **not reads**; see ADR-0061 §2 | 2.0 |
+| M22 Inspection, 2.0 release | Next | 2.0 |
 | M12–M15 Learning, controller, synthesis, escalation | Planned | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
@@ -530,9 +530,9 @@ number stays.
 |---|---|---|
 | M18 Tours for v1 and the map | 0 | 8,000 |
 | M19 Working state | 374 (built) | 8,374 |
-| M20 Seeing and searching | ~200 | ~8,574 |
-| M21 Isolation | ~350 | ~8,924 |
-| M22 Inspection, 2.0 release | ~440 | ~9,364 |
+| M20 Seeing and searching | 218 (built) | 8,592 |
+| M21 Isolation | 277 (built) | 8,869 |
+| M22 Inspection, 2.0 release | ~440 | ~9,309 |
 
 **How to read a v2 milestone.** Each item names the files it touches, the
 requirement IDs it closes, the test that proves it and its size. Items are
@@ -765,6 +765,21 @@ can run in a sandbox. About 350 lines of code.
 **Done when:** the four tests above pass; on macOS and Linux a dogfood day with
 a write-capable subagent leaves the main tree clean.
 
+**As built** ([ADR-0061](adr/0061-m21-isolation-as-built.md)), 277 lines of code.
+Two corrections to the text above, both deliberate and both flagged in the ADR:
+
+- **"cannot read outside the allowed roots" is not what shipped.** That line
+  contradicts [BLUEPRINT §7.5](BLUEPRINT.md) and PRD PERM-15, which specify a
+  read-only root bind and a writable set — a *write* boundary. The backends
+  confine writes and the network; a confined process can still read anything the
+  user can read. A read boundary, if wanted, is its own milestone.
+- **The port is `wrap(argv, …) -> list[str]`,** not `async run(…)`. `run_argv`
+  stays the only process launcher, and the generated argv and profile are
+  asserted on every platform.
+
+`seatbelt` was executed for real on macOS; `bwrap` is written and its argv
+asserted, but has never run. The Linux half of "done when" is still open.
+
 ---
 
 ## M22 — Inspection commands · **v2.0 release**
@@ -983,7 +998,8 @@ Ordered by expected value, not commitment.
 6. **Language-server tools** — `shell` and command tools cover the common cases
 7. **Homebrew and Scoop manifests** — when someone asks
 8. **Prompt-caching optimisation** across providers, not just Anthropic
-9. **The `container` sandbox backend** — if M21 did not have room for it
+9. **The `container` sandbox backend** — M21 had room (277 of ~350) but did not
+   build it speculatively; the `wrap` port (ADR-0061) is the shape it would use
 
 10. **A user manual** — one short doc covering every slash command, tool, skill,
     how to install and upgrade the CLI and MCP servers, and edgar's
