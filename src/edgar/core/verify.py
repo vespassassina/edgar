@@ -17,7 +17,8 @@ from typing import TYPE_CHECKING
 from edgar.core.errors import PermissionDenied
 from edgar.core.events import EventBus, VerifyFinished, VerifyStarted
 from edgar.permissions.policy import Deny
-from edgar.tools.builtin.shell import Shell, run_argv, shell_argv
+from edgar.sandbox.base import Sandbox
+from edgar.tools.builtin.shell import Shell, confined, run_argv, shell_argv
 from edgar.tools.spill import spill
 
 if TYPE_CHECKING:
@@ -30,6 +31,7 @@ class Check:
     command: str
     max_attempts: int = 2
     program: str = "auto"  # [shell] program
+    sandbox: Sandbox | None = None  # the walls the check runs inside [PERM-15]
 
 
 async def authorise(check: Check, guard: Guard, session: Session, bus: EventBus) -> None:
@@ -57,7 +59,16 @@ async def verify(
     """None when the check passes; otherwise the feedback for the model."""
     bus.emit(VerifyStarted(command=check.command, attempt=attempt))
     started = time.monotonic()
-    code, output = await run_argv(shell_argv(check.program, check.command), cwd)
+    # The check is a command a human declared, so it keeps the network; what the
+    # backend takes away is the ability to write outside the project [PERM-15].
+    argv = confined(
+        check.sandbox,
+        shell_argv(check.program, check.command),
+        cwd=cwd,
+        blob_dir=blob_dir,
+        network=True,
+    )
+    code, output = await run_argv(argv, cwd)
     duration = round((time.monotonic() - started) * 1000)
     bus.emit(VerifyFinished(ok=code == 0, exit_code=code, attempt=attempt, duration_ms=duration))
     if code == 0:

@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8590,
+    "loc": 8867,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6269,
+        "loc": 6356,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2016,
+            "loc": 2025,
             "status": "built",
             "children": [
               {
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 325,
+                "loc": 334,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 770,
+            "loc": 779,
             "status": "built",
             "children": [
               {
@@ -347,7 +347,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 61,
+                "loc": 70,
                 "summary": "The verify gate: done means your check passed [VER-1..6, ADR-0014].",
                 "stop": "index.html#s4",
                 "status": "built",
@@ -380,7 +380,7 @@ window.EDGAR_MAP = {
             "id": "core/permissions",
             "name": "permissions/",
             "kind": "package",
-            "loc": 291,
+            "loc": 304,
             "status": "built",
             "children": [
               {
@@ -389,7 +389,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "permissions",
-                "loc": 35,
+                "loc": 40,
                 "summary": "Control files: the files that steer edgar itself [PERM-12].",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -425,9 +425,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "permissions",
-                "loc": 106,
+                "loc": 114,
                 "summary": "The permission decision: one pure function",
-                "stop": "index.html#s7",
+                "stop": "isolation.html#w2",
                 "status": "built",
                 "port": false
               }
@@ -620,7 +620,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 573,
+            "loc": 598,
             "status": "built",
             "children": [
               {
@@ -629,7 +629,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 79,
+                "loc": 80,
                 "summary": "The tool contract, MCP-shaped so MCP is a translation layer, not a second system [TOOL-1].",
                 "stop": "index.html#s5",
                 "status": "built",
@@ -641,7 +641,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 160,
+                "loc": 179,
                 "summary": "Command and HTTP tools, declared in TOML: a CLI or an API for the agent, without",
                 "stop": "index.html#s10",
                 "status": "built",
@@ -653,7 +653,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 152,
+                "loc": 154,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -665,7 +665,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 89,
+                "loc": 92,
                 "summary": "Tools by name, which one wins a name, and which schemas a request can afford",
                 "stop": "index.html#s23",
                 "status": "built",
@@ -689,7 +689,7 @@ window.EDGAR_MAP = {
             "id": "core/tools/builtin",
             "name": "tools/builtin/",
             "kind": "package",
-            "loc": 319,
+            "loc": 350,
             "status": "built",
             "children": [
               {
@@ -698,7 +698,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools/builtin",
-                "loc": 185,
+                "loc": 196,
                 "summary": "File system built-ins: `read` `ls` `glob` `grep` `write` `edit` [TOOL-5].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -710,7 +710,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools/builtin",
-                "loc": 108,
+                "loc": 128,
                 "summary": "`shell` and `fetch`, and the process runner they share with command tools and",
                 "stop": "index.html#s9",
                 "status": "built",
@@ -738,14 +738,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2038,
+        "loc": 2058,
         "status": "built",
         "children": [
           {
             "id": "v1/agents",
             "name": "agents/",
             "kind": "package",
-            "loc": 244,
+            "loc": 259,
             "status": "built",
             "children": [
               {
@@ -754,7 +754,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 27,
+                "loc": 28,
                 "summary": "A subagent's definition: markdown + YAML frontmatter [SUB-1].",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -766,7 +766,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 82,
+                "loc": 86,
                 "summary": "Finding subagents: `.edgar/agents/*.md`, project over user [SUB-1, SUB-2].",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -778,7 +778,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 135,
+                "loc": 145,
                 "summary": "Spawning a subagent: the `task` tool re-enters the loop with a narrower",
                 "stop": "agents.html#a2",
                 "status": "built",
@@ -847,7 +847,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 159,
+            "loc": 164,
             "status": "built",
             "children": [
               {
@@ -856,9 +856,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 35,
+                "loc": 40,
                 "summary": "`edgar doctor`: credentials, connectivity, and a cloud-synced-folder warning",
-                "stop": "index.html#s30",
+                "stop": "isolation.html#w2",
                 "status": "built",
                 "port": false
               },
@@ -1175,9 +1175,30 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 283,
+        "loc": 453,
         "status": "built",
         "children": [
+          {
+            "id": "v2/agents",
+            "name": "agents/",
+            "kind": "package",
+            "loc": 59,
+            "status": "built",
+            "children": [
+              {
+                "path": "src/edgar/agents/worktree.py",
+                "name": "worktree.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "agents",
+                "loc": 59,
+                "summary": "`isolation: worktree`: a write-capable subagent works in its own git worktree,",
+                "stop": "isolation.html#w1",
+                "status": "built",
+                "port": false
+              }
+            ]
+          },
           {
             "id": "v2/cli",
             "name": "cli/",
@@ -1227,6 +1248,63 @@ window.EDGAR_MAP = {
                 "loc": 81,
                 "summary": "The plan and the todo list: what the session is working on [CTX-18, ADR-0025].",
                 "stop": "working.html#w2",
+                "status": "built",
+                "port": false
+              }
+            ]
+          },
+          {
+            "id": "v2/sandbox",
+            "name": "sandbox/",
+            "kind": "package",
+            "loc": 111,
+            "status": "built",
+            "children": [
+              {
+                "path": "src/edgar/sandbox/base.py",
+                "name": "base.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 45,
+                "summary": "The Sandbox port: `shell.sandbox` picks the walls a process runs inside",
+                "stop": "isolation.html#w2",
+                "status": "built",
+                "port": true
+              },
+              {
+                "path": "src/edgar/sandbox/bwrap.py",
+                "name": "bwrap.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 24,
+                "summary": "`bwrap`: bubblewrap on Linux. Everything readable, only the named roots",
+                "stop": "isolation.html#w3",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/sandbox/none.py",
+                "name": "none.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 16,
+                "summary": "`none`: no walls at all, the default, and the one backend that runs everywhere.",
+                "stop": "isolation.html#w2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/sandbox/seatbelt.py",
+                "name": "seatbelt.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 26,
+                "summary": "`seatbelt`: macOS `sandbox-exec`, with a profile generated per call [PERM-15].",
+                "stop": "isolation.html#w3",
                 "status": "built",
                 "port": false
               }

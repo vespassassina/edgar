@@ -72,6 +72,7 @@ class ToolContext:
     budget_remaining: float | None = None  # what is left to inherit [SUB-7]
     hooks: tuple[Hook, ...] = ()  # `pre_tool` rules that may veto this call [EXT-6]
     working: Working | None = None  # the session's plan and todo list, for `todo` [CTX-18]
+    network: bool = True  # what a sandbox is told about this call; set per call [PERM-15]
 
 
 def build_context(session: Session, rt: Runtime) -> ToolContext:

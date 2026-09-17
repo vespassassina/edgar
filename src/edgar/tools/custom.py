@@ -25,8 +25,9 @@ from urllib.parse import quote, urlsplit
 
 from edgar.core.errors import ConfigError
 from edgar.permissions.matcher import Subject
+from edgar.sandbox.base import Sandbox
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
-from edgar.tools.builtin.shell import run_argv
+from edgar.tools.builtin.shell import confined, run_argv
 
 _SLOT = re.compile(r"\{(\w+)\}")
 _ENV = re.compile(r"\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -57,16 +58,18 @@ def scrub(text: str) -> str:
     return text
 
 
-def load(folders: Iterable[tuple[Path, str]]) -> list[CommandTool | HttpTool]:
+def load(
+    folders: Iterable[tuple[Path, str]], sandbox: Sandbox | None = None
+) -> list[CommandTool | HttpTool]:
     """Every `*.toml` in each folder; `origin` is "user" or "project"."""
     tools: list[CommandTool | HttpTool] = []
     for folder, origin in folders:
         for path in sorted(folder.glob("*.toml")) if folder.is_dir() else []:
-            tools.append(_build(path, origin))
+            tools.append(_build(path, origin, sandbox))
     return tools
 
 
-def _build(path: Path, origin: str) -> CommandTool | HttpTool:
+def _build(path: Path, origin: str, sandbox: Sandbox | None = None) -> CommandTool | HttpTool:
     def bad(problem: str) -> ConfigError:
         return ConfigError(f"{path}: {problem}", hint="see BLUEPRINT §6.4 for the format")
 
@@ -100,7 +103,7 @@ def _build(path: Path, origin: str) -> CommandTool | HttpTool:
     if command:
         if not data["argv"] or not all(isinstance(a, str) for a in data["argv"]):
             raise bad("argv must be a non-empty list of strings")
-        return CommandTool(schema, data["argv"], timeout)
+        return CommandTool(schema, data["argv"], timeout, sandbox)
     host = urlsplit(_ENV.sub("x", data["url"])).netloc
     if not urlsplit(data["url"]).scheme.startswith("http") or _SLOT.search(host):
         raise bad("url must be http(s) with a fixed host; arguments fill only path and query")
@@ -120,8 +123,15 @@ def _fill(template: str, args: dict[str, Any], encode: bool = False) -> str:
 
 
 class CommandTool:
-    def __init__(self, schema: ToolSchema, argv: list[str], timeout_s: float) -> None:
+    def __init__(
+        self,
+        schema: ToolSchema,
+        argv: list[str],
+        timeout_s: float,
+        sandbox: Sandbox | None = None,
+    ) -> None:
         self.schema, self.argv, self.timeout_s = schema, argv, timeout_s
+        self.sandbox = sandbox
 
     def render(self, args: dict[str, Any]) -> list[str]:
         """Whole argv elements; an element naming an absent argument is dropped."""
@@ -137,9 +147,18 @@ class CommandTool:
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         argv = self.render(args)
-        program = Path(argv[0]).name
+        program = Path(argv[0]).name  # the tool's own program, never the sandbox's
         try:
-            code, out = await run_argv(argv, ctx.cwd)
+            code, out = await run_argv(
+                confined(
+                    self.sandbox,
+                    argv,
+                    cwd=ctx.cwd,
+                    blob_dir=ctx.blob_dir,
+                    network=ctx.network,
+                ),
+                ctx.cwd,
+            )
         except FileNotFoundError:
             return ToolResult(f"{argv[0]} is not installed or not on PATH", "not_found")
         return ToolResult(f"exit {code}\n{out}", "nonzero_exit" if code else None, code, program)

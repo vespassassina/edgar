@@ -12,6 +12,8 @@ from pathlib import Path
 
 from edgar.config.schema import Mode
 
+ISOLATIONS = ("none", "worktree")  # [SUB-11]
+
 
 @dataclass(frozen=True, slots=True)
 class AgentBudget:
@@ -30,6 +32,6 @@ class AgentDefinition:
     max_turns: int = 8
     budget: AgentBudget = field(default_factory=AgentBudget)
     verify: str | None = None  # a shell command, run like [verify] command [VER-1]
-    isolation: str = "none"  # "worktree" is v2 [SUB-11, ADR-0050]
+    isolation: str = "none"  # "worktree" runs it in its own git worktree [SUB-11]
     prompt: str = ""  # the body: the agent's own instructions
     origin: str = "project"  # "user" or "project" [SUB-2]

@@ -109,6 +109,17 @@ def _decide(tool: ToolSchema, s: Subject, p: Policy) -> Decision:
     return decision
 
 
+def network_allowed(mode: str, tainted: bool) -> bool:
+    """Whether a confined process may reach the network [PERM-15, PERM-11].
+
+    A sandbox enforces, it does not decide, so the answer is made here and carried
+    to it. It mirrors `_decide` on the same inputs: yolo allows before anything
+    else is read, read-only never reaches out on its own, and a session that has
+    taken in untrusted content does not either.
+    """
+    return mode == "yolo" or (mode != "read-only" and not tainted)
+
+
 def _mode(kind: str, s: Subject, commands: list[str], p: Policy) -> Decision:
     if kind == "read":
         return Allow()

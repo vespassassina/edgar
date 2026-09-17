@@ -50,6 +50,11 @@ def test_agent_definition_defaults() -> None:
     assert agent.origin == "project"
 
 
+def test_isolation_is_read_from_the_frontmatter(tmp_project: Path, home: Path) -> None:
+    _agent(_project(tmp_project), "walled", extra="isolation: worktree\n")
+    assert discover(tmp_project, home).agents["walled"].isolation == "worktree"  # [SUB-11]
+
+
 # discovery [SUB-1, SUB-2]
 
 
@@ -106,6 +111,8 @@ def test_full_frontmatter_is_parsed(tmp_project: Path, home: Path) -> None:
         ("---\nname: broken\ndescription: x\ntools: nope\n---\n", "tools"),
         ("---\nname: broken\ndescription: x\nbudget: nope\n---\n", "budget"),
         ("---\nname: broken\ndescription: x\nmax_turns: 0\n---\n", "max_turns"),
+        # An author who asks for isolation never silently gets none [SUB-11].
+        ("---\nname: broken\ndescription: x\nisolation: sandbox\n---\n", "isolation"),
     ],
 )
 def test_a_broken_agent_is_skipped_with_its_reason(

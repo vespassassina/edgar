@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from edgar.agents.definition import AgentBudget, AgentDefinition
+from edgar.agents.definition import ISOLATIONS, AgentBudget, AgentDefinition
 from edgar.permissions.policy import MODES
 
 _FRONT = re.compile(r"---\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|$)(.*)", re.S)
@@ -86,6 +86,11 @@ def _agent(head: dict[str, Any], prompt: str, path: Path, origin: str) -> AgentD
     max_turns = head.get("max_turns", 8)
     if not isinstance(max_turns, int) or isinstance(max_turns, bool) or max_turns < 1:
         raise ValueError("`max_turns` must be a positive integer")
+    # An unknown `isolation:` is a refusal, never a silent "none": an author who
+    # asked for isolation must not get an agent that quietly shares the tree [SUB-11].
+    isolation = head.get("isolation", "none")
+    if isolation not in ISOLATIONS:
+        raise ValueError(f"`isolation` must be one of {list(ISOLATIONS)}")
     return AgentDefinition(
         name=name,
         description=" ".join(description.split()),
@@ -96,6 +101,7 @@ def _agent(head: dict[str, Any], prompt: str, path: Path, origin: str) -> AgentD
         max_turns=max_turns,
         budget=AgentBudget(cost=budget_raw.get("cost"), turns=budget_raw.get("turns")),
         verify=head.get("verify"),
+        isolation=isolation,
         prompt=prompt,
         origin=origin,
     )

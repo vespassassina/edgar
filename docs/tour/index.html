@@ -31,6 +31,7 @@
       <li><a href="extensions.html">Extensions</a></li>
       <li><a href="working.html">Working state</a></li>
       <li><a href="media.html">Seeing and searching</a></li>
+      <li><a href="isolation.html">Isolation</a></li>
       <li><a href="map.html">The map</a></li>
     </ul>
   </div>
@@ -157,7 +158,8 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,200</td><td>The REPL, one-shot runs, rendering, setup: routing rules and fallback wired in (v1)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
-    <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~240</td><td>A subagent's definition, finding them, and spawning one (v1)</td></tr>
+    <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
+    <tr data-package="sandbox"><td><code>sandbox/</code></td><td class="loc">~110</td><td>The Sandbox port and its backends: nothing, bubblewrap, seatbelt (v2)</td></tr>
     <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~230</td><td>An extension folder's manifest, discovery, and observe-or-veto hooks (v1)</td></tr>
   </tbody>
 </table>

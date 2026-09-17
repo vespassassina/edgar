@@ -27,7 +27,15 @@ def control_files(cwd: Path, home: Path, instructions: Iterable[str]) -> Callabl
             return True
         if any(path.is_relative_to(tree) for tree in learned):
             return False  # machine-owned by design (SKL-13)
-        return any(path.is_relative_to(tree) for tree in trees)
+        if any(path.is_relative_to(tree) for tree in trees):
+            return True
+        # The same answer for an `.edgar/` anywhere else, so a subagent's git
+        # worktree under `.edgar/worktrees/` cannot hold a second, unguarded copy
+        # of the files that steer edgar [SUB-11]. Only ever adds an Ask.
+        parts = path.parts
+        at = max((i for i, part in enumerate(parts) if part == ".edgar"), default=-1)
+        rest = parts[at + 1 :] if at >= 0 else ()
+        return bool(rest) and (rest[0] in _FILES or (len(rest) > 1 and rest[0] in _TREES))
 
     return is_control
 

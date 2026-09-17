@@ -20,9 +20,24 @@ from pathlib import Path
 from typing import Any
 
 from edgar.core.message import ErrorKind
+from edgar.sandbox.base import Sandbox
 from edgar.tools.base import ToolContext, ToolResult, builtin_schema
 
 POSIX_SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "ash"}
+
+
+def confined(
+    sandbox: Sandbox | None, argv: Sequence[str], *, cwd: Path, blob_dir: Path, network: bool
+) -> list[str]:
+    """The argv that runs `argv` under the configured backend [PERM-15].
+
+    The writable set is fixed by the harness and never by the model: where edgar
+    was launched, and where spilled output goes. `network` is the answer
+    `permissions/` already gave for this call; a backend only ever takes it away.
+    """
+    if sandbox is None:
+        return list(argv)
+    return sandbox.wrap(argv, cwd=cwd, writable=[cwd, blob_dir], network=network)
 
 
 def shell_argv(program: str, command: str) -> list[str]:
@@ -82,8 +97,9 @@ def _kill(pid: int) -> None:
 
 
 class Shell:
-    def __init__(self, program: str = "auto") -> None:
+    def __init__(self, program: str = "auto", sandbox: Sandbox | None = None) -> None:
         self.program = program
+        self.sandbox = sandbox  # None is `none`: a plain subprocess, the default
         runs = Path(shell_argv(program, "")[0]).name
         self.schema = builtin_schema(
             "shell",
@@ -95,7 +111,14 @@ class Shell:
         )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
-        code, out = await run_argv(shell_argv(self.program, args["command"]), ctx.cwd)
+        argv = confined(
+            self.sandbox,
+            shell_argv(self.program, args["command"]),
+            cwd=ctx.cwd,
+            blob_dir=ctx.blob_dir,
+            network=ctx.network,
+        )
+        code, out = await run_argv(argv, ctx.cwd)
         words = args["command"].split()
         program = re.sub(r"[^A-Za-z0-9._-]", "", Path(words[0]).name) if words else None
         text = f"exit {code}\n{out}"

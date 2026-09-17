@@ -10,9 +10,12 @@ policy and a fresh transcript [SUB-3..SUB-10, ADR-0006].
 #   pick its model: its own, or routing for role "subagent"        [ROUTE-1]
 #   filter the registry to the agent's own `tools:` list
 #   give it what is left of the caller's budget                    [SUB-7]
+#   with `isolation: worktree`, cut it a git worktree and put its
+#   session's cwd there, so every path rule moves with it          [SUB-11]
 #   run a fresh, logged session with the agent's own prompt as its
 #   system prompt and the task text as its only turn               [SUB-3, SUB-4]
 #   turn a raised exception into a tool error, never a crash        [SUB-8]
+#   close the worktree either way, and say what became of it       [SUB-11]
 
 from __future__ import annotations
 
@@ -20,6 +23,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, cast
 
+from edgar.agents import worktree
 from edgar.agents.definition import AgentDefinition
 from edgar.config.schema import BudgetSection, Config, Mode
 from edgar.core.errors import ConfigError, EdgarError
@@ -115,18 +119,26 @@ async def spawn(
         )
     except EdgarError as exc:
         return ToolResult(str(exc), error="validation")
-    session = start(
-        Session(
-            cwd=ctx.cwd,
-            model=selection.model,
-            mode=mode,
-            depth=depth,
-            agent_chain=(*ctx.chain, agent.name),
-        )
+    session = Session(
+        cwd=ctx.cwd,
+        model=selection.model,
+        mode=mode,
+        depth=depth,
+        agent_chain=(*ctx.chain, agent.name),
     )
+    tree = None
+    if agent.isolation == worktree.ISOLATION:
+        # The session id names the tree, so two runs of the same agent never collide.
+        tree, refusal = await worktree.create(ctx.cwd, agent.name, session.id)
+        if tree is None:  # no worktree, no run: never a quiet fallback [SUB-11]
+            return ToolResult(refusal, error="validation")
+        session.cwd = tree.path  # the whole rebase: ToolContext.cwd follows Session.cwd
+    session = start(session)
     check = None
     if agent.verify:  # the agent's own frontmatter, ahead of a loaded skill's [VER-1]
-        check = Check(agent.verify, config.verify.max_attempts, config.shell.program)
+        # The same walls the parent's `shell` runs in: a subagent never widens them.
+        walls = getattr(registry.get("shell"), "sandbox", None)
+        check = Check(agent.verify, config.verify.max_attempts, config.shell.program, walls)
     rt = Runtime(
         provider=provider,
         model=model,
@@ -146,10 +158,16 @@ async def spawn(
         result = await run_turn(session, task, rt)
     except Exception as exc:  # a subagent's own failure surfaces as a tool error [SUB-8]
         return ToolResult(
-            f"agent {agent.name!r} failed: {type(exc).__name__}: {exc}", error="internal"
+            f"agent {agent.name!r} failed: {type(exc).__name__}: {exc}{await _closed(tree)}",
+            error="internal",
         )
     flag = " [budget exhausted: partial result]" if result.reason == "budget_exceeded" else ""
-    return ToolResult(f"{result.text}{flag}")
+    return ToolResult(f"{result.text}{flag}{await _closed(tree)}")
+
+
+async def _closed(tree: worktree.Worktree | None) -> str:
+    # Always in the summary the model and the human both read, both outcomes [SUB-11].
+    return "" if tree is None else f"\n\n{await worktree.finish(tree)}"
 
 
 def _cap(agent: AgentDefinition, ctx: ToolContext) -> float | None:

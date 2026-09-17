@@ -9,6 +9,30 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **A subagent that writes can get its own git worktree.** An agent whose
+  frontmatter says `isolation: worktree` runs in `.edgar/worktrees/<agent>-<session>`
+  on a branch called `edgar/<agent>-<session>`, so two agents editing the same
+  file finish on two branches and your working copy is never touched. The tree is
+  cut from your last commit, so an edit you have not committed yet is invisible to
+  it and safe from it. When the agent is done: if the tree is clean it is removed
+  and the branch keeps the commits; if anything at all is uncommitted, **the tree
+  is kept** and its path, branch and diff stat are printed in the agent's summary,
+  along with the `git worktree remove` line to delete it yourself. Nothing is ever
+  forced and nothing you did not write is ever thrown away. Outside a git
+  repository the agent is refused rather than quietly run unisolated [SUB-11,
+  ADR-0061].
+- **`[shell] sandbox` runs commands inside the platform's own walls.** `bwrap` on
+  Linux, `seatbelt` on macOS, `none` (the default) everywhere. It applies to
+  `shell`, to command tools you declared and to the verify command. The confined
+  process may write only where edgar was launched and where spilled output goes,
+  and reaches the network only when the permission engine already said it could —
+  so a session that has read untrusted content loses the network in the sandbox
+  too. **It confines writes and the network, not reads:** a confined command can
+  still read your files, which is what the design specifies and is said plainly
+  rather than overclaimed. A backend you configure but do not have ends the
+  session with an error instead of silently running unconfined, and
+  `edgar doctor` now prints a line saying which backend is set and which is the
+  best one this machine could run [PERM-15, ADR-0061].
 - **Show the model a picture.** `@photo.png` attaches an image the same way
   `@notes.md` attaches text, and the `read` tool on an image file answers with
   the image instead of "looks binary; not shown". PNG, JPEG, GIF and WebP are

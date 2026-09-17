@@ -1341,7 +1341,7 @@ than one that is honest:
   get around a container. This is why "done" is decided by the verify gate running
   the check itself, never by what the agent reports (§4.2)
 
-### 7.5 Sandbox backends (v1)
+### 7.5 Sandbox backends (v2)
 
 [PERM-15, ADR-0022](adr/0022-ports-and-adapters.md). `shell.sandbox` selects a
 backend for `shell`, command tools and the verify command:
@@ -1349,22 +1349,40 @@ backend for `shell`, command tools and the verify command:
 | Backend | Platform | Mechanism |
 |---|---|---|
 | `none` | all | plain subprocess (default) |
-| `bwrap` | Linux | bubblewrap: read-only root, project and blob dirs writable, network namespace unless allowed |
+| `bwrap` | Linux | bubblewrap: whole filesystem bound read-only, project and blob dirs writable, network namespace unless allowed |
 | `seatbelt` | macOS | `sandbox-exec` profile generated per call |
-| `container` | all, including Windows | Docker or Podman, project mounted, `--network none` unless allowed |
+| `container` | all, including Windows | Docker or Podman, project mounted, `--network none` unless allowed. Past v4, not built |
 
 ```python
 class Sandbox(Protocol):
     name: str
     def available(self) -> bool: ...
-    async def run(self, argv: list[str], *, cwd: Path, env: dict[str, str],
-                  writable: list[Path], network: bool, timeout_s: float) -> ProcessResult: ...
+    def wrap(self, argv: Sequence[str], *, cwd: Path,
+             writable: Sequence[Path], network: bool) -> list[str]: ...
 ```
 
-`network` follows the permission decision for that call, so taint (§7.2) and the
-sandbox reinforce each other. A configured backend that is unavailable fails the
-session start loudly; `doctor` recommends the best available one. Core tests use a
-fake sandbox and run everywhere; backend tests run where the backend exists.
+A backend does not run the process; it returns the argv that would run it
+confined, and `tools/builtin/shell.py`'s `run_argv` starts that. This is a change
+from this section's first sketch, which gave the protocol an `async run(...)`,
+made in M21 ([ADR-0061](adr/0061-m21-isolation-as-built.md)) for two reasons: one
+launcher keeps one process-group kill, and a command line can be asserted on a
+machine that cannot run the backend, which is the only way a bwrap argv gets
+tested at all on a macOS build machine. `container` will need the same shape;
+`docker run` is an argv like any other.
+
+**What the boundary is.** Writes and the network, not reads. A confined process can
+still read anything the user can read. ROADMAP M21 said "cannot read outside the
+allowed roots"; the backends above, as designed here, do not deliver that, and
+M21 shipped the narrower, honest claim rather than a read boundary nobody had
+specified. See [ADR-0061](adr/0061-m21-isolation-as-built.md).
+
+`network` follows the permission decision for that call — `permissions.policy.
+network_allowed(mode, tainted)`, computed per call and carried on
+`ToolContext.network` — so taint (§7.2) and the sandbox reinforce each other, and
+the backend never makes a policy decision of its own. A configured backend that is
+unavailable fails the session start loudly; `doctor` recommends the best available
+one. Core tests use `none` and run everywhere; the generated argv and profile are
+asserted everywhere; a backend is *executed* only where it exists.
 
 ### 7.6 Capability broker (v4)
 
@@ -1857,7 +1875,7 @@ shell = "ask"
 
 [shell]
 program = "auto"                      # [TOOL-11]
-sandbox = "none"                      # none | bwrap | seatbelt | container (v1) [PERM-15]
+sandbox = "none"                      # none | bwrap | seatbelt (v2); container is past v4 [PERM-15]
 
 [browser]                             # what /browser connects [CLI-29, ADR-0033]
 tool = "browse"                       # a command tool wrapping a browser CLI: costs its schema only

@@ -25,6 +25,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from edgar.context.tokens import approx_tokens
+from edgar.sandbox.base import Sandbox
 from edgar.tools.base import Tool, ToolSchema
 
 
@@ -99,10 +100,10 @@ def _defers(tool: Tool) -> bool:
     return tool.schema.kind == "mcp"
 
 
-def core_registry(shell: str = "auto") -> ToolRegistry:
+def core_registry(shell: str = "auto", sandbox: Sandbox | None = None) -> ToolRegistry:
     from edgar.tools.builtin.fs import builtins
 
-    return ToolRegistry(builtins(shell))
+    return ToolRegistry(builtins(shell, sandbox))
 
 
 def registry_for(
@@ -115,6 +116,7 @@ def registry_for(
     mcp: Iterable[Tool] = (),
     ext: Iterable[Tool] = (),
     budget: int | None = None,
+    sandbox: Sandbox | None = None,
 ) -> ToolRegistry:
     """Built-ins and `extra` (the `skill` tool), then the MCP servers' tools, then
     `ext` (an extension's bundled `tools/` [EXT-8]), then `~/.edgar/tools/*.toml`,
@@ -126,4 +128,7 @@ def registry_for(
     folders = [(home / ".edgar" / "tools", "user")]
     if project_exec:
         folders.append((cwd / ".edgar" / "tools", "project"))
-    return ToolRegistry([*builtins(shell), *extra, *mcp, *ext, *load(folders)], budget=budget)
+    # Every tool that starts a process gets the same backend: the built-in `shell`
+    # and each command tool a human declared [PERM-15].
+    custom = load(folders, sandbox)
+    return ToolRegistry([*builtins(shell, sandbox), *extra, *mcp, *ext, *custom], budget=budget)

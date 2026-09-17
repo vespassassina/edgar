@@ -25,8 +25,16 @@ list is done. Read it first, then the three documents under "Read".
   `src/` code: `just loc` read 8,374 of 9,500.
 - **M20 is done** (2026-09-17,
   [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)): images end to end,
-  plus web search and git as example files costing no code. `just loc` reads
-  8,592 of 9,500. **M21, isolation, is next.**
+  plus web search and git as example files costing no code. `just loc` read
+  8,592 of 9,500.
+- **M21 is done and unmerged** (2026-09-17,
+  [ADR-0061](adr/0061-m21-isolation-as-built.md)), on branch
+  `feat/m21-isolation`: worktree subagents and the sandbox backends. `just loc`
+  reads **8,869 of 9,500**. **M22, inspection and the 2.0 release, is next**, with
+  631 lines of code left for it. Four decisions in ADR-0061 are flagged for extra
+  review before merge; §2 (the sandbox is a write and network boundary, **not** a
+  read boundary, against the roadmap's own wording) is the one that matters most,
+  and §6 says `bwrap` has never been executed by anyone.
 - The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
   **v2 is the daily driver**, M18–M22, ≤ 9,500 lines of code. Learning
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
@@ -37,7 +45,7 @@ list is done. Read it first, then the three documents under "Read".
   (`ImageBlock`'s field list, the compaction-elision approach, the
   spill-reuse-versus-new-helper choice) — all three held up on direct
   reading. Not yet pushed to `origin`. Next up: Step 0b (the dogfood week, the
-  maintainer's own task) and Step 4 (M21).
+  maintainer's own task), reviewing M21 (Step 4) and then M22 (Step 5).
 - **Four documentation gaps** were found by the cold subagent that verified the
   web-search example; all four are older than M20 and none is fixed. They are in
   `JOURNAL.md`'s M20 entry: there is no `edgar tools validate` to match
@@ -51,7 +59,7 @@ list is done. Read it first, then the three documents under "Read".
 
 1. [ADR-0057](adr/0057-daily-driver-before-learning.md): why, and the eight
    decisions. Ten minutes.
-2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M21.
+2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M22.
    Every item names its files, requirement IDs, test and size.
 3. [`AGENTS.md`](../AGENTS.md): the standing rules. Lines mean lines of code;
    pseudocode comments in every file you touch; shallow functions; the tour
@@ -186,12 +194,65 @@ What a later milestone needs to know:
   should arrive the same way; ADR-0060's last section says why a built-in
   `web_search` was refused (PRV-15: it would need a default host).
 
-## Step 4 — M21 onward
+## Step 4 — M21, isolation · DONE 2026-09-17, NOT MERGED
 
-The same loop as M18, M19 and M20, item by item, with the milestone's tour page
-as its last item. Never start M22 with M21's tour missing. 908 lines of code are
-left in the v2 budget for M21 and M22; if a milestone would push past 9,500,
-something moves out, the budget does not move.
+Built in three commits on `feat/m21-isolation`, one per roadmap item plus this
+trace. New files: `agents/worktree.py` and the `sandbox/` package
+(`base.py`, `none.py`, `bwrap.py`, `seatbelt.py`); the tour page is
+[`tour/isolation.html`](tour/isolation.html). 277 lines of code against ~350
+estimated, `just loc` 8,869 of 9,500, `just check` green on macOS with 858 tests.
+The decisions are in [ADR-0061](adr/0061-m21-isolation-as-built.md), four of them
+flagged for extra review.
+
+The tour page was created in the **first** commit rather than the last, with the
+sandbox stops marked `planned`, and grown as the code landed. That is a
+deliberate departure from "the tour is item 3": `just check` must be green at
+every commit, and `test_tour.py` fails the moment a `.py` exists with no stop.
+
+What a later milestone needs to know:
+
+- **How `sandbox/base.py` is extended for `container`.** Add `container.py` with
+  a class carrying `name`, `available()` (does `docker` or `podman` answer?) and
+  `wrap(argv, *, cwd, writable, network) -> list[str]` returning
+  `["docker", "run", "--rm", …, "--network", "none", …, *argv]`, then add an
+  instance to `_all()` — **at the end**, because `best()` walks the list backwards
+  and the order *is* the ranking. Nothing else changes: `backend()`, the config
+  literal in `config/schema.py`, `doctor` and every call site already name it.
+  The port is pure on purpose (ADR-0061 §1); a backend that needs to supervise
+  its own process does not fit, and widening the port should be argued in the
+  open rather than bolted on.
+- **`agents/worktree.py`'s cleanup contract, which must not be loosened.**
+  `finish()` treats *any* non-empty `git status --porcelain` as dirty, keeps the
+  tree, and returns a summary naming the path, the branch, the diff stat and the
+  removal command. The tree is only ever removed when it is clean, always from
+  the parent repo, and **never** forced. Nothing deletes a worktree later, and
+  nothing should start: a kept tree holds work a subagent did that nobody has
+  read yet. If you want a human to *find* kept trees more easily, add a line to
+  `edgar doctor` that lists them — do not add a registry file, and do not add
+  automatic cleanup.
+- **`create()` refuses rather than degrades.** Outside a git repository, or on
+  any failure creating the tree, the subagent does not run at all. Any future
+  isolation mode should copy that: a quiet fallback to sharing the tree is the
+  failure this feature exists to prevent.
+- **A sandbox never decides.** The network answer comes from
+  `permissions.policy.network_allowed(mode, tainted)`, is recomputed per call in
+  `tools/execute.py` (taint can be set by an earlier call in the same turn) and
+  rides on `ToolContext.network`. The writable set is `[cwd, blob_dir]`, built by
+  the harness. If a future feature needs another writable root, it goes in
+  `confined()` in `tools/builtin/shell.py` and nowhere else.
+- **`.edgar/worktrees/` must stay ignored** (it is in
+  `templates/gitignore.fragment`). Without `.edgar/` ignored, a worktree always
+  reads dirty and is therefore always kept: safe, but useless.
+
+## Step 5 — M22, inspection and the 2.0 release
+
+The same loop, item by item, with the milestone's tour work as its last item.
+**631 lines of code are left** in the v2 budget; M22 estimates ~440. If it would
+push past 9,500, something moves out, the budget does not move.
+
+One open offer: the roadmap's "Never yet" item 9 allows the `container` sandbox
+backend if budget remains at the end of M22. M21 did not build it speculatively.
+It is perhaps 25 lines on the port as it stands; **ask before building it.**
 
 ## Proposed diff to `AGENTS.md` (maintainer applies by hand)
 
@@ -217,10 +278,28 @@ still describe the removable tier as "v2". Proposed wording:
 
 `CLAUDE.md` is already updated on this branch.
 
+## Proposed diff to `src/edgar/templates/config.toml` (maintainer applies by hand)
+
+The shipped config template is hand-authored under the same rule as
+`config.toml` itself (ADR-0008), so M21 did not edit it. `[shell] sandbox` is
+read and honoured by the code, but a fresh `edgar init` does not mention it.
+Proposed, under the existing `[shell]` block:
+
+```diff
+ [shell]
+ program = "auto"
++# The walls a shell call, a command tool and the verify command run inside.
++# "none" (the default) is a plain subprocess; "bwrap" needs bubblewrap on Linux,
++# "seatbelt" uses macOS's sandbox-exec. A backend you name but do not have ends
++# the session with an error rather than running unconfined. It confines writes
++# and the network, not reads. `edgar doctor` says which is best here. [PERM-15]
++# sandbox = "none"
+```
+
 ## Resume commands
 
 ```bash
-git switch main
+git switch feat/m21-isolation
 ```
 
 ```bash
