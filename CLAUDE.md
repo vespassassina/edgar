@@ -26,10 +26,15 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built at
 5,000 lines of code. **0.1.0 is released**: cut from `main` on 2026-09-14 with M0
 to M8 in it, published to PyPI by the `v0.1.0` GitHub release, so
-`uvx edgar-harness` now runs it. **v1.0 is code-complete** (M7 to M11, ADR-0056) at
-exactly 8,000 of 8,000 lines of code, not yet tagged. **What comes next is v2, the
-daily driver** (M18 to M22, ADR-0057), not learning: read `docs/HANDOFF.md` before
-anything else. M7 is done: facts,
+`uvx edgar-harness` now runs it. **v1.0 is tagged and released** (M7 to M11,
+ADR-0056) at exactly 8,000 of 8,000 lines of code, on PyPI, `ghcr.io` and as
+GitHub release binaries for all three platforms. **v2, the daily driver, is
+underway** (M18 to M22, ADR-0057), not learning: M18 (tours for v1 and the map,
+ADR-0058) and M19 (working state — `@path` attachments, plan mode and the
+`todo` tool, `edgar context show`, `edgar sessions compact ID`,
+`edgar config show --resolved`, ADR-0059) are both done; `just loc` reads 8,374
+of the v2 budget of 9,500. **M20, seeing and searching, is next**: read
+`docs/HANDOFF.md` before anything else. M7 is done: facts,
 `recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
 `/history`, the daily cap and `edgar cost` (ADR-0046). M8 is done: MCP servers over stdio and
 Streamable HTTP, started only when a tool is called, deferred schemas through
