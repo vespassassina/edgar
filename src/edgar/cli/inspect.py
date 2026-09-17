@@ -170,6 +170,48 @@ def _conditions(rule: Route) -> str:
     return ", ".join(set_here) or "no conditions: it matches anything"
 
 
+# edgar agents list | validate:
+#   list      every agent a session here would find, with its scope and its model
+#   validate  every file discovery had to skip, with its path, line and reason
+#
+# Both read `agents/discovery.py`'s own walk, extensions folded in exactly as a
+# session folds them [SUB-1, SUB-2, EXT-8], so what they print is what a turn
+# would get. A model of "-" means no `model:` in the file: routing picks one for
+# the subagent role, which `edgar route explain` will show.
+
+
+def agents_command(argv: list[str], cwd: Path, home: Path) -> int:
+    from edgar.agents.discovery import discover
+    from edgar.cli import trust
+    from edgar.extensions.discovery import disabled_from_config
+    from edgar.extensions.discovery import discover as discover_extensions
+    from edgar.skills.discovery import discover as discover_skills
+
+    if argv not in (["list"], ["validate"]):
+        print("usage: edgar agents list | edgar agents validate", file=sys.stderr)
+        return 2
+    config = load(cwd, home=home)
+    found = discover(cwd, home)
+    if trust.trusted(cwd, config, home):  # an extension's agents, on the same terms
+        discover_extensions(
+            cwd, home, discover_skills(cwd, home), found, disabled_from_config(config.later)
+        )
+    for warning in found.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+    if argv == ["list"]:
+        for agent in found.agents.values():
+            print(
+                f"{agent.name:<24} {agent.origin:<12} {agent.model or '-':<28} {agent.description}"
+            )
+        if not found.agents:
+            print("no agents; add one as .edgar/agents/NAME.md")
+        return 0
+    for problem in found.problems:
+        print(problem, file=sys.stderr)
+    print(f"{len(found.agents)} agents ok, {len(found.problems)} with problems")
+    return 1 if found.problems else 0
+
+
 SECRET = ("api_key", "token", "secret", "password")
 
 

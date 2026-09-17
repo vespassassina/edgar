@@ -21,6 +21,7 @@ ADMIN = {
     "context",
     "doctor",
     "route",
+    "agents",
     "trust",
     "permissions",
     "sessions",

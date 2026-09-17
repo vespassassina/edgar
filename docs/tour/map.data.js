@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8964,
+    "loc": 9013,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6363,
+        "loc": 6367,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2030,
+            "loc": 2034,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 223,
+                "loc": 226,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 151,
+                "loc": 152,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -738,14 +738,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2115,
+        "loc": 2131,
         "status": "built",
         "children": [
           {
             "id": "v1/agents",
             "name": "agents/",
             "kind": "package",
-            "loc": 259,
+            "loc": 275,
             "status": "built",
             "children": [
               {
@@ -766,7 +766,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 86,
+                "loc": 102,
                 "summary": "Finding subagents: `.edgar/agents/*.md`, project over user [SUB-1, SUB-2].",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -1175,7 +1175,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 486,
+        "loc": 515,
         "status": "built",
         "children": [
           {
@@ -1203,7 +1203,7 @@ window.EDGAR_MAP = {
             "id": "v2/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 134,
+            "loc": 163,
             "status": "built",
             "children": [
               {
@@ -1212,7 +1212,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "cli",
-                "loc": 134,
+                "loc": 163,
                 "summary": "The commands that print or shrink what a session holds [CTX-2, CTX-10].",
                 "stop": "working.html#w4",
                 "status": "built",

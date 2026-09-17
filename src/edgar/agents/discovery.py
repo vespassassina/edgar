@@ -40,7 +40,7 @@ def scan(folder: Path, origin: str, found: Found) -> None:
         try:
             agent = _read(path, origin)
         except (OSError, UnicodeDecodeError, ValueError) as exc:
-            found.problems.append(f"{path}: {exc}")
+            found.problems.append(f"{path}:{line_of(path, str(exc))}: {exc}")
             continue
         old = found.agents.get(agent.name)
         if old is not None:
@@ -48,6 +48,25 @@ def scan(folder: Path, origin: str, found: Found) -> None:
                 f"the {origin} agent {agent.name!r} replaces the {old.origin} one"
             )
         found.agents[agent.name] = agent
+
+
+def line_of(path: Path, message: str) -> int:
+    """Which line a problem sits on, so `edgar agents validate` can point at it.
+
+    Every rule in `_agent()` names the key it is about in backticks, so the line
+    is that key's line in the frontmatter. A problem about the file as a whole —
+    no frontmatter, not a mapping — belongs on line 1, and so does a key that is
+    missing altogether rather than wrong.
+    """
+    key = re.search(r"`(\w+)", message)
+    if key is None:
+        return 1
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return 1
+    at = next((i for i, line in enumerate(lines, 1) if re.match(rf"\s*{key[1]}\s*:", line)), 1)
+    return at
 
 
 def _read(path: Path, origin: str) -> AgentDefinition:

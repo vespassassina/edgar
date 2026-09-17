@@ -150,6 +150,39 @@ def test_route_explain_names_the_rule_that_decided_and_contacts_nothing(
     assert "rule never-here" in out and "skipped for role main" in out
 
 
+def test_agents_list_and_validate_point_at_the_line_that_is_wrong(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[SUB-1, SUB-2] validate says file, line and reason; list says scope and model."""
+    folder = tmp_project / ".edgar" / "agents"
+    folder.mkdir(parents=True)
+    (folder / "reviewer.md").write_text(
+        '---\nname: reviewer\ndescription: reviews a diff\nmodel: "fake/big"\n---\nReview it.\n'
+    )
+    (folder / "broken.md").write_text(
+        "---\nname: broken\ndescription: a bad one\nmode: sideways\n---\nGo.\n"
+    )
+    capsys.readouterr()
+
+    assert admin.command(["agents", "list"], tmp_project, home) == 0
+    out = capsys.readouterr().out
+    assert "reviewer" in out and "project" in out and "fake/big" in out
+    assert "broken" not in out  # it never loaded, so no session would see it
+
+    assert admin.command(["agents", "validate"], tmp_project, home) == 1
+    captured = capsys.readouterr()
+    assert "1 agents ok, 1 with problems" in captured.out
+    # The line number is the offending key's own line, not the file's first.
+    assert f"{folder / 'broken.md'}:4: `mode` must be one of" in captured.err
+
+
+def test_agents_says_how_to_use_it(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert admin.command(["agents", "frobnicate"], tmp_project, home) == 2
+    assert "usage: edgar agents list" in capsys.readouterr().err
+
+
 def test_route_explain_says_how_to_use_it(
     tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

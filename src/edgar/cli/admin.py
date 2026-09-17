@@ -40,7 +40,7 @@ USAGE = """usage: edgar init | edgar doctor [--network]
        edgar mcp list | test NAME | login NAME | logout NAME
        edgar ext list | edgar login PROVIDER | edgar logout PROVIDER
        edgar context show [SESSION] | edgar config show --resolved
-       edgar route explain [PROMPT]"""
+       edgar route explain [PROMPT] | edgar agents list | validate"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
@@ -57,6 +57,10 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         from edgar.cli.inspect import config_show  # the layered config and its origins
 
         return config_show(argv[1:], cwd, home)
+    if argv[0] == "agents":
+        from edgar.cli.inspect import agents_command  # the same walk a session runs
+
+        return agents_command(argv[1:], cwd, home)
     if argv[0] == "route":
         from edgar.cli.inspect import route_explain  # the pure function a turn calls
 
