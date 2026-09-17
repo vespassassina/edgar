@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from edgar.config.schema import ProviderSection
+from edgar.context.tokens import approx_message_tokens, image_tokens
 from edgar.core.errors import ConfigError
 from edgar.core.message import ImageBlock, Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.units import pairing_violations
@@ -160,3 +161,45 @@ def test_a_server_edgar_knows_nothing_about_does_not_claim_to_see() -> None:
     assert not quirks_for("mine", ProviderSection(base_url="http://localhost:1234/v1")).images
     stated = ProviderSection(base_url="http://localhost:1234/v1", images=True)
     assert quirks_for("mine", stated).images
+
+
+# 4. What a picture costs: geometry, per family, as a pure function [ADR-0052].
+
+
+def test_a_small_image_costs_one_tile_on_chat_completions() -> None:
+    assert image_tokens(ImageBlock("image/png", "b.png", 100, 100)) == 85 + 170
+
+
+def test_a_wide_image_costs_a_tile_per_512_pixels() -> None:
+    # 1024x512 covers two tiles across and one down.
+    assert image_tokens(ImageBlock("image/png", "b.png", 1024, 512)) == 85 + 2 * 170
+
+
+def test_an_oversized_image_is_shrunk_before_it_is_tiled() -> None:
+    # 4096x4096 fits the 2048 square, then its short side down to 768: 2x2 tiles.
+    assert image_tokens(ImageBlock("image/png", "b.png", 4096, 4096)) == 85 + 4 * 170
+
+
+def test_anthropic_charges_by_area_not_by_tiles() -> None:
+    block = ImageBlock("image/png", "b.png", 750, 1000)
+    assert image_tokens(block, "anthropic") == 1000  # 750 * 1000 / 750
+
+
+def test_an_unmeasured_image_costs_one_tile_rather_than_nothing() -> None:
+    # A header the spill could not read leaves 0x0; charging nothing would let a
+    # session drift over the window with no warning [CTX-3].
+    assert image_tokens(ImageBlock("image/png", "b.png")) == 85 + 170
+
+
+def test_counting_a_message_includes_its_images() -> None:
+    shot = ImageBlock("image/png", "b.png", 100, 100)
+    plain = [Message("user", (TextBlock("look"),))]
+    withimage = [Message("user", (TextBlock("look"), shot))]
+    assert approx_message_tokens(withimage) - approx_message_tokens(plain) == 85 + 170
+
+
+def test_counting_a_message_includes_an_image_a_tool_produced() -> None:
+    shot = ImageBlock("image/png", "b.png", 100, 100)
+    result = ToolResultBlock("tu_1", (TextBlock("read"),), images=(shot,))
+    counted = approx_message_tokens([Message("tool", (result,))])
+    assert counted > 85 + 170

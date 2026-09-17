@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8530,
+    "loc": 8551,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6221,
+        "loc": 6242,
         "status": "built",
         "children": [
           {
@@ -185,7 +185,7 @@ window.EDGAR_MAP = {
             "id": "core/context",
             "name": "context/",
             "kind": "package",
-            "loc": 248,
+            "loc": 269,
             "status": "built",
             "children": [
               {
@@ -230,7 +230,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 20,
+                "loc": 41,
                 "summary": "Token counting. Approximate for now; exact counts come from providers (OQ-3, M2).",
                 "stop": "index.html#s22",
                 "status": "built",

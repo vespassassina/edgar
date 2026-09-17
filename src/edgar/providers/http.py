@@ -109,10 +109,10 @@ class HttpAdapter:
         """Characters over four, scaled by the last observed ratio of the provider's
         own count to ours. Exact where usage is returned, close enough before
         [CTX-9, OQ-3]; the ratio also absorbs the tool schemas sent alongside."""
-        return round(approx_message_tokens(messages) * self._ratio)
+        return round(approx_message_tokens(messages, self.family) * self._ratio)
 
     def observe(self, messages: Sequence[Message], usage: Usage) -> None:
-        approx = approx_message_tokens(messages)
+        approx = approx_message_tokens(messages, self.family)
         if usage.input_tokens and approx and not usage.approximate:
             self._ratio = usage.input_tokens / approx
 

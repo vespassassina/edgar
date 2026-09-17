@@ -65,7 +65,7 @@ class FakeProvider:
         return ["test"]
 
     def count_tokens(self, messages: Sequence[Message]) -> int:
-        return approx_message_tokens(messages)
+        return approx_message_tokens(messages, self.family)
 
 
 def _rules(messages: Sequence[Message]) -> tuple[str, ToolUseBlock | None]:
