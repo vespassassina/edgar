@@ -259,6 +259,7 @@ async def interact(
     project_exec: bool = True,
     resume: str | None = None,
     plan: bool = False,
+    no_history: bool = False,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -266,7 +267,9 @@ async def interact(
     from prompt_toolkit.output import ColorDepth
     from prompt_toolkit.patch_stdout import patch_stdout
 
-    root, config = prepare(cwd, model=model, mode=mode, env=env, home=home, confirm_yolo=_yolo)
+    root, config = prepare(
+        cwd, model=model, mode=mode, env=env, home=home, confirm_yolo=_yolo, no_history=no_history
+    )
     home = home or Path.home()
     if project_exec and not trust.trusted(root, config, home):  # [PERM-13]
         print(trust.describe(root, config))

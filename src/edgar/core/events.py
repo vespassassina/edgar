@@ -335,9 +335,12 @@ class FactProposed(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FactSaved(Event):
-    # cli/repl.py and cli/slash.py, when a fact goes active.
+    # cli/repl.py and cli/slash.py, when a fact goes active. `text` is set when
+    # nobody else is about to say what was saved, so a fact the harness learned on
+    # its own is shown rather than added quietly (v3) [MEM-8].
     fact_id: int
     provenance: str
+    text: str = ""
 
 
 # learning (v3): the two events the learning path is allowed to read [ADR-0017]

@@ -21,7 +21,9 @@ from __future__ import annotations
 import os
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
+from importlib import import_module
 from pathlib import Path
+from typing import Any
 
 from edgar.agents.discovery import Found as AgentsFound
 from edgar.agents.discovery import discover as discover_agents
@@ -87,11 +89,14 @@ def prepare(
     env: Mapping[str, str] | None = None,
     home: Path | None = None,
     confirm_yolo: Callable[[], bool] | None = None,
+    no_history: bool = False,
 ) -> tuple[Path, Config]:
     root = (cwd or Path.cwd()).resolve()
     if not root.is_dir():
         raise UsageError(f"--cwd {root} is not a directory")
-    flags = {}
+    flags: dict[str, tuple[Any, str]] = {}
+    if no_history:  # the opt-out MEM-15 asks for, as one more layered override
+        flags["memory.history"] = (False, "flag --no-history")
     if mode is not None:
         flags["permissions.mode"] = (mode, "flag --mode")
     if model is not None:
@@ -357,8 +362,28 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
         if session.model != rt.name:
             session.record({"type": "model", "model": rt.name})
         session.mode, session.model = mode, rt.name
+    _learning(s, bus, session)
     bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
     return session, rt
+
+
+def _learning(s: Setup, bus: EventBus, session: Session) -> None:
+    # v3 attaches by name, so no Core, v1 or v2 module imports edgar.learning and
+    # the import graph stays one-way [NFR-12, ADR-0015]. A missing package is the
+    # deleted tier, not an error: CI runs the suite exactly that way.
+    try:
+        learning = import_module("edgar.learning")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return
+    learning.attach(
+        bus,
+        root=s.root,
+        session=session.id,
+        memory=s.memory,
+        scope=s.scope,
+        autolearn=s.config.memory.autolearn,
+        history=s.config.memory.history,
+    )
 
 
 def spending(home: Path) -> Store:

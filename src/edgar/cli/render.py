@@ -16,6 +16,7 @@ from edgar.core.events import (
     AsideFinished,
     Compacted,
     Event,
+    FactSaved,
     ModelSelected,
     ProviderRetry,
     ReasoningDropped,
@@ -148,6 +149,8 @@ def _notice(event: Event) -> str | None:
         return f"repaired a {event.tool} call ({event.repair})"
     if isinstance(event, ModelSelected):
         return f"model: {event.model} ({event.reason})"
+    if isinstance(event, FactSaved) and event.text:
+        return f"remembered: {event.text}"
     if isinstance(event, Compacted):
         return f"compacted {event.before:,} → {event.after:,} tokens ({event.stages})"
     return None

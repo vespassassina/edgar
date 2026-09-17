@@ -56,13 +56,20 @@ INDEXES = ("words", "grams")
 COLUMNS = "id, scope, text, provenance, confidence, status, supersedes"
 NEAR = 0.5  # word overlap at which a new fact may contradict an old one
 
+# The provenances a fact may be active with. Every one of them is text a human
+# typed or a record the harness computed, and the list is closed: anything else
+# can reach `pending` at most, and a pending fact is never injected. A property
+# test walks generated trajectories and asserts no active fact escapes this set
+# [MEM-8, ADR-0017].
+ACTIVE_FROM = ("user", "user-prompt", "user-feedback", "error-template")
+
 
 @dataclass(frozen=True, slots=True)
 class Fact:
     id: int
     scope: str
     text: str
-    provenance: str  # user | model-proposed (v2 adds user-prompt, error-template, …)
+    provenance: str  # user | user-prompt | user-feedback | error-template | model-proposed
     confidence: float
     status: str  # pending | active | superseded | forgotten
     supersedes: int | None = None
@@ -163,8 +170,9 @@ class Memory(Store):
         if same:
             return same[0]
         rival = next((f.id for f in active if overlap(f.text, text) >= NEAR), None)
-        # 3. Only typed text goes straight to active [MEM-8].
-        status = "active" if provenance == "user" and rival is None else "pending"
+        # 3. Only typed text and harness-computed records go straight to active;
+        #    a rival sends even those to a human first [MEM-8, MEM-10].
+        status = "active" if provenance in ACTIVE_FROM and rival is None else "pending"
         with self._op() as op:
             fact = op.insert(scope, text, provenance, status, rival)
             self._evict(op, scope)
