@@ -44,6 +44,18 @@ list is done. Read it first, then the three documents under "Read".
   yet. See `JOURNAL.md`'s "fix: the main turn's routing context was always
   bare" entry. `just loc` now reads **9,306 of 9,500**, 194 lines of headroom
   left in the v2 budget.
+- **M12 is done and merged** (2026-09-17,
+  [ADR-0063](adr/0063-m12-learning-foundations-as-built.md)): autolearn from a
+  typed directive, error facts from a tool failure that repeats three times,
+  `.edgar/history.md`, `edgar stats`, `edgar history show|distill`, and a
+  property test over generated hostile trajectories proving the learning
+  boundary holds. `TARGET_TIER` flipped to `"v3"`; `just loc` reads **9,359 of
+  9,500** for `src/` without the removable packages (141 lines of headroom for
+  all of M13, M14 and M15) and 9,766 of 12,000 for the v3 tier total. One gap
+  found while wiring it, out of scope and left for M13: `tools/execute.py`'s
+  `_failed()` returns before emitting `ToolFinished`, so validation,
+  permission-denied and unknown-tool-name failures never reach the bus and
+  cannot become error facts. **M13, the controller, is next.**
 - **M21 is done and merged** (2026-09-17,
   [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
   sandbox backends. Two of
@@ -314,6 +326,63 @@ One open offer, still open: the roadmap's "Never yet" item 9 allows the
 `container` sandbox backend if budget remains. 195 lines of code remain, and it
 is perhaps 25 on the port as it stands; **ask before building it**, and weigh it
 against PRV-14, which was dropped and has the better claim.
+
+## Step 6 — M12, learning foundations · DONE AND MERGED 2026-09-17
+
+Built in five commits on `feat/m12-learning-foundations`: events (`ToolFinished`
+gained `error: ErrorRecord | None`, plus `PromptTyped` and `SkillsActivated`),
+the tier flip, the `learning/` package (`experience.py`, `learner.py`,
+`error_facts.py`, `history.py`, `cli.py`) with the tour page and stop `s31`
+turned into a link, the tests including the property test, and the trace. New
+package: `src/edgar/learning/`; new tour page `docs/tour/learning.html`. 407
+lines of code against the budget, `just loc` 9,359 of 9,500 (`src/` without the
+removable packages) and 9,766 of 12,000 (v3 total), `just check` green with 917
+tests. The decisions are in
+[ADR-0063](adr/0063-m12-learning-foundations-as-built.md).
+
+What a later milestone needs to know:
+
+- **The boundary is a subscription, not a filter.** `Learner` reads exactly one
+  event, `PromptTyped`, and only at `depth == 0`; `ErrorFacts` reads exactly one
+  field, `ToolFinished.error`. Neither opens a file, reads a transcript or
+  scans text for anything unsafe — there is nothing to filter, because the
+  excluded sources (tool output, model text, a subagent's prompt, piped stdin,
+  an `@path` body) physically cannot reach either event. Copy this shape for
+  M13's controller and M14's synthesiser: subscribe narrowly, never guess.
+- **The property test is the one to extend, not duplicate.**
+  `tests/property/test_learning_boundary.py` drives a generated trajectory of
+  typed lines, model text, tool calls and failures — with attacker-chosen text
+  tainted so it can be told apart — through the real subscribers on a real bus,
+  and asserts no tainted byte ever reaches an active fact. A future learning
+  source should be added as a new step kind here before it is trusted.
+- **`ToolFinished.error` has a real gap, left for M13.** `tools/execute.py`'s
+  `_failed()` helper returns a result directly, before `ToolStarted` or
+  `ToolFinished` is ever emitted, for three failure kinds: unknown tool name
+  (`not_found`), schema validation (`validation`), and permission/hook denial
+  (`permission_denied`). `ErrorFacts` can never see these three kinds. This
+  does not break the core ADR-0017 example (a shell command's binary-not-found
+  failure happens inside real execution, past `ToolStarted`, a different code
+  path) — but it is a real blind spot if M13 wants to learn from denials.
+- **`edgar stats` and `edgar history show|distill` live in `learning/cli.py`**,
+  not beside the other inspection commands in `cli/inspect.py`, because
+  `tests/unit/test_architecture.py`'s import-graph check catches a
+  function-level `import edgar.learning` exactly like a top-level one.
+  `cli/main.py` dispatches to it by name with `importlib`. Any future v3/v4
+  command needs the same shape.
+- **`history distill` can never produce an active fact**, not by a check but by
+  construction: it saves with provenance `"distilled"`, which is not in
+  `memory/store.py`'s `ACTIVE_FROM`, so the store puts it in `pending` no
+  matter how many times a pattern repeats. Do not add `"distilled"` to
+  `ACTIVE_FROM` without a new ADR — that is ADR-0017's rule, not an oversight.
+- **`.edgar/history.md`, `.edgar/history.1.md` and `.edgar/learning.db` are
+  gitignored by default** (OQ-1, resolved in `templates/gitignore.fragment`):
+  one person's sessions, not the project's shared state.
+- MEM-14's out-of-band model call to condense a long prompt was **cut**:
+  `history.py`'s `condense()` keeps the first 40 words and says how many were
+  dropped, no model call. The verbatim prompt is kept in `learning.db`, so a
+  later milestone can add the call over the same data if it earns its keep —
+  see ADR-0063's "What was cut" section, since this is the one place the build
+  agent flagged as a decision the maintainer might make differently.
 
 ## Proposed diff to `AGENTS.md` (maintainer applies by hand)
 
