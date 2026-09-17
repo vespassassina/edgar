@@ -116,6 +116,7 @@ async def execute(
             truncated=block.truncated,
             blob=block.blob,
             image=result.image.ref if result.image else None,
+            error=block.error,  # the record, never the message [MEM-22]
         )
     )
     return block

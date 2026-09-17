@@ -81,7 +81,8 @@ class MemorySection:
     pinned_max: int = 20  # facts in the prompt, chosen at session start [MEM-6]
     scope_cap: int = 500  # active facts per scope; beyond it the least useful go [MEM-11]
     retriever: str = "fts5"  # or a plugin's name under edgar.retrievers [MEM-24]
-    autolearn: bool = True  # read from v2 on [MEM-8]
+    autolearn: bool = True  # read from v3 on [MEM-8]
+    history: bool = True  # write .edgar/history.md; `--no-history` turns it off [MEM-15]
 
 
 @dataclass(frozen=True, slots=True)

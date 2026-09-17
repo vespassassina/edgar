@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 9304,
+    "loc": 9739,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6556,
+        "loc": 6608,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2043,
+            "loc": 2083,
             "status": "built",
             "children": [
               {
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 152,
+                "loc": 160,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 173,
+                "loc": 176,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -80,7 +80,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 136,
+                "loc": 139,
                 "summary": "What reaches the terminal [CLI-5, CLI-15, CLI-21, CLI-23].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 306,
+                "loc": 310,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 335,
+                "loc": 357,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -152,7 +152,7 @@ window.EDGAR_MAP = {
             "id": "core/config",
             "name": "config/",
             "kind": "package",
-            "loc": 391,
+            "loc": 392,
             "status": "built",
             "children": [
               {
@@ -173,7 +173,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "config",
-                "loc": 147,
+                "loc": 148,
                 "summary": "The config model (BLUEPRINT §14). The dataclasses are the schema.",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 779,
+            "loc": 789,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 191,
+                "loc": 201,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -632,7 +632,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 598,
+            "loc": 599,
             "status": "built",
             "children": [
               {
@@ -665,7 +665,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 154,
+                "loc": 155,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -750,7 +750,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2233,
+        "loc": 2234,
         "status": "built",
         "children": [
           {
@@ -982,7 +982,7 @@ window.EDGAR_MAP = {
             "id": "v1/memory",
             "name": "memory/",
             "kind": "package",
-            "loc": 391,
+            "loc": 392,
             "status": "built",
             "children": [
               {
@@ -1039,7 +1039,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "memory",
-                "loc": 205,
+                "loc": 206,
                 "summary": "Facts: short durable notes, kept in SQLite and injected as data [MEM-3, MEM-5].",
                 "stop": "memory.html#m1",
                 "status": "built",
@@ -1363,8 +1363,8 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 0,
-        "status": "planned",
+        "loc": 382,
+        "status": "built",
         "children": [
           {
             "id": "v3/controller",
@@ -1415,9 +1415,21 @@ window.EDGAR_MAP = {
             "id": "v3/learning",
             "name": "learning/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 382,
+            "status": "built",
             "children": [
+              {
+                "path": "src/edgar/learning/cli.py",
+                "name": "cli.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "learning",
+                "loc": 52,
+                "summary": "`edgar stats` and `edgar history show|distill` [MEM-19, MEM-17].",
+                "stop": "learning.html#l4",
+                "status": "built",
+                "port": false
+              },
               {
                 "path": "src/edgar/learning/curator.py",
                 "name": "curator.py",
@@ -1436,10 +1448,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "learning",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s31",
-                "status": "planned",
+                "loc": 61,
+                "summary": "Facts templated from ErrorRecords, saved only after repeats [MEM-22].",
+                "stop": "learning.html#l3",
+                "status": "built",
                 "port": false
               },
               {
@@ -1448,10 +1460,22 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "learning",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s31",
-                "status": "planned",
+                "loc": 166,
+                "summary": "What each run did, recorded from the bus so nothing has to be re-derived [MEM-18].",
+                "stop": "learning.html#l2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/learning/history.py",
+                "name": "history.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "learning",
+                "loc": 67,
+                "summary": "`history.md`: what happened, in a file a person can read [MEM-12..17].",
+                "stop": "learning.html#l4",
+                "status": "built",
                 "port": false
               },
               {
@@ -1460,10 +1484,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "learning",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s31",
-                "status": "planned",
+                "loc": 36,
+                "summary": "Autolearn: a fact from a line a human typed, and from nothing else [MEM-8, MEM-9].",
+                "stop": "learning.html#l1",
+                "status": "built",
                 "port": false
               },
               {

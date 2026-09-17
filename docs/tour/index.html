@@ -32,12 +32,13 @@
       <li><a href="working.html">Working state</a></li>
       <li><a href="media.html">Seeing and searching</a></li>
       <li><a href="isolation.html">Isolation</a></li>
+      <li><a href="learning.html">Learning</a></li>
       <li><a href="map.html">The map</a></li>
     </ul>
   </div>
   <div class="ak-meta">
-    <span class="ak-pill ak-pill-ok">Built</span> M0 to M11<br>
-    <span class="ak-pill ak-pill-warn">Planned</span> M12 to M17, as v3 and v4<br>
+    <span class="ak-pill ak-pill-ok">Built</span> M0 to M11, and M12<br>
+    <span class="ak-pill ak-pill-warn">Planned</span> M13 to M17, the rest of v3 and v4<br>
     Kept in sync by a test
   </div>
 </header>
@@ -84,7 +85,7 @@
   </ol>
   <p class="ak-eyebrow toc-part"><a href="#v2">III. v3 and v4</a><span class="count" data-count="v2"></span></p>
   <ol class="ak-nav">
-    <li class="planned"><a href="#s31"><span class="n">31</span>Learning (M12)</a></li>
+    <li><a href="#s31"><span class="n">31</span>Learning (M12)</a></li>
     <li class="planned"><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
     <li class="planned"><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
     <li class="planned"><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
@@ -147,19 +148,20 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
 <table class="ak-table" id="sizes">
   <thead><tr><th>Package</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
   <tbody>
-    <tr data-package="core"><td><code>core/</code></td><td class="loc">~700</td><td>The turn loop and the types everything else speaks in</td></tr>
+    <tr data-package="core"><td><code>core/</code></td><td class="loc">~790</td><td>The turn loop and the types everything else speaks in</td></tr>
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,450</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,320</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
     <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~305</td><td>Finding skills, reading only their frontmatter, deterministic activation, and the audit before a copy (v1, v2)</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
-    <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
+    <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~290</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,350</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,470</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
     <tr data-package="sandbox"><td><code>sandbox/</code></td><td class="loc">~110</td><td>The Sandbox port and its backends: nothing, bubblewrap, seatbelt (v2)</td></tr>
+    <tr data-package="learning"><td><code>learning/</code></td><td class="loc">~410</td><td>Telemetry, autolearn from typed text, error facts, <code>history.md</code> (v3)</td></tr>
     <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
   </tbody>
 </table>
@@ -804,12 +806,19 @@ flowchart LR
     sched["schedule/tick.py"] -->|"runs edgar -p on a clock"| v1
 </pre></div>
 
-<article class="stop planned" id="s31" data-files="src/edgar/learning/learner.py src/edgar/learning/error_facts.py src/edgar/learning/experience.py">
+<article class="stop" id="s31" data-files="src/edgar/learning/learner.py src/edgar/learning/error_facts.py src/edgar/learning/experience.py">
   <h4><span class="n">31</span>Learning foundations</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M12 · planned</span> <code>learning/learner.py</code> <code>learning/error_facts.py</code> <code>learning/experience.py</code></p>
-  <p>Learning from what you type and from what breaks. Nothing on this path reads
-  tool output, error text or fetched content, and that is enforced by what each
-  function accepts, not by filtering. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m12--learning-foundations">Roadmap: M12</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/learner.py"><code>learning/learner.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/error_facts.py"><code>learning/error_facts.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/experience.py"><code>learning/experience.py</code></a></p>
+  <p class="look">Look for: <code>Learner</code> <code>extract</code> <code>ErrorFacts</code> <code>TEMPLATES</code> <code>Recorder</code> <code>Stats</code></p>
+  <p>M12 has a tour of its own: <a href="learning.html">Learning</a>, four stops on the
+  boundary, the telemetry, the error templates and <code>history.md</code>. What to
+  carry from here: <code>Learner</code> subscribes to exactly one event,
+  <code>PromptTyped</code>, which is built in two places from the line you typed and
+  from nothing else, so a fetched page, a piped file and a tool result have no road to
+  a fact. The other source is an <code>ErrorRecord</code>'s four fields, templated
+  rather than quoted, and only after the same failure has happened three times. Every
+  other candidate — the model's <code>remember</code> call,
+  <code>edgar history distill</code> — lands pending and waits for a human.</p>
 </article>
 
 <article class="stop planned" id="s32" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/apply.py">

@@ -34,6 +34,8 @@ def test_read_a_file_with_the_fake_model(
     assert recorder.names == [
         "ModelSelected",
         "SessionStarted",
+        "PromptTyped",  # the -p argument, before attach() reads anything [MEM-9]
+        "SkillsActivated",
         "TurnStarted",
         "RequestStarted",
         "RequestFinished",

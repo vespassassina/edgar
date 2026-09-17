@@ -65,6 +65,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--plan", action="store_true", help="plan first: read-only until /go [CLI-20]"
     )
     parser.add_argument("--quiet", action="store_true", help="no status line")
+    parser.add_argument(
+        "--no-history", action="store_true", help="do not write .edgar/history.md [MEM-15]"
+    )
     parser.add_argument("--show-thinking", action="store_true", help="show reasoning")
     parser.add_argument("--no-color", action="store_true", help="no colour (also NO_COLOR)")
     parser.add_argument("--verify", metavar="CMD", help="the check that decides done [CLI-17]")
@@ -81,6 +84,12 @@ def main(argv: list[str] | None = None) -> int:
             return _prompt_command(argv[1:])
         if argv[:1] == ["models"]:
             return _models_command(argv[1:])
+        if argv[:1] in (["stats"], ["history"]):
+            # v3's own commands, reached by name: a module under cli/ that imported
+            # edgar.learning would break tier isolation [NFR-12, ADR-0015].
+            from importlib import import_module
+
+            return int(import_module("edgar.learning.cli").command(argv, Path.cwd()))
         if argv[:1] == ["memory"]:
             from edgar.cli.memory import command as memory
 
@@ -131,6 +140,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
                 project_exec=not args.no_project_exec,
                 resume=args.resume,
                 plan=args.plan,
+                no_history=args.no_history,
             )
         )
     from edgar.cli.oneshot import run_prompt
@@ -150,6 +160,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         project_exec=not args.no_project_exec,
         resume=args.resume,
         plan=args.plan,
+        no_history=args.no_history,
     )
 
 

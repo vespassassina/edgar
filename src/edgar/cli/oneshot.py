@@ -27,6 +27,7 @@ from edgar.core.events import (
     Event,
     EventBus,
     FactProposed,
+    PromptTyped,
     Subscriber,
     ThinkingDelta,
     ToolStarted,
@@ -58,6 +59,7 @@ def run_prompt(
     project_exec: bool = True,
     resume: str | None = None,
     plan: bool = False,
+    no_history: bool = False,
 ) -> int:
     if mode is None:
         # Nobody is there to answer a permission prompt, so the mode must be a
@@ -66,7 +68,7 @@ def run_prompt(
             "non-interactive runs need an explicit --mode",
             hint="add --mode read-only to look, or --mode ask|auto|yolo",
         )
-    root, config = prepare(cwd, model=model, mode=mode, env=env, home=home)
+    root, config = prepare(cwd, model=model, mode=mode, env=env, home=home, no_history=no_history)
     if project_exec:
         trust.require(root, config, home or Path.home())  # untrusted: exit 3 [PERM-13]
     s = setup(root, config, home=home, env=env, verify=verify, project_exec=project_exec)
@@ -89,6 +91,9 @@ def run_prompt(
         status = Status(config.model.default or "")
         bus.subscribe(status)
     session, rt = begin(s, bus, resume)
+    # `prompt` is the -p argument exactly as given. Piped stdin arrived as `attached`
+    # and @path bodies are read below, so neither can reach a learner [MEM-9, CLI-3].
+    bus.emit(PromptTyped(text=prompt))
     if plan:  # --plan is the human choosing read-only up front [CLI-20]
         enter(session)
     if session.log is not None:

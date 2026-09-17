@@ -38,7 +38,7 @@ from edgar.context.attach import attach
 from edgar.context.working import enter, save_plan
 from edgar.core import aside
 from edgar.core.errors import EdgarError
-from edgar.core.events import Event, EventBus, FactProposed, FactSaved, InputQueued
+from edgar.core.events import Event, EventBus, FactProposed, FactSaved, InputQueued, PromptTyped
 from edgar.core.loop import Runtime, Shots, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Answer
@@ -149,6 +149,10 @@ class Shell:
 
     def submit(self, text: str) -> None:
         """Run now, or queue behind the turn in progress [CLI-13]."""
+        # `text` here is the input line, typed or pasted, with nothing added to it:
+        # attach() runs later and its bodies never come back through this event, so
+        # anything subscribed to PromptTyped sees only what a human typed [MEM-9].
+        self.rt.bus.emit(PromptTyped(text=text))
         if not self.busy:
             self.turn = asyncio.create_task(self._run(text))
             return
@@ -255,6 +259,7 @@ async def interact(
     project_exec: bool = True,
     resume: str | None = None,
     plan: bool = False,
+    no_history: bool = False,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -262,7 +267,9 @@ async def interact(
     from prompt_toolkit.output import ColorDepth
     from prompt_toolkit.patch_stdout import patch_stdout
 
-    root, config = prepare(cwd, model=model, mode=mode, env=env, home=home, confirm_yolo=_yolo)
+    root, config = prepare(
+        cwd, model=model, mode=mode, env=env, home=home, confirm_yolo=_yolo, no_history=no_history
+    )
     home = home or Path.home()
     if project_exec and not trust.trusted(root, config, home):  # [PERM-13]
         print(trust.describe(root, config))

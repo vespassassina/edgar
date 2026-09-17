@@ -36,6 +36,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from edgar.core.message import ErrorRecord
     from edgar.providers.base import Usage
 
 
@@ -253,6 +254,10 @@ class ToolFinished(Event):
     truncated: bool
     blob: str | None
     image: str | None = None  # where the picture it produced was spilled [ADR-0052]
+    # What failed, in the four fields the harness computed itself: never the error's
+    # text. This is the only thing a learner is allowed to read about a failure, and
+    # carrying the record rather than the message is what keeps that true [MEM-22].
+    error: ErrorRecord | None = None
 
 
 # context [CTX-3]
@@ -330,9 +335,33 @@ class FactProposed(Event):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class FactSaved(Event):
-    # cli/repl.py and cli/slash.py, when a fact goes active.
+    # cli/repl.py and cli/slash.py, when a fact goes active. `text` is set when
+    # nobody else is about to say what was saved, so a fact the harness learned on
+    # its own is shown rather than added quietly (v3) [MEM-8].
     fact_id: int
     provenance: str
+    text: str = ""
+
+
+# learning (v3): the two events the learning path is allowed to read [ADR-0017]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class PromptTyped(Event):
+    """One line a human typed, and nothing else [MEM-8, MEM-9, CLI-3]."""
+
+    # cli/repl.py's submit() and cli/oneshot.py's run_prompt(), at the moment the
+    # line arrives and before attach() runs. `text` is the line exactly as typed:
+    # never piped stdin, never an @path body, never tool output, never model text.
+    # A learner that reads this event and no other text cannot see any of those.
+    text: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class SkillsActivated(Event):
+    # cli/setup.py's verify_for_turn(), once per turn, naming the skills it loaded,
+    # so telemetry can record them without re-deriving the match [MEM-18].
+    names: tuple[str, ...]
 
 
 # extensions and hooks [EXT-5]

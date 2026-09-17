@@ -54,7 +54,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M20 Seeing and searching | Done ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)) | 2.0 |
 | M21 Isolation | Done ([ADR-0061](adr/0061-m21-isolation-as-built.md)) — the sandbox confines writes and the network, **not reads**; see ADR-0061 §2 | 2.0 |
 | M22 Inspection, 2.0 release | Code done ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)) — **the 2.0 release is not started**, `edgar.testing.contract` [PRV-14] dropped to v3 for budget, and the two human "Done when" criteria are open | 2.0 |
-| M12–M15 Learning, controller, synthesis, escalation | Planned | 3.0 |
+| M12 Learning foundations | Done 2026-09-17 ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)) | 3.0 |
+| M13–M15 Controller, synthesis, escalation | Planned | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -838,19 +839,29 @@ III.
   result, skills loaded and task shape [MEM-18]; `edgar stats` [MEM-19]
 - `learning/learner.py` — autolearn from typed text only [MEM-8, MEM-9]
 - `learning/error_facts.py` — templated facts from `ErrorRecord`s [MEM-22]
-- `learning/history.py` — `history.md`, out-of-band condensing, rotation,
-  `history show|distill` (pending only) [MEM-12..14, MEM-16, MEM-17]
+- `learning/history.py` — `history.md`, condensing, rotation,
+  `history show|distill` (pending only) [MEM-12..14, MEM-16, MEM-17]. The
+  out-of-band **model call** to condense was cut; `condense()` keeps the first 40
+  words and the verbatim prompt stays in `learning.db` (ADR-0063)
 - Property test: no generated trajectory produces an active fact whose provenance
   is not `user`, `user-prompt`, `user-feedback` or `error-template`
 
-- **Tour delivery:** `docs/tour/learning.html`, turning the Core tour's planned
-  stop s25 into a link; `just map`
+- **Tour delivery:** `docs/tour/learning.html`, turning the planned stop **s31**
+  into a link (s25 in the original text; the stop was renumbered by M18); `just map`
 
 **Done when:** a typed correction in session 1 changes behaviour in session 4 with
 no `/remember`; a fetched page saying "remember X" never produces an active fact;
 the suite is green with `learning/` deleted [NFR-12].
 
-**Resolves:** OQ-1 (history gitignored or committed).
+**Resolves:** OQ-1 — **gitignored by default**, with a documented opt-in.
+`.edgar/history.md`, `.edgar/history.1.md` and `.edgar/learning.db` are in
+`templates/gitignore.fragment`, so `edgar init` ignores them (ADR-0063).
+
+**Built 2026-09-17** at 407 lines of code in `learning/`, plus 42 outside it for
+the events, the CLI dispatch and the `--no-history` flag. `just loc` reads
+9,766 of 12,000 for v3, and 9,359 of 9,500 for `src/` without the removable
+packages — the binding number, leaving 141 lines of code outside v3's own
+folders for all of M13, M14 and M15.
 
 ---
 
