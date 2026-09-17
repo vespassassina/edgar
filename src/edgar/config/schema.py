@@ -85,6 +85,22 @@ class MemorySection:
     history: bool = True  # write .edgar/history.md; `--no-history` turns it off [MEM-15]
 
 
+# The post-turn gate (v3) [CTRL-1, CTRL-2, CTRL-6]. Off until you turn it on: it is a
+# second model call after a turn, and edgar makes no call you did not ask for [PRV-15].
+# `mode = "always"` asks on every turn instead of only on a tripped check [CTRL-2].
+# The five numbers are the thresholds `controller/triggers.py` compares against.
+@dataclass(frozen=True, slots=True)
+class ControllerSection:
+    enabled: bool = False
+    mode: Literal["trigger", "always"] = "trigger"
+    dry_run: bool = True  # a policy or config proposal is logged, not applied [CTRL-6]
+    token_fraction: float = 0.60  # the turn's prompt tokens / the model's context window
+    error_streak: int = 3  # turns in a row that ended with a failing tool call
+    burn_rate: float = 0.80  # today's spend / daily_cost_cap; no cap, no check
+    output_tokens: int = 16_000  # one turn's output
+    wall_clock_s: float = 300.0  # one turn's wall clock
+
+
 @dataclass(frozen=True, slots=True)
 class BrowserSection:
     """What `/browser` connects [CLI-29, ADR-0036]: a command tool by name, or an MCP
@@ -154,6 +170,7 @@ SECTIONS: dict[str, type] = {
     "shell": ShellSection,
     "memory": MemorySection,
     "browser": BrowserSection,
+    "controller": ControllerSection,
 }
 
 # Sections made of named blocks, `[providers.NAME]`, `[pricing."a/b"]` and
@@ -171,7 +188,6 @@ LATER = frozenset(
         "subagents",  # v1
         "extensions",  # v1
         "hooks",  # v1
-        "controller",  # v2
         "history",  # v2
     }
 )
@@ -190,6 +206,7 @@ class Config:
     shell: ShellSection = field(default_factory=ShellSection)
     memory: MemorySection = field(default_factory=MemorySection)
     browser: BrowserSection = field(default_factory=BrowserSection)
+    controller: ControllerSection = field(default_factory=ControllerSection)
     providers: dict[str, ProviderSection] = field(default_factory=dict)
     pricing: dict[str, PriceSection] = field(default_factory=dict)
     mcp: dict[str, McpSection] = field(default_factory=dict)
