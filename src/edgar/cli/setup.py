@@ -39,6 +39,7 @@ from edgar.core.events import (
     ModelSelected,
     SessionEnded,
     SessionStarted,
+    SkillsActivated,
     TurnFinished,
 )
 from edgar.core.loop import Runtime
@@ -392,6 +393,7 @@ def verify_for_turn(s: Setup, rt: Runtime, activated: Sequence[Skill]) -> Runtim
     """VER-1's order: `--verify` already fixed `rt.verify` for the whole session;
     otherwise a skill loaded into this turn outranks the project's own
     `verify.command`, which is why this runs again every turn."""
+    rt.bus.emit(SkillsActivated(names=tuple(skill.name for skill in activated)))
     if s.explicit_verify:
         return rt
     command = skill_verify(activated)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import fields
 from pathlib import Path
 from typing import Any
 
@@ -76,6 +77,27 @@ def test_timeout(tmp_project: Path, recorder: Recorder) -> None:
     result = _run(tool_use("stub", {}), ctx, ToolRegistry([_Stub("slow")]))
     assert result.error and result.error.kind == "timeout"
     assert recorder.names[-1] == "ToolFinished"
+
+
+def test_tool_finished_carries_the_record_and_no_error_text(
+    tmp_project: Path, recorder: Recorder
+) -> None:
+    # A learner subscribes to this event, so it must carry the four harness-computed
+    # fields and nothing a tool wrote [MEM-22, ADR-0017].
+    ctx = _ctx(tmp_project, recorder, timeout_s=0.05)
+    _run(tool_use("stub", {}), ctx, ToolRegistry([_Stub("slow")]))
+    (finished,) = recorder.of(ToolFinished)
+    assert finished.error is not None
+    assert (finished.error.tool, finished.error.kind) == ("stub", "timeout")
+    assert {f.name for f in fields(finished.error)} == {"tool", "kind", "exit_code", "program"}
+
+
+def test_tool_finished_has_no_record_when_the_call_worked(
+    tmp_project: Path, recorder: Recorder
+) -> None:
+    _run(tool_use("stub", {}), _ctx(tmp_project, recorder), ToolRegistry([_Stub("ok")]))
+    (finished,) = recorder.of(ToolFinished)
+    assert finished.ok and finished.error is None
 
 
 def test_a_crashing_tool_becomes_an_internal_error(tmp_project: Path) -> None:

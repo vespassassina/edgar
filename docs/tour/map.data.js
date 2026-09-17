@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 9304,
+    "loc": 9319,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6556,
+        "loc": 6571,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2043,
+            "loc": 2048,
             "status": "built",
             "children": [
               {
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 173,
+                "loc": 175,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 306,
+                "loc": 307,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 335,
+                "loc": 337,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 779,
+            "loc": 788,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 191,
+                "loc": 200,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -632,7 +632,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 598,
+            "loc": 599,
             "status": "built",
             "children": [
               {
@@ -665,7 +665,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 154,
+                "loc": 155,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",

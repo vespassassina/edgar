@@ -27,6 +27,7 @@ from edgar.core.events import (
     Event,
     EventBus,
     FactProposed,
+    PromptTyped,
     Subscriber,
     ThinkingDelta,
     ToolStarted,
@@ -89,6 +90,9 @@ def run_prompt(
         status = Status(config.model.default or "")
         bus.subscribe(status)
     session, rt = begin(s, bus, resume)
+    # `prompt` is the -p argument exactly as given. Piped stdin arrived as `attached`
+    # and @path bodies are read below, so neither can reach a learner [MEM-9, CLI-3].
+    bus.emit(PromptTyped(text=prompt))
     if plan:  # --plan is the human choosing read-only up front [CLI-20]
         enter(session)
     if session.log is not None:
