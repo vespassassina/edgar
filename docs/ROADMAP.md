@@ -974,6 +974,14 @@ Ordered by expected value, not commitment.
 8. **Prompt-caching optimisation** across providers, not just Anthropic
 9. **The `container` sandbox backend** — if M21 did not have room for it
 
+10. **A user manual** — one short doc covering every slash command, tool, skill,
+    how to install and upgrade the CLI and MCP servers, and edgar's
+    idiosyncrasies a user must know, so a new user is not left reading source.
+    Requested 2026-09-17.
+11. **`/help` (`/h`) lists everything** — today it is not built; when it is, it
+    must print every slash command, tool and skill with a one-line description
+    each, formatted for a terminal (one line per entry). Requested 2026-09-17.
+
 Images moved into M20 ([ADR-0052](adr/0052-media-input-in-v2.md),
 [ADR-0057](adr/0057-daily-driver-before-learning.md)); web search and git tools
 into M20 as extensions; notifications into M16.

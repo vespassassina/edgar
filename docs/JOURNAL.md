@@ -27,6 +27,12 @@ In order:
    seeing and searching**, is next.
 4. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
+5. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
+   yet: a short doc covering every slash command, tool and skill, install and
+   upgrade steps for the CLI and MCP servers, and edgar's idiosyncrasies; and
+   `/help`/`/h` itself must list every slash command, tool and skill with a
+   one-line description, one line per entry in the terminal. Logged in
+   `ROADMAP.md`'s "Past v4" list as items 10 and 11.
 
 v2 sits at 8,374 of 9,500 `src/` lines of code after M19, so M20, M21 and M22
 share the 1,126 that are left. ADR-0053's cuts are no longer forbidden: plan
