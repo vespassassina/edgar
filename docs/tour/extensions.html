@@ -162,6 +162,30 @@ flowchart TD
   <code>pyproject.toml</code> at release.</p>
 </article>
 
+<article class="stop" id="x6" data-files="src/edgar/skills/audit.py src/edgar/extensions/validate.py">
+  <h4><span class="n">6</span>The gate before a copy</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/audit.py"><code>skills/audit.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/validate.py"><code>extensions/validate.py</code></a></p>
+  <p class="look">Look for: <code>DANGERS</code> <code>audit</code> <code>render</code> <code>diff</code> <code>validate</code> <code>_agreed</code></p>
+  <p>Extensions are copied in from a path, never installed from an index, so the copy
+  is the only moment anyone checks what is arriving
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0042-skill-audit.md">ADR-0042</a>).
+  <code>audit</code> answers two separate questions and keeps them apart: conformance
+  (does it load, does the description say when to use it, do its paths stay inside the
+  folder) and dangers (a download piped into a shell, <code>sudo</code>, a recursive
+  delete, text telling a session not to ask or not to tell, hidden characters, hosts,
+  credential locations, and every bundled script with the programs it calls).
+  <code>DANGERS</code> is a table, one row per rule, so a new pattern is a row and a
+  test rather than a branch. No model is asked anything: the text under review may be
+  hostile, and a verdict a model decides is a verdict an injection can argue with.</p>
+  <p><code>diff</code> prints the fixes it would make and never applies them, so the
+  audit writes nothing. In <code>validate.py</code>, <code>_agreed</code> is the
+  "humans widen, machines tighten" line in one function: a clean audit asks
+  <code>[Y/n]</code>, a danger finding asks <code>[y/N]</code>, and with no terminal a
+  danger finding is refused unless a human passed <code>--yes</code>. The copy itself
+  goes to a staging folder and then one <code>rename</code>, so a session sees the
+  whole extension or none of it — never half of one.</p>
+</article>
+
 <p class="check"><strong>Before you go:</strong> an extension ships a hook on
 <code>pre_tool</code> and an agent that uses a tool the extension also ships. Trace the
 order in which those two are discovered, and name the point at which a permission
@@ -180,6 +204,8 @@ decision is made.</p>
     <tr data-file="src/edgar/extensions/hooks.py"><td><code>extensions/hooks.py</code></td><td class="loc">~116</td><td>Named events, filters, and the veto</td></tr>
     <tr data-file="src/edgar/providers/registry.py"><td><code>providers/registry.py</code></td><td class="loc">~80</td><td>Lazy resolution, and the entry-point door</td></tr>
     <tr data-file="src/edgar/skills/discovery.py"><td><code>skills/discovery.py</code></td><td class="loc">~91</td><td>The skill source port: find and lint</td></tr>
+    <tr data-file="src/edgar/skills/audit.py"><td><code>skills/audit.py</code></td><td class="loc">~180</td><td>Conformance, dangers and a diff it never applies</td></tr>
+    <tr data-file="src/edgar/extensions/validate.py"><td><code>extensions/validate.py</code></td><td class="loc">~102</td><td><code>ext validate</code>, and the gate <code>ext add</code> passes</td></tr>
     <tr data-file="src/edgar/skills/activate.py"><td><code>skills/activate.py</code></td><td class="loc">~36</td><td>Bodies, loaded only when asked for</td></tr>
     <tr data-file="src/edgar/__init__.py"><td><code>edgar/__init__.py</code></td><td class="loc">~78</td><td>One function, and the version</td></tr>
   </tbody>

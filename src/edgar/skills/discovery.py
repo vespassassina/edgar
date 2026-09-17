@@ -85,7 +85,7 @@ def scan(folder: Path, origin: str, found: Found) -> None:
     for path in sorted(folder.glob("*/SKILL.md")) if folder.is_dir() else []:
         # 1. Read one skill; a broken file is reported, never fatal.
         try:
-            skill = _read(path, origin)
+            skill = read(path, origin)
         except (OSError, UnicodeDecodeError, ValueError) as exc:
             found.problems.append(f"{path}: {exc}")
             continue
@@ -98,7 +98,10 @@ def scan(folder: Path, origin: str, found: Found) -> None:
         found.skills[skill.name] = skill
 
 
-def _read(path: Path, origin: str) -> Skill:
+# Public because `edgar skills audit` reads a candidate skill with the same rules a
+# session reads an installed one: one loader, so an audit cannot pass what discovery
+# would reject, nor the other way round [SKL-18].
+def read(path: Path, origin: str) -> Skill:
     head, _ = split(path.read_text(encoding="utf-8"))
     name, description = head.get("name"), head.get("description")
     if not isinstance(name, str) or not _NAME.match(name) or len(name) > 64:

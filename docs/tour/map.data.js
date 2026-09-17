@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 9013,
+    "loc": 9303,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6367,
+        "loc": 6555,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2034,
+            "loc": 2042,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 226,
+                "loc": 234,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -566,9 +566,21 @@ window.EDGAR_MAP = {
             "id": "core/skills",
             "name": "skills/",
             "kind": "package",
-            "loc": 91,
+            "loc": 271,
             "status": "built",
             "children": [
+              {
+                "path": "src/edgar/skills/audit.py",
+                "name": "audit.py",
+                "kind": "file",
+                "tier": "core",
+                "package": "skills",
+                "loc": 180,
+                "summary": "Judge a skill before it is copied in [SKL-18, ADR-0042].",
+                "stop": "extensions.html#x6",
+                "status": "built",
+                "port": false
+              },
               {
                 "path": "src/edgar/skills/discovery.py",
                 "name": "discovery.py",
@@ -738,7 +750,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2131,
+        "loc": 2233,
         "status": "built",
         "children": [
           {
@@ -913,7 +925,7 @@ window.EDGAR_MAP = {
             "id": "v1/extensions",
             "name": "extensions/",
             "kind": "package",
-            "loc": 229,
+            "loc": 331,
             "status": "built",
             "children": [
               {
@@ -949,6 +961,18 @@ window.EDGAR_MAP = {
                 "loc": 43,
                 "summary": "Extension manifests: `extension.toml` in a folder alongside `tools/`, `skills/`,",
                 "stop": "extensions.html#x1",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/extensions/validate.py",
+                "name": "validate.py",
+                "kind": "file",
+                "tier": "v1",
+                "package": "extensions",
+                "loc": 102,
+                "summary": "`edgar ext validate PATH` and `edgar ext add PATH` [EXT-3].",
+                "stop": "extensions.html#x6",
                 "status": "built",
                 "port": false
               }

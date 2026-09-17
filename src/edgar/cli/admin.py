@@ -36,9 +36,11 @@ from edgar.tools.mcp.schema import hints
 USAGE = """usage: edgar init | edgar doctor [--network]
        edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID | compact ID
-       edgar tools list | describe NAME | edgar skills list | validate | edgar cost
+       edgar tools list | describe NAME | edgar cost
+       edgar skills list | validate | edgar skills audit PATH [--strict] [--diff]
        edgar mcp list | test NAME | login NAME | logout NAME
-       edgar ext list | edgar login PROVIDER | edgar logout PROVIDER
+       edgar ext list | edgar ext validate PATH | edgar ext add PATH [--yes]
+       edgar login PROVIDER | edgar logout PROVIDER
        edgar context show [SESSION] | edgar config show --resolved
        edgar route explain [PROMPT] | edgar agents list | validate"""
 
@@ -81,10 +83,18 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         return sessions_compact(argv[2], cwd, home)
     if argv[0] == "sessions" and len(argv) in (2, 3):
         return _sessions(argv[1:], cwd)
+    if argv[:2] == ["skills", "audit"]:
+        from edgar.skills.audit import command as audit_command  # deterministic, no model
+
+        return audit_command(argv[2:])
     if argv[0] in ("tools", "skills") and len(argv) in (2, 3):
         return _tools(argv, cwd, home)
     if argv == ["ext", "list"]:
         return _ext(cwd, home)
+    if argv[0] == "ext" and argv[1:2] in (["validate"], ["add"]):
+        from edgar.extensions.validate import command as ext_command  # loads, never widens
+
+        return ext_command(argv[1:], cwd)
     if argv[0] == "trust" and set(argv[1:]) <= {"--yes"}:
         config = load(cwd, home=home)
         if not trust.executable(cwd, config):

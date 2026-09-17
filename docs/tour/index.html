@@ -151,7 +151,7 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,450</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,320</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
-    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~130</td><td>Finding skills, reading only their frontmatter, and deterministic activation (v1)</td></tr>
+    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~305</td><td>Finding skills, reading only their frontmatter, deterministic activation, and the audit before a copy (v1, v2)</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
@@ -160,7 +160,7 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
     <tr data-package="sandbox"><td><code>sandbox/</code></td><td class="loc">~110</td><td>The Sandbox port and its backends: nothing, bubblewrap, seatbelt (v2)</td></tr>
-    <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~230</td><td>An extension folder's manifest, discovery, and observe-or-veto hooks (v1)</td></tr>
+    <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
   </tbody>
 </table>
 </div>
