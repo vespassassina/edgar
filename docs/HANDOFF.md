@@ -27,10 +27,17 @@ list is done. Read it first, then the three documents under "Read".
   [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)): images end to end,
   plus web search and git as example files costing no code. `just loc` read
   8,592 of 9,500.
+- **M22's code is done, on a branch, not merged** (2026-09-17,
+  [ADR-0062](adr/0062-m22-inspection-commands-as-built.md)): the rest of `edgar
+  doctor`, `route explain`, `agents list|validate`, `ext validate|add` with
+  `skills audit`, and the tour stops. `just loc` reads **9,305 of 9,500**.
+  `edgar.testing.contract` [PRV-14] was **dropped to v3** for budget — see
+  ADR-0062 §6 for the measurement. **What is left of M22 is the 2.0 release
+  itself and its two human criteria, and the release needs the maintainer's
+  explicit authorisation, as every push, tag and release in this project does.**
 - **M21 is done and merged** (2026-09-17,
   [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
-  sandbox backends. `just loc` reads **8,869 of 9,500**. **M22, inspection and
-  the 2.0 release, is next**, with 631 lines of code left for it. Two of
+  sandbox backends. Two of
   ADR-0061's flagged decisions matter most and are not yet resolved: §2 says
   the sandbox is a write and network boundary, **not** a read boundary,
   against the roadmap's own wording — a reviewer still has to decide whether a
@@ -48,7 +55,8 @@ list is done. Read it first, then the three documents under "Read".
   after independent re-verification of its ADR's flagged decisions by reading
   the actual source (not the agent's self-report) — every one held up. Not yet
   pushed to `origin`. Next up: Step 0b (the dogfood week, the maintainer's own
-  task) and M22 (Step 5).
+  task), then reviewing M22's branch, then the 2.0 release when the maintainer
+  decides to cut it.
 - **Four documentation gaps** were found by the cold subagent that verified the
   web-search example; all four are older than M20 and none is fixed. They are in
   `JOURNAL.md`'s M20 entry: there is no `edgar tools validate` to match
@@ -247,15 +255,56 @@ What a later milestone needs to know:
   `templates/gitignore.fragment`). Without `.edgar/` ignored, a worktree always
   reads dirty and is therefore always kept: safe, but useless.
 
-## Step 5 — M22, inspection and the 2.0 release
+## Step 5 — M22, inspection · CODE DONE 2026-09-17, NOT MERGED, RELEASE NOT STARTED
 
-The same loop, item by item, with the milestone's tour work as its last item.
-**631 lines of code are left** in the v2 budget; M22 estimates ~440. If it would
-push past 9,500, something moves out, the budget does not move.
+Built in five commits on `feat/m22-inspection-commands`, one per roadmap item:
+`c3e7d18` doctor, `d4da60f` `route explain`, `cb03b77` `agents list|validate`,
+`3a06545` `ext validate|add` with `skills audit`, `8d9290b` the tour stops. New
+files: `skills/audit.py` and `extensions/validate.py`; everything else extends
+`cli/doctor.py`, `cli/inspect.py`, `cli/admin.py`, `agents/discovery.py` and
+`providers/routing.py`. 436 lines of code against ~440 estimated, `just loc`
+9,305 of 9,500, `just check` green on macOS with 869 tests. The decisions, three
+flagged for extra review, are in
+[ADR-0062](adr/0062-m22-inspection-commands-as-built.md).
 
-One open offer: the roadmap's "Never yet" item 9 allows the `container` sandbox
-backend if budget remains at the end of M22. M21 did not build it speculatively.
-It is perhaps 25 lines on the port as it stands; **ask before building it.**
+**The 2.0 release is deliberately not started.** No version bump in
+`pyproject.toml` or `src/edgar/__init__.py`, no tag, no `CHANGELOG.md` version
+header — everything new is under "Unreleased". The maintainer authorises a
+release every time; nothing here presumes it.
+
+What a later milestone needs to know:
+
+- **`edgar doctor` is offline by default and must stay that way.** A check that
+  wants the network goes behind `--network`, and the skipped line has to say what
+  was not checked. `--network` calls each provider's `models()`, which is an
+  authenticated call (no tokens, but it needs the key) — if you add a check that
+  needs no credentials, say so on its line rather than letting the two blur.
+- **A remote MCP server is not probed, on purpose.** The handshake in `edgar mcp
+  test NAME` is the only probe worth making, and duplicating it in `doctor` would
+  be a second copy of the client. If M16 ever lands, its tick check goes in
+  `cli/doctor.py`'s comment block *and* its print order, which are kept in step.
+- **The danger table in `skills/audit.py` is data.** A new pattern is a row in
+  `DANGERS` plus a test, never a branch, and the ids (`SA-D1`…) are referenced by
+  the docs, so append rather than renumber. The conformance ids (`SA-1`…) set the
+  exit code; danger ids never do.
+- **ADR-0042's `--review` is unbuilt but its rule still binds.** If anyone adds
+  the opt-in model review, it may add findings and must not set the exit code or
+  the default answer. A skill that can argue with its own audit is the failure
+  the whole design exists to prevent.
+- **`ext add` never lands a partial copy**: stage beside the destination, then one
+  `rename`. Any future installer (a git URL, say) must keep that shape, and must
+  keep the order — validate, audit, show, ask, only then write.
+- **`skills/discovery.py`'s `read()` is public now** so the audit and a session
+  load a skill with the same rules. Keep it that way; two readers would let an
+  audit pass what discovery rejects.
+- `cli/inspect.py` is at 163 lines of code and holds five commands. It is the
+  home for inspection commands, per M19's note, but it is now big enough that a
+  sixth should probably start its own module.
+
+One open offer, still open: the roadmap's "Never yet" item 9 allows the
+`container` sandbox backend if budget remains. 195 lines of code remain, and it
+is perhaps 25 on the port as it stands; **ask before building it**, and weigh it
+against PRV-14, which was dropped and has the better claim.
 
 ## Proposed diff to `AGENTS.md` (maintainer applies by hand)
 
@@ -302,7 +351,7 @@ Proposed, under the existing `[shell]` block:
 ## Resume commands
 
 ```bash
-git switch main
+git switch feat/m22-inspection-commands
 ```
 
 ```bash
