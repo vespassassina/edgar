@@ -4,7 +4,8 @@ Once the prompt passes `compact_at` of the usable window, stages run until it is
 under `compact_to`:
 
 - **S1 elide**: in turns older than `keep_last_turns`, each tool result becomes a
-  one-line stub and thinking is dropped. No model call; the blocks stay.
+  one-line stub, thinking is dropped and each picture becomes a line naming it.
+  No model call; the blocks stay.
 - **S2 summarise**: those turns fold into one summary message of fixed shape,
   with any earlier summary folded in. One model call.
 - **S3 overflow**: only if the prompt still does not fit the window, elide inside
@@ -26,7 +27,7 @@ from edgar.context.tokens import approx_tokens, message_text
 from edgar.context.working import render
 from edgar.core.errors import ContextOverflow
 from edgar.core.events import Compacted, EventBus
-from edgar.core.message import Message, TextBlock, ThinkingBlock, ToolResultBlock
+from edgar.core.message import ImageBlock, Message, TextBlock, ThinkingBlock, ToolResultBlock
 from edgar.core.units import units
 from edgar.providers.base import plus
 
@@ -56,12 +57,25 @@ def elide(view: list[Message], upto: int) -> list[Message]:
 
 
 def _stub(block: Any, calls: dict[str, Any]) -> Any:
+    # Elision extends the existing per-block helper rather than adding a second
+    # pass of its own, so `elide()` stays the only place that knows where a turn
+    # may be cut and the pairing invariant keeps one home [CTX-4, ADR-0060].
+    #
+    # An old picture becomes a line naming it: the reference survives, so a human
+    # can attach it again, and the model stops paying for it every request. The
+    # bytes were never in the transcript, only in the session's blobs [ADR-0052].
+    if isinstance(block, ImageBlock):
+        size = f"{block.width}x{block.height}"
+        return TextBlock(f"{ELIDED}image {block.media_type} {size} · {block.ref}]")
     if not isinstance(block, ToolResultBlock) or block.text.startswith(ELIDED):
         return block
     call = calls.get(block.tool_use_id)
     what = f"{call.name} {json.dumps(call.args, ensure_ascii=False)[:60]}" if call else "result"
     where = f" · full output {block.blob}" if block.blob else ""
-    stub = f"{ELIDED}{what} · ~{approx_tokens(block.text):,} tokens{where}]"
+    shots = "".join(f" · image {i.ref}" for i in block.images)
+    stub = f"{ELIDED}{what} · ~{approx_tokens(block.text):,} tokens{where}{shots}]"
+    if block.images:  # the pictures go with the text: one unit, elided whole
+        return replace(block, content=(TextBlock(stub),), images=())
     return replace(block, content=(TextBlock(stub),)) if len(stub) < len(block.text) else block
 
 

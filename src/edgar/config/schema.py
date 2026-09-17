@@ -120,6 +120,7 @@ class ProviderSection:
     auth_style: Literal["bearer", "api-key", "none"] | None = None
     api_version: str | None = None  # Azure
     native_tools: bool | None = None  # false: tool calls travel as text [PRV-16]
+    images: bool | None = None  # true: this server takes images [ADR-0052]
     parallel_tools: bool | None = None
     stream_usage: bool | None = None
     max_context: int | None = None

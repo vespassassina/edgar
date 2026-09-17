@@ -8,6 +8,7 @@ httpx never loads on a run that does not reach a provider [PRV-4, NFR-1].
 from __future__ import annotations
 
 import asyncio
+import base64
 import email.utils
 import json
 import random
@@ -17,6 +18,7 @@ import time
 from collections.abc import AsyncIterator, Collection, Mapping, Sequence
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -25,7 +27,7 @@ from edgar.config.schema import PriceSection
 from edgar.context.tokens import approx_message_tokens
 from edgar.core.errors import ContextOverflow, EdgarError, ProviderError
 from edgar.core.events import EventBus, ProviderRetry, ToolCallRepaired
-from edgar.core.message import Message, ToolUseBlock
+from edgar.core.message import ImageBlock, Message, ToolUseBlock
 from edgar.providers import repair
 from edgar.providers.base import Capabilities, Usage
 from edgar.providers.pricing import cost_of
@@ -77,6 +79,7 @@ class HttpAdapter:
             streaming=True,
             reasoning=quirks.reasoning,
             prompt_caching=self.caching,
+            images=quirks.images,
             max_context=quirks.max_context,
             max_output=quirks.max_output,
         )
@@ -106,10 +109,10 @@ class HttpAdapter:
         """Characters over four, scaled by the last observed ratio of the provider's
         own count to ours. Exact where usage is returned, close enough before
         [CTX-9, OQ-3]; the ratio also absorbs the tool schemas sent alongside."""
-        return round(approx_message_tokens(messages) * self._ratio)
+        return round(approx_message_tokens(messages, self.family) * self._ratio)
 
     def observe(self, messages: Sequence[Message], usage: Usage) -> None:
-        approx = approx_message_tokens(messages)
+        approx = approx_message_tokens(messages, self.family)
         if usage.input_tokens and approx and not usage.approximate:
             self._ratio = usage.input_tokens / approx
 
@@ -242,6 +245,18 @@ def _decode(data: list[str]) -> Any:
         return json.loads("\n".join(data))
     except ValueError:
         raise ProviderError(f"unreadable stream event: {' '.join(data)[:120]!r}") from None
+
+
+def encoded(block: ImageBlock) -> str:
+    """The spilled bytes, base64 for the wire. Read at send time, because the block
+    holds the reference and never the picture [ADR-0052]."""
+    try:
+        return base64.b64encode(Path(block.ref).read_bytes()).decode("ascii")
+    except OSError as exc:  # the session's blobs were cleared under a resumed session
+        raise ProviderError(
+            f"the image {block.ref} is gone: {exc}",
+            hint="attach the file again; blobs live under .edgar/sessions/<id>/blobs/",
+        ) from None
 
 
 def tool_calls(

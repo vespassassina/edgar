@@ -220,10 +220,15 @@ def test_the_example_tools_load() -> None:
         "gcal_events",
         "gdocs_get",
         "gh_issue",
+        "git-commit",
+        "git-diff",
+        "git-log",
+        "git-status",
         "gmail_search",
         "onedrive_ls",
         "service_status",
         "weather",
+        "web_search",
     ]
     for path in (EXAMPLES / "tools").glob("*.toml"):
         tomllib.loads(path.read_text(encoding="utf-8"))

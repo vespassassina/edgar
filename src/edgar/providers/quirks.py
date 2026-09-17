@@ -59,6 +59,7 @@ class Quirks:
     max_tokens_param: Literal["max_tokens", "max_completion_tokens"] | None = None
     cost_source: Literal["table", "response", "free"] = "table"
     reasoning: bool = False  # the server streams reasoning text back
+    images: bool = False  # the server takes ImageBlocks; a model without it is refused
     thinking_budget: int | None = None  # Anthropic: request extended thinking
     oauth: OAuth | None = None  # None: this provider issues keys its own way
 
@@ -67,6 +68,7 @@ QUIRKS: dict[str, Quirks] = {
     "openai": Quirks(
         "https://api.openai.com/v1",
         "OPENAI_API_KEY",
+        images=True,
         parallel_tools=True,
         stream_usage=True,
         max_context=128_000,
@@ -76,6 +78,7 @@ QUIRKS: dict[str, Quirks] = {
         None,
         "AZURE_OPENAI_API_KEY",
         base_url_env="AZURE_OPENAI_ENDPOINT",
+        images=True,
         auth_style="api-key",
         api_version="2024-10-21",
         parallel_tools=True,
@@ -86,6 +89,7 @@ QUIRKS: dict[str, Quirks] = {
     "openrouter": Quirks(
         "https://openrouter.ai/api/v1",
         "OPENROUTER_API_KEY",
+        images=True,
         parallel_tools=True,
         stream_usage=True,
         max_context=128_000,
@@ -110,6 +114,7 @@ QUIRKS: dict[str, Quirks] = {
     "anthropic": Quirks(
         "https://api.anthropic.com",
         "ANTHROPIC_API_KEY",
+        images=True,
         parallel_tools=True,
         max_context=200_000,
         max_output=16_384,

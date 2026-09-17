@@ -252,6 +252,7 @@ class ToolFinished(Event):
     duration_ms: int
     truncated: bool
     blob: str | None
+    image: str | None = None  # where the picture it produced was spilled [ADR-0052]
 
 
 # context [CTX-3]

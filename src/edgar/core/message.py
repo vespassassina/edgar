@@ -8,7 +8,7 @@ property testing straightforward [CTX-8].
 # How a conversation looks in these types. A transcript is a list of Messages; each
 # Message has a role and a tuple of blocks:
 #
-#   Message("user",      [TextBlock("fix the failing test")])
+#   Message("user",      [TextBlock("fix the failing test"), ImageBlock("image/png", …)])
 #   Message("assistant", [ThinkingBlock(...), TextBlock("Let me look."),
 #                         ToolUseBlock(id="t1", name="read", args={"path": "x.py"})])
 #   Message("tool",      [ToolResultBlock(tool_use_id="t1", content=[TextBlock("…")])])
@@ -66,6 +66,21 @@ class ThinkingBlock:
 
 
 @dataclass(frozen=True, slots=True)
+class ImageBlock:
+    # A picture the model is meant to look at [ADR-0052]. The bytes are never here:
+    # they are spilled to sessions/<id>/blobs/ like large tool output, and `ref` is
+    # the path to them, so a session JSONL stays a readable line-per-entry file.
+    #
+    # Four fields, and only four: `ref` and `media_type` are what an adapter needs to
+    # build a data URL, `width` and `height` are what token counting needs to size it
+    # (0 when the header could not be read). Nothing else is serialised or counted.
+    media_type: str  # "image/png", "image/jpeg", "image/gif", "image/webp"
+    ref: str  # path of the spilled bytes, as posix
+    width: int = 0
+    height: int = 0
+
+
+@dataclass(frozen=True, slots=True)
 class ToolUseBlock:
     # The model asking to run a tool. `id` pairs it with its result.
     id: str
@@ -99,6 +114,10 @@ class ToolResultBlock:
     untrusted: bool = False  # network-sourced: sets session taint [TOOL-13]
     error: ErrorRecord | None = None  # set when is_error, by the harness
     blob: str | None = None  # path of the spilled full output [CTX-13]
+    # Pictures the call produced, beside its text: `read` on a PNG [ADR-0052]. A
+    # separate field rather than a wider `content`, so the text of a result, its
+    # serialisation and the elision stub all keep working exactly as before.
+    images: tuple[ImageBlock, ...] = ()
 
     @property
     def text(self) -> str:
@@ -106,7 +125,7 @@ class ToolResultBlock:
 
 
 # Any block a message can hold.
-ContentBlock = TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock
+ContentBlock = TextBlock | ThinkingBlock | ImageBlock | ToolUseBlock | ToolResultBlock
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,3 +156,10 @@ class Message:
     @property
     def tool_results(self) -> tuple[ToolResultBlock, ...]:
         return tuple(b for b in self.content if isinstance(b, ToolResultBlock))
+
+    @property
+    def images(self) -> tuple[ImageBlock, ...]:
+        # Every picture the message carries: attached to the prompt, or produced by
+        # a tool call it holds the result of. Adapters and token counting read this.
+        own = tuple(b for b in self.content if isinstance(b, ImageBlock))
+        return own + tuple(i for r in self.tool_results for i in r.images)

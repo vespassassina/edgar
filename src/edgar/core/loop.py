@@ -56,7 +56,7 @@ from edgar.core.events import (
     TurnFinished,
     TurnStarted,
 )
-from edgar.core.message import Message, TextBlock, ToolResultBlock, ToolUseBlock
+from edgar.core.message import ImageBlock, Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.session import Session, new_id
 from edgar.core.units import assert_pairing
 from edgar.core.verify import Check, verify
@@ -67,6 +67,10 @@ from edgar.providers.fallback import next_provider
 from edgar.tools.base import ToolContext, build_context
 from edgar.tools.execute import execute_many
 from edgar.tools.registry import ToolRegistry
+
+# What a caller may hand a turn beside the prompt: attached text, and pictures.
+Texts = Sequence[str]
+Shots = Sequence[ImageBlock]
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,11 +119,12 @@ class _Turn:
 
 
 async def run_turn(
-    session: Session, prompt: str, rt: Runtime, *, attached: Sequence[str] = ()
+    session: Session, prompt: str, rt: Runtime, *, attached: Texts = (), images: Shots = ()
 ) -> TurnResult:
-    """`attached` is piped stdin or an @file: context, never the prompt [CLI-3]."""
+    # `attached` is piped stdin or an @file: context, never the prompt [CLI-3].
+    # `images` are the pictures an @photo.png resolved to [ADR-0052].
     # 1. Record what the human typed, with anything attached marked as attached.
-    turn = _start(session, prompt, rt, attached)
+    turn = _start(session, prompt, rt, attached, images)
     reason = "completed"
 
     # 2. Keep the text as it streams in, so a cancel can save what was said.
@@ -182,15 +187,17 @@ async def run_turn(
     return TurnResult(turn.text, reason, turn.usage)
 
 
-def _start(session: Session, prompt: str, rt: Runtime, attached: Sequence[str]) -> _Turn:
+def _start(session: Session, prompt: str, rt: Runtime, attached: Texts, images: Shots) -> _Turn:
     # Announce the turn.
     turn_id = new_id()
     rt.bus.emit(TurnStarted(turn_id=turn_id, model=session.model, depth=session.depth))
     # The prompt is one block; each attachment is its own block, tagged as attached
     # so nothing downstream mistakes it for something the human typed.
     wrapped = (f"\n\n<attached>\n{a.rstrip()}\n</attached>" for a in attached)
-    blocks = (TextBlock(prompt), *(TextBlock(a, attached=True) for a in wrapped))
-    session.append(Message("user", blocks))
+    # A picture rides beside the typed line as its own block, in the same message.
+    blocks: list[TextBlock | ImageBlock] = [TextBlock(prompt), *images]
+    blocks.extend(TextBlock(a, attached=True) for a in wrapped)
+    session.append(Message("user", tuple(blocks)))
     # Set up what tool calls share for the whole turn.
     ctx = build_context(session, rt)
     guard = rt.guard or Guard(Policy(mode=session.mode, cwd=session.cwd, home=Path.home()))
@@ -281,12 +288,12 @@ async def _check(check: Check, session: Session, rt: Runtime, turn: _Turn) -> st
 
 
 def _over(cap: float | None, spent: float | None) -> bool:
-    """Unknown spend cannot be shown to be under a cap, so it counts as over [BUD-5]."""
+    # Unknown spend cannot be shown to be under a cap, so it counts as over [BUD-5].
     return cap is not None and (spent is None or spent >= cap)
 
 
 def _acted(rt: Runtime, name: str, result: ToolResultBlock) -> bool:
-    """A non-read tool that actually ran: what makes the verify gate run [VER-2]."""
+    # A non-read tool that actually ran: what makes the verify gate run [VER-2].
     tool = rt.tools.get(name)
     refused = result.error is not None and result.error.kind in NOT_RUN
     return tool is not None and category(tool.schema) != "read" and not refused

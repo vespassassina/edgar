@@ -64,11 +64,11 @@ def test_a_control_file_attaches_because_reading_one_is_allowed(tmp_path: Path) 
 
 def test_a_directory_and_a_binary_file_are_refused_by_name(tmp_path: Path) -> None:
     (tmp_path / "docs").mkdir()
-    (tmp_path / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00")
-    found = _attach("read @docs and @logo.png", tmp_path)
+    (tmp_path / "a.bin").write_bytes(b"\x00\x01\x02\xff\xfe")  # not text, not a picture
+    found = _attach("read @docs and @a.bin", tmp_path)
     assert not found.bodies
     assert any("@docs is a directory" in p for p in found.problems)
-    assert any("@logo.png" in p for p in found.problems)
+    assert any("@a.bin" in p for p in found.problems)
 
 
 def test_a_path_outside_the_working_directory_is_refused(tmp_path: Path) -> None:
@@ -91,3 +91,23 @@ def test_an_oversized_attachment_spills_like_tool_output(tmp_path: Path) -> None
 def test_an_email_address_is_not_an_attachment(tmp_path: Path) -> None:
     # The token has to start a word, so "write to a@b.com" attaches nothing.
     assert _attach("write to a@b.com", tmp_path).problems == ()
+
+
+def test_an_at_path_to_a_picture_attaches_it_as_an_image(tmp_path: Path) -> None:
+    # A PNG used to be refused as "not a text file"; from M20 it is the point [ADR-0052].
+    png = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x02\x00\x00\x00\x03\x08\x06\x00\x00\x00"
+    (tmp_path / "shot.png").write_bytes(png)
+    found = _attach("what is in @shot.png", tmp_path)
+    assert not found.problems and not found.bodies
+    (shot,) = found.images
+    assert (shot.media_type, shot.width, shot.height) == ("image/png", 2, 3)
+    assert Path(shot.ref).read_bytes() == png  # the bytes went to the blobs, not the prompt
+
+
+def test_a_picture_outside_the_working_directory_is_still_refused(tmp_path: Path) -> None:
+    # The refusal rules are the same for a picture as for text [CLI-3].
+    outside = tmp_path.parent / "elsewhere.png"
+    outside.write_bytes(b"\x89PNG\r\n\x1a\n")
+    found = _attach(f"look at @{outside}", tmp_path)
+    assert not found.images
+    assert any("outside the working directory" in p for p in found.problems)

@@ -3,6 +3,8 @@
 It follows three fixed rules, deterministic and offline:
 
 - a user message `read PATH` calls `read` with that path; `ls [PATH]` calls `ls`
+- a message carrying an image is answered by naming what it saw, so a test can
+  watch an ImageBlock survive a turn and a --resume
 - after tool results, it replies with the result text
 - anything else is echoed back
 
@@ -36,6 +38,7 @@ class FakeProvider:
         streaming=True,
         reasoning=True,
         prompt_caching=False,
+        images=True,  # it round-trips an ImageBlock, which is what the tests need
         max_context=200_000,
         max_output=32_000,
     )
@@ -62,13 +65,16 @@ class FakeProvider:
         return ["test"]
 
     def count_tokens(self, messages: Sequence[Message]) -> int:
-        return approx_message_tokens(messages)
+        return approx_message_tokens(messages, self.family)
 
 
 def _rules(messages: Sequence[Message]) -> tuple[str, ToolUseBlock | None]:
     last = messages[-1]
     if last.role == "tool":
         return "\n".join(r.text for r in last.tool_results), None
+    if last.images:  # it cannot look, but it can say what arrived [ADR-0052]
+        seen = ", ".join(f"{i.media_type} {i.width}x{i.height} {i.ref}" for i in last.images)
+        return f"fake/test saw: {seen}", None
     match = _COMMAND.match(last.text)
     if match is None or (match[1] == "read" and match[2] is None):
         return f"fake/test heard: {last.text}", None

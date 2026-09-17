@@ -9,6 +9,32 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **Show the model a picture.** `@photo.png` attaches an image the same way
+  `@notes.md` attaches text, and the `read` tool on an image file answers with
+  the image instead of "looks binary; not shown". PNG, JPEG, GIF and WebP are
+  recognised from their first bytes, with no new dependency. The bytes go to
+  `sessions/<id>/blobs/` and never into the session's JSONL, so a transcript
+  stays readable and small; `--events` carries the reference so a watcher can
+  find the file on disk. A model that cannot see refuses an attached image
+  **where the model is chosen**, before anything is sent or spent, and says so;
+  if a tool produces a picture mid-turn instead, that model is told what the
+  file is rather than sent nothing. Images are priced by their dimensions per
+  provider, so the context budget and the cost caps stay right, and an old
+  picture is elided to a line naming it, so you stop paying for it every request
+  [ADR-0052, ADR-0060].
+- **Web search, as a file you copy in.** `examples/tools/web_search.toml` is an
+  HTTP tool in three documented variants — Brave, Tavily, or your own SearXNG —
+  with the key read from the environment at call time and scrubbed from what
+  comes back. There is deliberately no default host: you pick one, and you can
+  see which one. `examples/skills/web-research/` is the half that matters —
+  search, fetch the best hits, answer with the URLs. No code was added for this.
+- **git, as four files you copy in.** `git-status`, `git-diff`, `git-log` and
+  `git-commit` as command tools: argv templates started directly, never through
+  a shell, so a commit message with newlines, semicolons or backticks in it is
+  message text. `examples/skills/git/` carries the etiquette, including reading
+  the repository's own `AGENTS.md` first, and `examples/extensions/git-trail/`
+  is an observe-only `post_tool` hook that logs each commit. No code was added
+  for this either.
 - **Attach a file to what you type.** A bare `@path` anywhere in a REPL line or
   in `edgar -p` attaches that file's text to the message as context, leaving the
   line you typed exactly as you typed it. A missing path, a directory, a

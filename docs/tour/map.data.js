@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8372,
+    "loc": 8590,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6063,
+        "loc": 6269,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2009,
+            "loc": 2016,
             "status": "built",
             "children": [
               {
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 169,
+                "loc": 173,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 303,
+                "loc": 306,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -152,7 +152,7 @@ window.EDGAR_MAP = {
             "id": "core/config",
             "name": "config/",
             "kind": "package",
-            "loc": 390,
+            "loc": 391,
             "status": "built",
             "children": [
               {
@@ -173,7 +173,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "config",
-                "loc": 146,
+                "loc": 147,
                 "summary": "The config model (BLUEPRINT §14). The dataclasses are the schema.",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -185,7 +185,7 @@ window.EDGAR_MAP = {
             "id": "core/context",
             "name": "context/",
             "kind": "package",
-            "loc": 248,
+            "loc": 276,
             "status": "built",
             "children": [
               {
@@ -206,9 +206,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 139,
+                "loc": 146,
                 "summary": "Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].",
-                "stop": "index.html#s16",
+                "stop": "media.html#m6",
                 "status": "built",
                 "port": false
               },
@@ -230,9 +230,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 20,
+                "loc": 41,
                 "summary": "Token counting. Approximate for now; exact counts come from providers (OQ-3, M2).",
-                "stop": "index.html#s22",
+                "stop": "media.html#m5",
                 "status": "built",
                 "port": false
               }
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 758,
+            "loc": 770,
             "status": "built",
             "children": [
               {
@@ -287,9 +287,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 190,
+                "loc": 191,
                 "summary": "The event bus: the only output path [ADR-0011].",
-                "stop": "index.html#s3",
+                "stop": "media.html#m7",
                 "status": "built",
                 "port": false
               },
@@ -311,9 +311,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 76,
+                "loc": 87,
                 "summary": "The one message vocabulary. Nothing outside providers/ sees a provider-native shape.",
-                "stop": "index.html#s2",
+                "stop": "media.html#m1",
                 "status": "built",
                 "port": false
               },
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1174,
+            "loc": 1249,
             "status": "built",
             "children": [
               {
@@ -446,9 +446,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 154,
+                "loc": 171,
                 "summary": "The Anthropic Messages API, streamed [PRV-2].",
-                "stop": "index.html#s13",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -458,7 +458,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 65,
+                "loc": 66,
                 "summary": "The Provider port [ADR-0022]. Adapters translate; they never decide [ADR-0002].",
                 "stop": "index.html#s11",
                 "status": "built",
@@ -470,9 +470,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 63,
+                "loc": 69,
                 "summary": "`fake/test`: a model that runs nowhere, for trying edgar without a key.",
-                "stop": "index.html#s24",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -482,9 +482,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 235,
+                "loc": 248,
                 "summary": "What the two HTTP adapters share: the request with its retries, server-sent",
-                "stop": "index.html#s24",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -494,9 +494,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 196,
+                "loc": 220,
                 "summary": "One adapter for every OpenAI-compatible server [PRV-1, PRV-3, ADR-0002].",
-                "stop": "index.html#s12",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -518,9 +518,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 163,
+                "loc": 168,
                 "summary": "How providers differ, as data [PRV-3, ADR-0002, ADR-0020].",
-                "stop": "index.html#s12",
+                "stop": "media.html#m3",
                 "status": "built",
                 "port": false
               },
@@ -554,7 +554,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 107,
+                "loc": 116,
                 "summary": "Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].",
                 "stop": "agents.html#a4",
                 "status": "built",
@@ -587,7 +587,7 @@ window.EDGAR_MAP = {
             "id": "core/storage",
             "name": "storage/",
             "kind": "package",
-            "loc": 282,
+            "loc": 290,
             "status": "built",
             "children": [
               {
@@ -608,7 +608,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "storage",
-                "loc": 200,
+                "loc": 208,
                 "summary": "The session record: `.edgar/sessions/<id>.jsonl`, append-only [CTX-14, ADR-0010].",
                 "stop": "memory.html#m4",
                 "status": "built",
@@ -620,7 +620,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 505,
+            "loc": 573,
             "status": "built",
             "children": [
               {
@@ -629,7 +629,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 76,
+                "loc": 79,
                 "summary": "The tool contract, MCP-shaped so MCP is a translation layer, not a second system [TOOL-1].",
                 "stop": "index.html#s5",
                 "status": "built",
@@ -653,7 +653,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 150,
+                "loc": 152,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -677,9 +677,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 30,
+                "loc": 93,
                 "summary": "Stage S0 of the context pipeline: large output keeps its head and tail [TOOL-4, CTX-13].",
-                "stop": "index.html#s22",
+                "stop": "media.html#m2",
                 "status": "built",
                 "port": false
               }
@@ -689,7 +689,7 @@ window.EDGAR_MAP = {
             "id": "core/tools/builtin",
             "name": "tools/builtin/",
             "kind": "package",
-            "loc": 312,
+            "loc": 319,
             "status": "built",
             "children": [
               {
@@ -698,9 +698,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools/builtin",
-                "loc": 178,
+                "loc": 185,
                 "summary": "File system built-ins: `read` `ls` `glob` `grep` `write` `edit` [TOOL-5].",
-                "stop": "index.html#s9",
+                "stop": "media.html#m7",
                 "status": "built",
                 "port": false
               },
@@ -1175,7 +1175,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 271,
+        "loc": 283,
         "status": "built",
         "children": [
           {
@@ -1203,7 +1203,7 @@ window.EDGAR_MAP = {
             "id": "v2/context",
             "name": "context/",
             "kind": "package",
-            "loc": 129,
+            "loc": 141,
             "status": "built",
             "children": [
               {
@@ -1212,9 +1212,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "context",
-                "loc": 48,
-                "summary": "`@path` in a typed prompt attaches that file's text [CLI-3].",
-                "stop": "working.html#w1",
+                "loc": 60,
+                "summary": "`@path` in a typed prompt attaches that file's text, or the picture in it [CLI-3].",
+                "stop": "media.html#m7",
                 "status": "built",
                 "port": false
               },

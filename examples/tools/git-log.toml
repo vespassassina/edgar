@@ -1,0 +1,16 @@
+# See git-status.toml for how these four files fit together.
+#
+# An argv element naming an argument that was not passed is dropped whole, which
+# is why each optional one is a single `--flag=value` element: no dangling `-n`
+# with nothing after it. `count` is required rather than optional for exactly
+# that reason — dropping it would mean the entire history, not a sane default,
+# so the model has to say how much it wants.
+name = "git-log"
+description = "Recent commits, one line each. Ask for 20 unless you need more. Pass path to see only the commits touching one file."
+argv = ["git", "log", "--oneline", "--decorate", "--max-count={count}", "--", "{path}"]
+read_only = true
+[input]
+type = "object"
+required = ["count"]
+properties.count = { type = "integer", description = "how many commits; 20 is usually right" }
+properties.path = { type = "string", description = "one file or folder, relative to the repository root" }

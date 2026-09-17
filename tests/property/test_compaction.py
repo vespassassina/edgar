@@ -11,7 +11,14 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from edgar.context.compact import ELIDED, apply, elide, fold, rewind, turn_starts
-from edgar.core.message import Message, TextBlock, ThinkingBlock, ToolResultBlock, ToolUseBlock
+from edgar.core.message import (
+    ImageBlock,
+    Message,
+    TextBlock,
+    ThinkingBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
 from edgar.core.units import pairing_violations
 
 Turn = list[int]  # the number of tool calls in each exchange of the turn
@@ -28,7 +35,15 @@ def conversation(turns: list[Turn]) -> list[Message]:
             uses = tuple(ToolUseBlock(i, "write", {"path": f"f{i}.txt"}) for i in ids)
             out.append(Message("assistant", (ThinkingBlock("hmm", "fake:test"), *uses)))
             text = (TextBlock("x" * 400),)
-            out.append(Message("tool", tuple(ToolResultBlock(i, text) for i in ids)))
+            # Every other result carries a picture, so each stage is exercised on a
+            # unit with an image in it as well as without [ADR-0052].
+            shot = (ImageBlock("image/png", f"blobs/{ids[0]}.png", 640, 480),)
+            out.append(
+                Message(
+                    "tool",
+                    tuple(ToolResultBlock(i, text, images=shot if n % 2 else ()) for i in ids),
+                )
+            )
         out.append(Message("assistant", (ThinkingBlock("so", "fake:test"), TextBlock("done"))))
     return out
 

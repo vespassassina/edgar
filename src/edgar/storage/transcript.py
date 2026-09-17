@@ -30,7 +30,14 @@ from edgar.context.compact import apply
 from edgar.context.working import Todo
 from edgar.core import events as ev
 from edgar.core.errors import UsageError
-from edgar.core.message import ContentBlock, ErrorRecord, Message, TextBlock, ToolResultBlock
+from edgar.core.message import (
+    ContentBlock,
+    ErrorRecord,
+    ImageBlock,
+    Message,
+    TextBlock,
+    ToolResultBlock,
+)
 from edgar.core.session import Session
 from edgar.memory.redact import redact
 from edgar.providers.base import plus
@@ -97,6 +104,8 @@ def from_dict(entry: dict[str, Any]) -> Message:
         if raw["kind"] == "ToolResultBlock":
             b["content"] = tuple(TextBlock(**t) for t in b["content"])
             b["error"] = ErrorRecord(**b["error"]) if b["error"] else None
+            # `images` is absent in every session written before M20 [ADR-0060].
+            b["images"] = tuple(ImageBlock(**i) for i in b.get("images", ()))
         blocks.append(BLOCKS[raw["kind"]](**b))
     return Message(entry["role"], tuple(blocks), meta=entry.get("meta", {}))
 

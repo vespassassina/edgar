@@ -12,8 +12,10 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from base64 import b64encode
 from collections.abc import Callable
 from itertools import pairwise
+from pathlib import Path
 from typing import Any
 
 import cassettes
@@ -29,6 +31,7 @@ from edgar.core.events import (
     ToolCallRepaired,
 )
 from edgar.core.message import (
+    ImageBlock,
     Message,
     TextBlock,
     ThinkingBlock,
@@ -38,6 +41,12 @@ from edgar.core.message import (
 
 PROVIDERS = ["openai", "azure", "openrouter", "ollama", "anthropic", "compat"]
 FOREIGN = "elsewhere:model-x"  # reasoning from a family no adapter here belongs to
+# A 1x1 PNG, header-accurate, so the geometry reader can measure it.
+PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+    b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+)
+B64 = b64encode(PNG).decode("ascii")
 
 MakeRig = Callable[[str, str], Rig]
 
@@ -56,6 +65,13 @@ def call_and_result(call_id: str, thinking: ThinkingBlock | None = None) -> tupl
         blocks = (thinking, *blocks)
     result = ToolResultBlock(call_id, (TextBlock("     1\thello\n     2\tworld\n"),))
     return Message("assistant", blocks), Message("tool", (result,))
+
+
+def _shot(root: Path) -> ImageBlock:
+    # The block holds a reference; the bytes have to exist for the adapter to read.
+    blob = root / "photo.png"
+    blob.write_bytes(PNG)
+    return ImageBlock("image/png", blob.as_posix(), 1, 1)
 
 
 def sent(rig: Rig) -> str:
@@ -90,6 +106,29 @@ class TestProviderContract:
         body = sent(r)
         assert "call_rt" in body and "hello" in body  # the id and the result both travel
         assert response.message.text
+
+    def test_sends_an_attached_image_as_base64(
+        self, rig: MakeRig, name: str, tmp_path: Path
+    ) -> None:
+        # Serialising a picture is entirely outbound, so the "text" cassette answers
+        # it: what matters is the request body each family builds [ADR-0052].
+        r = rig(name, "text")
+        shot = _shot(tmp_path)
+        r.run([system(), Message("user", (TextBlock("What is this?"), shot))], tools=[])
+        body = sent(r)
+        assert "image/png" in body and B64 in body
+
+    def test_sends_an_image_a_tool_call_produced(
+        self, rig: MakeRig, name: str, tmp_path: Path
+    ) -> None:
+        r = rig(name, "round_trip")
+        call, _ = call_and_result("call_img")
+        result = ToolResultBlock(
+            "call_img", (TextBlock("read photo.png"),), images=(_shot(tmp_path),)
+        )
+        r.run([system(), user("Read photo.png."), call, Message("tool", (result,))])
+        body = sent(r)
+        assert "call_img" in body and B64 in body  # the pairing and the picture both travel
 
     def test_preserves_own_thinking_blocks(self, rig: MakeRig, name: str) -> None:
         first = rig(name, "thinking" if rig_reasons(name) else "text")

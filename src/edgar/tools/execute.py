@@ -101,6 +101,7 @@ async def execute(
         if result.error
         else None,
         blob=out.blob.as_posix() if out.blob else None,
+        images=(result.image,) if result.image else (),
     )
     bus.emit(
         ToolFinished(
@@ -110,6 +111,7 @@ async def execute(
             duration_ms=round((time.monotonic() - started) * 1000),
             truncated=block.truncated,
             blob=block.blob,
+            image=result.image.ref if result.image else None,
         )
     )
     return block

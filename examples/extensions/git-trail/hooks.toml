@@ -1,0 +1,13 @@
+# `post_tool` is observation only: fired and forgotten, its exit code and output
+# never read, and nothing it prints reaches the model or memory [EXT-6, EXT-7].
+# Only `pre_tool` can stop a call, and this hook deliberately is not one — it
+# watches commits, it does not police them.
+#
+# `match` narrows it to the one tool worth recording; without it the hook would
+# run after every call. Swap in `python3` if your platform has no bare `python`
+# on PATH.
+[[hooks]]
+event = "post_tool"
+command = ["python", "log_commit.py"]
+match = { tool = "git-commit" }
+timeout_s = 5

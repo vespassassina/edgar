@@ -22,21 +22,34 @@ list is done. Read it first, then the three documents under "Read".
   [ADR-0059](adr/0059-m19-working-state-as-built.md)): `@path` attachments, plan
   mode and the `todo` tool, `edgar context show`, `edgar sessions compact ID`
   and `edgar config show --resolved`. It is the first milestone since 1.0 with
-  `src/` code: `just loc` reads 8,374 of 9,500. **M20, seeing and searching, is
-  next.**
+  `src/` code: `just loc` read 8,374 of 9,500.
+- **M20 is done** (2026-09-17,
+  [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)): images end to end,
+  plus web search and git as example files costing no code. `just loc` reads
+  8,592 of 9,500. **M21, isolation, is next.**
 - The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
   **v2 is the daily driver**, M18–M22, ≤ 9,500 lines of code. Learning
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
   numbers did not change; the order of work is M18, M19, M20, M21, M22, then
   M12.
-- The re-tiering docs, M18 and M19 landed on `main`. Next up: Step 0b (the
-  dogfood week, the maintainer's own task) and Step 3 (M20).
+- The re-tiering docs, M18 and M19 landed on `main`; M20 is on the branch
+  `feat/m20-seeing-and-searching`, unmerged and unpushed, waiting for review of
+  ADR-0060's three flagged decisions. Next up: Step 0b (the dogfood week, the
+  maintainer's own task) and Step 4 (M21).
+- **Four documentation gaps** were found by the cold subagent that verified the
+  web-search example; all four are older than M20 and none is fixed. They are in
+  `JOURNAL.md`'s M20 entry: there is no `edgar tools validate` to match
+  `edgar skills validate`; an HTTP tool's `{slot}` that is missing from
+  `[input].properties` loads silently though `EXTENDING.md` documents the rule;
+  `edgar trust` lists a tool file by its first comment line rather than its name
+  or host; and `EXTENDING.md` never gives the HTTP-tool grammar in full. The
+  first two are candidates for M22's inspection work.
 
 ## Read, in this order
 
 1. [ADR-0057](adr/0057-daily-driver-before-learning.md): why, and the eight
    decisions. Ten minutes.
-2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M20.
+2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M21.
    Every item names its files, requirement IDs, test and size.
 3. [`AGENTS.md`](../AGENTS.md): the standing rules. Lines mean lines of code;
    pseudocode comments in every file you touch; shallow functions; the tour
@@ -120,12 +133,63 @@ What a later milestone needs to know:
   `agents list|validate` and the rest of `doctor` belong there too, not in
   `cli/admin.py`.
 
-## Step 3 — M20 onward
+## Step 3 — M20, seeing and searching · DONE 2026-09-17
 
-The same loop as M18 and M19, item by item, with the milestone's tour page as
-its last item. Never start M21 with M20's tour missing. 1,126 lines of code are
-left in the v2 budget for M20, M21 and M22; if a milestone would push past
-9,500, something moves out, the budget does not move.
+Built in ten commits, `e512b90..33e1d90`, one per roadmap item. No new module:
+every image change extends a file that already existed. The tour page is
+[`tour/media.html`](tour/media.html). `just loc` reads 8,592 of 9,500 (218
+added against ~200 estimated). The decisions, three of them flagged for extra
+review, are in [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md).
+
+What a later milestone needs to know:
+
+- **The `ImageBlock` shape.** Frozen and slotted, four fields and only four:
+  `media_type`, `ref` (the blob path, posix), `width`, `height` (both 0 when the
+  header could not be parsed). The bytes are never in the block, never in the
+  transcript and never in the event stream — only under
+  `sessions/<id>/blobs/`. Anything that needs the bytes calls `encoded()` in
+  `providers/http.py`, which base64s for one request and raises `ProviderError`
+  if the blob is gone. If you are tempted to add a fifth field, the test that
+  kept the others out was "does serialisation or token counting read it?", and
+  the asymmetry is in ADR-0060 §1: adding later is additive, removing is a
+  migration.
+- **`Message.images`** gathers pictures from a message's own blocks *and* its
+  tool results. Read that instead of walking blocks; counting, eliding and both
+  adapters all do.
+- **The capability-gating pattern**, which is the one to copy for any future
+  capability. The row goes in `providers/quirks.py` — a capability is data, never
+  a branch. The refusal goes in `providers/routing.py` next to
+  `check_capabilities()` and `check_images()`, and fires **where the model is
+  chosen**, from `cli/oneshot.py` and `cli/repl.py`, before a request is built
+  or a cent is spent [ROUTE-6]. When the same capability can also be hit
+  mid-turn, once the model is already chosen, carry it on `ToolContext` (see
+  `ToolContext.images`, set from `rt.provider.capabilities` in `build_context`)
+  and have the tool answer with a plain sentence rather than an error: the call
+  worked, and the model decides what to do next.
+- **`context/tokens.py` stays pure.** `image_tokens()` prices by geometry and
+  knows two rules, one for `anthropic` and one for everyone else, chosen by the
+  `family` string. A new provider family with a third pricing rule goes here, and
+  every caller already passes `family` through `approx_message_tokens()`.
+- **Compaction has exactly one function that knows where a turn may be cut**,
+  and `_stub()` is where a new block type gets its elided form. Do not add a
+  second pass; ADR-0060 §2 has the argument. Whatever you add must be
+  idempotent and must replace a tool result's text and its images together.
+- **`core/loop.py` is at 200/200 lines of code**, its hard cap, with no
+  headroom. Anything M21 or M22 adds to a turn has to buy its lines back inside
+  the file: the M20 technique was module-level type aliases keeping signatures
+  on one line, and narration moved from docstrings into `#` comments, which the
+  budget does not count.
+- **Web search and git are files, not code**, under `examples/`. If a future
+  capability fits the frozen command-tool, HTTP-tool, skill or hook formats, it
+  should arrive the same way; ADR-0060's last section says why a built-in
+  `web_search` was refused (PRV-15: it would need a default host).
+
+## Step 4 — M21 onward
+
+The same loop as M18, M19 and M20, item by item, with the milestone's tour page
+as its last item. Never start M22 with M21's tour missing. 908 lines of code are
+left in the v2 budget for M21 and M22; if a milestone would push past 9,500,
+something moves out, the budget does not move.
 
 ## Proposed diff to `AGENTS.md` (maintainer applies by hand)
 
@@ -154,7 +218,7 @@ still describe the removable tier as "v2". Proposed wording:
 ## Resume commands
 
 ```bash
-git switch docs/re-tier-v2-v3-v4
+git switch feat/m20-seeing-and-searching
 ```
 
 ```bash

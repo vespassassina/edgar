@@ -1,0 +1,10 @@
+# An extension: a folder bundling a hook behind one manifest. Copy to
+# .edgar/extensions/ (this project) or ~/.edgar/extensions/ (everywhere), then
+# run `edgar trust` and `edgar ext list`.
+#
+# Pairs with the four git tools in examples/tools/ and the `git` skill: it keeps
+# a local note of every commit the agent made, so you can see afterwards what it
+# did without reading the whole transcript.
+name = "git-trail"
+version = "0.1.0"
+description = "Appends one line to git-trail.log for every commit the agent makes."
