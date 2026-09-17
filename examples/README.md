@@ -13,7 +13,9 @@ until you copy it.
 | [`tools/gmail_search.toml`](tools/gmail_search.toml) | A command tool wrapping `gws`, so Google's own OAuth stays outside edgar | `.edgar/tools/` |
 | [`tools/gcal_events.toml`](tools/gcal_events.toml) | The same pattern as `gmail_search.toml`, for Calendar | `.edgar/tools/` |
 | [`tools/gdocs_get.toml`](tools/gdocs_get.toml) | The same pattern as `gmail_search.toml`, for Docs | `.edgar/tools/` |
+| [`tools/web_search.toml`](tools/web_search.toml) | Web search: an HTTP tool in three variants (Brave, Tavily, your own SearXNG) — pick one, there is no default host | `.edgar/tools/` |
 | [`skills/changelog/`](skills/changelog/) | A skill: instructions plus a template file beside them | `.edgar/skills/` |
+| [`skills/web-research/`](skills/web-research/) | A skill: search, `fetch` the best hits, answer with sources | `.edgar/skills/` |
 | [`agents/code-reviewer.md`](agents/code-reviewer.md) | A subagent: one flat file, `read-only` mode, four tools | `.edgar/agents/` |
 | [`extensions/audit-log/`](extensions/audit-log/) | An extension: a manifest plus one observation-only hook | `.edgar/extensions/` |
 

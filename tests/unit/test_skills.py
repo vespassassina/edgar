@@ -224,6 +224,7 @@ def test_the_example_tools_load() -> None:
         "onedrive_ls",
         "service_status",
         "weather",
+        "web_search",
     ]
     for path in (EXAMPLES / "tools").glob("*.toml"):
         tomllib.loads(path.read_text(encoding="utf-8"))
