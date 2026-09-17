@@ -133,10 +133,12 @@ def sessions_compact(which: str, cwd: Path, home: Path) -> int:
 # this is free and works with no key set [ROUTE-9].
 #
 # The context it builds is the one the real path builds, not a richer one: the
-# main turn (`cli/setup.py`'s `runtime()`) passes a bare `RoutingContext()`, so a
-# rule keyed on `mode`, `tags` or `schedule` cannot match for the main role. That
-# is a property of edgar, not of this command, so the command shows it rather
-# than papering over it with a context no turn would ever use.
+# main turn (`cli/setup.py`'s `runtime()`) knows `mode` and `tools_required` before
+# any turn runs, so a rule keyed on either can match for the main role, but `tags`
+# and `schedule` are not produced anywhere yet (they wait on v4's scheduler), so a
+# rule keyed on either still cannot match for main. That is a property of edgar,
+# not of this command, so the command shows it rather than papering over it with a
+# context no turn would ever use.
 
 ROLES: tuple[Role, ...] = ("main", "subagent", "compactor", "controller", "condenser")
 
@@ -150,10 +152,10 @@ def route_explain(argv: list[str], cwd: Path, home: Path) -> int:
     tokens = approx_tokens(" ".join(argv[1:]))
     print(f"{len(rules)} [[route]] rules · prompt ~{tokens:,} tokens · no provider contacted")
     for role in ROLES:
-        ctx = RoutingContext(role=role, prompt_tokens=tokens)
+        ctx = RoutingContext(role=role, mode=config.permissions.mode, prompt_tokens=tokens)
         chosen = select_model(ctx, config.model, rules)
         print(f"{role:<11} {chosen.model:<32} {chosen.rule:<14} {chosen.reason}")
-    main = RoutingContext(prompt_tokens=tokens)
+    main = RoutingContext(mode=config.permissions.mode, prompt_tokens=tokens)
     for rule in rules:
         verdict = "matched" if matches(rule, main) else "skipped"
         print(f"  rule {rule.name:<20} {verdict} for role main: {_conditions(rule)}")

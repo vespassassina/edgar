@@ -11,6 +11,7 @@ from harness import Recorder
 
 from edgar.cli.oneshot import run_prompt
 from edgar.core.errors import ConfigError
+from edgar.core.events import ModelSelected
 from edgar.core.message import Message, TextBlock
 
 
@@ -61,6 +62,30 @@ def test_model_can_come_from_project_config(
     (tmp_project / ".edgar" / "config.toml").write_text('[model]\ndefault = "fake/test"\n')
     assert run_prompt("hi", cwd=tmp_project, model=None, mode="ask", env={}, home=home) == 0
     assert capsys.readouterr().out == "fake/test heard: hi\n"
+
+
+def test_a_route_rule_keyed_on_mode_matches_the_main_turn(
+    tmp_project: Path, home: Path, recorder: Recorder
+) -> None:
+    """The main turn's `RoutingContext` used to be built with every field left at
+    its default, so a `[[route]]` rule keyed on `mode` could never match it. Fixed
+    in `cli/setup.py`'s `runtime()`, which now passes the mode the CLI resolved."""
+    (tmp_project / ".edgar").mkdir()
+    (tmp_project / ".edgar" / "config.toml").write_text(
+        '[model]\ndefault = "fake/wrong-if-picked"\n\n'
+        '[[route]]\nname = "read-only-goes-cheap"\nmodel = "fake/test"\nmode = "read-only"\n'
+    )
+    run_prompt(
+        "hi",
+        cwd=tmp_project,
+        model=None,
+        mode="read-only",
+        subscribers=[recorder],
+        env={},
+        home=home,
+    )
+    selected = recorder.of(ModelSelected)[0]
+    assert (selected.model, selected.rule) == ("fake/test", "read-only-goes-cheap")
 
 
 def test_no_model_anywhere_is_a_config_error(tmp_project: Path, home: Path) -> None:

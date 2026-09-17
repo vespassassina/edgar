@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 9303,
+    "loc": 9304,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6555,
+        "loc": 6556,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2042,
+            "loc": 2043,
             "status": "built",
             "children": [
               {
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 334,
+                "loc": 335,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "index.html#s18",
                 "status": "built",

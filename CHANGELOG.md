@@ -123,6 +123,13 @@ extension formats freeze.
   "which file won" is one command. API keys render as `***`; edgar stores the
   name of an environment variable, never a key [CFG-2, CFG-6].
 
+### Fixed
+- A `[[route]]` rule keyed on `mode`, such as one routing `read-only` turns to a
+  cheaper model, could never match your main turn: the routing context it was
+  checked against left every field but the role at its default. `mode` and
+  `tools_required` are now the real ones for that turn; `tags` and `schedule`
+  stay unset, since nothing in edgar produces either yet [ROUTE-2].
+
 ### Docs
 - The tour covers all of v1 and now has a map. Four new pages —
   [memory](docs/tour/memory.html), [MCP and signing in](docs/tour/mcp.html),

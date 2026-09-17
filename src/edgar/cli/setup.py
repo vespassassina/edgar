@@ -297,7 +297,12 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
     """The runtime for the configured main model, or for `choice` (`/model`)."""
     config = s.config
     rules = routes_from_config(config.later)  # [[route]] rules, ahead of role binding [ROUTE-2]
-    selection = choice or select_model(RoutingContext(), config.model, rules)
+    # `mode` and `tools_required` are known before any turn runs, so a [[route]] rule
+    # keyed on either can match for the main role too; `tags` and `schedule` are not
+    # produced anywhere yet (they wait on v4's scheduler), so they stay at their
+    # empty defaults here rather than being faked.
+    ctx = RoutingContext(mode=config.permissions.mode, tools_required=bool(s.tools.names()))
+    selection = choice or select_model(ctx, config.model, rules)
     provider, provider_model = resolve(selection.model, config, env=s.env)
     # A model with no tool support caught here, not partway through a turn [ROUTE-6].
     check_capabilities(

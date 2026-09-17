@@ -29,9 +29,9 @@ In order:
    ~~**M21, isolation.**~~ Done 2026-09-17
    ([ADR-0061](adr/0061-m21-isolation-as-built.md)).
    ~~**M22's code.**~~ Done 2026-09-17
-   ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)); `just loc` now
-   reads 9,305 of 9,500. **The 2.0 release itself is not started** and needs the
-   maintainer's authorisation, as every push, tag and release here does.
+   ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)). **The 2.0 release
+   itself is not started** and needs the maintainer's authorisation, as every
+   push, tag and release here does.
 4. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 5. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
@@ -41,12 +41,36 @@ In order:
    one-line description, one line per entry in the terminal. Logged in
    `ROADMAP.md`'s "Past v4" list as items 10 and 11.
 
-v2 sits at 9,305 of 9,500 `src/` lines of code with every M22 code item built
+v2 sits at 9,306 of 9,500 `src/` lines of code with every M22 code item built
 except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 (ADR-0062 §6). ADR-0053's cuts are all reversed now bar that one.
 `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-17 · fix: the main turn's routing context was always bare
+
+**Asked:** fix the bug M22's build agent surfaced and documented but correctly
+left alone (out of that milestone's scope): `cli/setup.py`'s `runtime()` called
+`select_model(RoutingContext(), ...)` with every field left at its default, so a
+`[[route]]` rule keyed on `mode`, `tags` or `schedule` could never match for the
+main role, in every real turn, permanently.
+
+**Done:** traced which fields are actually knowable at that call site before a
+turn runs. `mode` is `config.permissions.mode`, resolved before `runtime()` is
+called; `tools_required` is `bool(s.tools.names())`, the registry `runtime()`
+already builds against a line later. Both now go into the `RoutingContext` at
+`cli/setup.py:300`. `tags` and `schedule` stay at their empty defaults: grepping
+every `RoutingContext(...)` construction in `src/` turned up no producer for
+either anywhere in the codebase — they are wired for `[[route]]` rules to read
+but nothing populates them yet, since they wait on v4's scheduler and no
+tag-setting mechanism exists. Faking them would have been worse than leaving
+them bare. `edgar route explain`'s mirrored context and its comment
+(`cli/inspect.py`) now say the same thing accurately. Added a regression test,
+`test_a_route_rule_keyed_on_mode_matches_the_main_turn`
+(`tests/integration/test_oneshot.py`), that a `[[route]] mode = "read-only"` rule
+now matches a real `-p` run started in that mode. `just check` green, 870 tests;
+`just loc` 9,306 of 9,500 (+2 lines).
 
 ## 2026-09-17 · M22 — the inspection commands (code only)
 
