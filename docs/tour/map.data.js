@@ -208,7 +208,7 @@ window.EDGAR_MAP = {
                 "package": "context",
                 "loc": 146,
                 "summary": "Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].",
-                "stop": "index.html#s16",
+                "stop": "media.html#m6",
                 "status": "built",
                 "port": false
               },
@@ -232,7 +232,7 @@ window.EDGAR_MAP = {
                 "package": "context",
                 "loc": 41,
                 "summary": "Token counting. Approximate for now; exact counts come from providers (OQ-3, M2).",
-                "stop": "index.html#s22",
+                "stop": "media.html#m5",
                 "status": "built",
                 "port": false
               }
@@ -289,7 +289,7 @@ window.EDGAR_MAP = {
                 "package": "core",
                 "loc": 191,
                 "summary": "The event bus: the only output path [ADR-0011].",
-                "stop": "index.html#s3",
+                "stop": "media.html#m7",
                 "status": "built",
                 "port": false
               },
@@ -313,7 +313,7 @@ window.EDGAR_MAP = {
                 "package": "core",
                 "loc": 87,
                 "summary": "The one message vocabulary. Nothing outside providers/ sees a provider-native shape.",
-                "stop": "index.html#s2",
+                "stop": "media.html#m1",
                 "status": "built",
                 "port": false
               },
@@ -448,7 +448,7 @@ window.EDGAR_MAP = {
                 "package": "providers",
                 "loc": 171,
                 "summary": "The Anthropic Messages API, streamed [PRV-2].",
-                "stop": "index.html#s13",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -472,7 +472,7 @@ window.EDGAR_MAP = {
                 "package": "providers",
                 "loc": 69,
                 "summary": "`fake/test`: a model that runs nowhere, for trying edgar without a key.",
-                "stop": "index.html#s24",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -484,7 +484,7 @@ window.EDGAR_MAP = {
                 "package": "providers",
                 "loc": 248,
                 "summary": "What the two HTTP adapters share: the request with its retries, server-sent",
-                "stop": "index.html#s24",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -496,7 +496,7 @@ window.EDGAR_MAP = {
                 "package": "providers",
                 "loc": 220,
                 "summary": "One adapter for every OpenAI-compatible server [PRV-1, PRV-3, ADR-0002].",
-                "stop": "index.html#s12",
+                "stop": "media.html#m4",
                 "status": "built",
                 "port": false
               },
@@ -520,7 +520,7 @@ window.EDGAR_MAP = {
                 "package": "providers",
                 "loc": 168,
                 "summary": "How providers differ, as data [PRV-3, ADR-0002, ADR-0020].",
-                "stop": "index.html#s12",
+                "stop": "media.html#m3",
                 "status": "built",
                 "port": false
               },
@@ -679,7 +679,7 @@ window.EDGAR_MAP = {
                 "package": "tools",
                 "loc": 93,
                 "summary": "Stage S0 of the context pipeline: large output keeps its head and tail [TOOL-4, CTX-13].",
-                "stop": "index.html#s22",
+                "stop": "media.html#m2",
                 "status": "built",
                 "port": false
               }
@@ -700,7 +700,7 @@ window.EDGAR_MAP = {
                 "package": "tools/builtin",
                 "loc": 185,
                 "summary": "File system built-ins: `read` `ls` `glob` `grep` `write` `edit` [TOOL-5].",
-                "stop": "index.html#s9",
+                "stop": "media.html#m7",
                 "status": "built",
                 "port": false
               },
@@ -1214,7 +1214,7 @@ window.EDGAR_MAP = {
                 "package": "context",
                 "loc": 60,
                 "summary": "`@path` in a typed prompt attaches that file's text, or the picture in it [CLI-3].",
-                "stop": "working.html#w1",
+                "stop": "media.html#m7",
                 "status": "built",
                 "port": false
               },
