@@ -214,11 +214,13 @@ extension folders that bundle any of the above and share it by copying.
 
 **Coming in 2.0, the daily driver (M18 to M22).** The tour pages per v1 feature
 and the [map of the harness](https://vespassassina.github.io/edgar/map.html) are
-built, and were M18. Still to come: `@path` attachments, plan mode and a `todo`
-list that survive compaction. Images in the conversation. Web search and git as extensions you can
-read. A git worktree per subagent that writes, and a sandboxed shell. The
-inspection commands: `context show`, `route explain`, `config show --resolved`,
-the rest of `doctor`.
+built, and were M18. M19 added `@path` attachments, plan mode and a `todo` list
+that survive compaction, and three commands that show you what edgar is working
+from: `edgar context show`, `edgar sessions compact ID` and
+`edgar config show --resolved`. Still to come: images in the conversation. Web
+search and git as extensions you can read. A git worktree per subagent that
+writes, and a sandboxed shell. The rest of the inspection commands:
+`route explain`, `agents list`, the rest of `doctor`.
 
 **Long sessions that stay valid.** Context is compressed in stages, cheapest
 first: big outputs spill to disk, old tool results become stubs, old turns fold

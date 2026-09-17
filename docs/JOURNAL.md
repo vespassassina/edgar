@@ -20,20 +20,69 @@ In order:
    in the handoff), journal every friction under a `## Dogfood` heading in this
    file. The list is M19–M22's real specification.
 3. ~~**M18, tours for v1 and the map.**~~ Done 2026-09-16
-   ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)). **M19,
-   working state**, is next: it flips `TARGET_TIER` to `"v2"` and is the first
-   milestone since 1.0 that writes `src/` code.
+   ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)).
+   ~~**M19, working state.**~~ Done 2026-09-17
+   ([ADR-0059](adr/0059-m19-working-state-as-built.md)); it flipped
+   `TARGET_TIER` to `"v2"` and `just loc` now reads 8,374 of 9,500. **M20,
+   seeing and searching**, is next.
 4. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 
-v1 sits exactly at 8,000/8,000 `src/` lines of code. M18 must not add a line to
-`src/`; M19 flips `TARGET_TIER` to `"v2"` in `tests/support/budget.py` and works
-inside 9,500. ADR-0053's cuts are no longer forbidden: they are M19 (plan mode,
-`todo`, `context show`), M21 (worktrees, sandboxes) and M22 (`route explain`,
-`agents list|validate`, `ext validate|add`, the contract kit, `config show
---resolved`, the rest of `doctor`). `AGENTS.md` rule 10 and its size table still
+v2 sits at 8,374 of 9,500 `src/` lines of code after M19, so M20, M21 and M22
+share the 1,126 that are left. ADR-0053's cuts are no longer forbidden: plan
+mode, `todo`, `context show` and `config show --resolved` landed in M19; the
+rest are M21 (worktrees, sandboxes) and M22 (`route explain`,
+`agents list|validate`, `ext validate|add`, the contract kit, the rest of
+`doctor`). `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-17 · M19 — working state, and the first v2 code
+
+**Asked:** build M19 in five ordered items, each with its test and its own
+commit — `@path` attachments, plan mode and the `todo` tool, `edgar context
+show`, `edgar sessions compact ID`, `edgar config show --resolved` — then the
+tour page and the map. Flip `TARGET_TIER` to `"v2"` before the first commit and
+stay under 9,500 lines of code. The brief's estimate was ~340.
+
+**Done:** all five, in five commits plus this one. `context/attach.py` (48 LOC)
+pulls `@path` tokens out of a typed line and returns the file's text as a
+separate body the REPL and `-p` wrap as `TextBlock(attached=True)`; refusals
+(missing, directory, credential file, outside the working directory, not text)
+name the path and stop the turn instead of raising, and oversized content goes
+through the existing spill. `context/working.py` (81 LOC) holds the plan, the
+todo list and the mode to give back, renders them as one pinned block placed
+just above the current turn by `build()`, and never enters the transcript;
+`tools/builtin/todo.py` (41 LOC) replaces the whole list in one call and emits
+`TodoUpdated`, which the status bar renders and `replay()` reads back.
+`cli/inspect.py` (101 LOC) holds the three new commands. Six new tests, including
+a 60-turn session through six compactions asserting the todo block is
+byte-identical in every request and the pairing invariant holds in all of them, a
+`/plan` whose `write` is denied and a `/go` that restores `auto`, and a
+`config show --resolved` that never prints the key in the environment. New tour
+page `docs/tour/working.html` with a stop per new file, `just map` re-run,
+three new COOKBOOK recipes. `just check` green (749 tests), `just loc` 8,374 of
+9,500.
+
+**Decided** ([ADR-0059](adr/0059-m19-working-state-as-built.md)): working state
+lives on the `Session`, outside the transcript, and is rendered into the prompt
+on the way out — so compaction's stages need no special case and the pairing
+invariant holds for it by construction, rather than by every future stage
+remembering an index. Plan mode is the session's existing `mode` set to
+`read-only` with the previous mode remembered, not a new `Policy` flag and not a
+dynamic guard: the permission engine gained nothing, `leave()` can only restore
+a mode the session already had, and `enter()`/`leave()` are reachable only from
+`/plan`, `--plan` and `/go`, all typed by a human. The `todo` tool is category
+`read` — it changes nothing the user owns, so it does not trip the verify gate
+and stays callable in plan mode, where writing the list is the work. `@path`
+does not refuse `.edgar/config.toml`: the permission engine asks about a control
+file only for a *write*, and a module inventing a second rule is how two rules
+end up disagreeing.
+
+**Next:** M20, seeing and searching. Plan *mode* is deliberately not restored by
+`--resume` (the plan text and todos are); if that turns out to be the wrong
+call, it is a one-line change and a new ADR. `AGENTS.md` rule 10 and the
+dogfood week are still open, unchanged from M18.
 
 ## 2026-09-16 · M18 — the tour covers all of v1, and has a map
 

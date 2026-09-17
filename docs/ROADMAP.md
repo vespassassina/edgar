@@ -50,8 +50,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M10 Extensions, hooks, plugins, embedding | Done ([ADR-0055](adr/0055-m10-extensions-as-built.md)) | 1.0 |
 | M11 Init, doctor, docs | Done · 1.0 ([ADR-0056](adr/0056-m11-as-built.md)) — PRD §11's two human criteria still open | 1.0 |
 | M18 Tours for v1 and the map | Done ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)) | 2.0 |
-| M19 Working state | Next | 2.0 |
-| M20 Seeing and searching | Planned | 2.0 |
+| M19 Working state | Done ([ADR-0059](adr/0059-m19-working-state-as-built.md)) | 2.0 |
+| M20 Seeing and searching | Next | 2.0 |
 | M21 Isolation | Planned | 2.0 |
 | M22 Inspection, 2.0 release | Planned | 2.0 |
 | M12–M15 Learning, controller, synthesis, escalation | Planned | 3.0 |
@@ -529,10 +529,10 @@ number stays.
 | Milestone | Adds to `src/` (est.) | Running total |
 |---|---|---|
 | M18 Tours for v1 and the map | 0 | 8,000 |
-| M19 Working state | ~340 | ~8,340 |
-| M20 Seeing and searching | ~200 | ~8,540 |
-| M21 Isolation | ~350 | ~8,890 |
-| M22 Inspection, 2.0 release | ~440 | ~9,330 |
+| M19 Working state | 374 (built) | 8,374 |
+| M20 Seeing and searching | ~200 | ~8,574 |
+| M21 Isolation | ~350 | ~8,924 |
+| M22 Inspection, 2.0 release | ~440 | ~9,364 |
 
 **How to read a v2 milestone.** Each item names the files it touches, the
 requirement IDs it closes, the test that proves it and its size. Items are
@@ -627,7 +627,10 @@ to any file's stop in one click.
 
 ---
 
-## M19 — Working state
+## M19 — Working state · DONE 2026-09-17
+
+Built in six commits, `41052a8..c73c0f7`, one per item;
+[ADR-0059](adr/0059-m19-working-state-as-built.md) records the decisions.
 
 **Goal:** the things a person reaches for in the first hour of real work and
 does not find. About 340 lines of code.
