@@ -27,25 +27,28 @@ list is done. Read it first, then the three documents under "Read".
   [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)): images end to end,
   plus web search and git as example files costing no code. `just loc` read
   8,592 of 9,500.
-- **M21 is done and unmerged** (2026-09-17,
-  [ADR-0061](adr/0061-m21-isolation-as-built.md)), on branch
-  `feat/m21-isolation`: worktree subagents and the sandbox backends. `just loc`
-  reads **8,869 of 9,500**. **M22, inspection and the 2.0 release, is next**, with
-  631 lines of code left for it. Four decisions in ADR-0061 are flagged for extra
-  review before merge; §2 (the sandbox is a write and network boundary, **not** a
-  read boundary, against the roadmap's own wording) is the one that matters most,
-  and §6 says `bwrap` has never been executed by anyone.
+- **M21 is done and merged** (2026-09-17,
+  [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
+  sandbox backends. `just loc` reads **8,869 of 9,500**. **M22, inspection and
+  the 2.0 release, is next**, with 631 lines of code left for it. Two of
+  ADR-0061's flagged decisions matter most and are not yet resolved: §2 says
+  the sandbox is a write and network boundary, **not** a read boundary,
+  against the roadmap's own wording — a reviewer still has to decide whether a
+  read boundary is wanted at all, and if so it is its own milestone; §6 says
+  `bwrap` has never been executed by anyone (no Linux machine was available to
+  test it), only asserted argv-by-argv against `bwrap(1)`'s documented
+  behaviour — a Linux reviewer should run it for real before anyone relies on
+  it.
 - The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
   **v2 is the daily driver**, M18–M22, ≤ 9,500 lines of code. Learning
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
   numbers did not change; the order of work is M18, M19, M20, M21, M22, then
   M12.
-- The re-tiering docs, M18, M19 and M20 landed on `main`, merged after
-  independent re-verification of ADR-0060's three flagged decisions
-  (`ImageBlock`'s field list, the compaction-elision approach, the
-  spill-reuse-versus-new-helper choice) — all three held up on direct
-  reading. Not yet pushed to `origin`. Next up: Step 0b (the dogfood week, the
-  maintainer's own task), reviewing M21 (Step 4) and then M22 (Step 5).
+- The re-tiering docs, M18, M19, M20 and M21 landed on `main`, each merged
+  after independent re-verification of its ADR's flagged decisions by reading
+  the actual source (not the agent's self-report) — every one held up. Not yet
+  pushed to `origin`. Next up: Step 0b (the dogfood week, the maintainer's own
+  task) and M22 (Step 5).
 - **Four documentation gaps** were found by the cold subagent that verified the
   web-search example; all four are older than M20 and none is fixed. They are in
   `JOURNAL.md`'s M20 entry: there is no `edgar tools validate` to match
@@ -299,7 +302,7 @@ Proposed, under the existing `[shell]` block:
 ## Resume commands
 
 ```bash
-git switch feat/m21-isolation
+git switch main
 ```
 
 ```bash
