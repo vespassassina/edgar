@@ -107,6 +107,20 @@ only the answer, and status goes to stderr, so `> out.txt` holds just the
 result. `-p` needs `--mode`: nobody is there to answer a question, so you choose
 up front what it may do.
 
+## Attach a file to what you type
+
+```bash
+edgar -p "explain @README.md in one paragraph" --mode read-only
+```
+
+In the REPL and in `-p`, a word starting with `@` attaches that file's text to
+your message. Like piped input it is context, never the prompt, and like piped
+input it is never a learning source: nothing you attach can turn into a
+remembered fact. Text files only, inside the working directory; a directory, a
+binary file or a path that is not there gets a message naming it, and the turn
+does not run. A file bigger than `tools.max_output_tokens` keeps its head and
+tail and spills the rest to a blob, exactly as large tool output does.
+
 ## Give the agent a CLI
 
 A command tool is an argv template. edgar starts the program directly, never

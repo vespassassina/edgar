@@ -69,6 +69,7 @@ a.node:focus-visible rect { stroke: var(--ak-accent); stroke-width: 2; }
       <li><a href="mcp.html">MCP</a></li>
       <li><a href="agents.html">Subagents</a></li>
       <li><a href="extensions.html">Extensions</a></li>
+      <li><a href="working.html">Working state</a></li>
       <li><a href="map.html" aria-current="page">The map</a></li>
     </ul>
   </div>
@@ -90,7 +91,7 @@ fails if the committed copy has drifted.</p>
 
 <div class="root-node">
   <b>src/edgar</b>
-  <span><b id="total">0</b> lines of code, <span id="count">0</span> files, four tiers</span>
+  <span><b id="total">0</b> lines of code, <span id="count">0</span> files, five tiers</span>
   <span>v3 and v4 are dashed: planned, and removable by design</span>
 </div>
 
@@ -118,7 +119,7 @@ file that v1 grew is still Core.</p>
 <p>The six ports (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0022-ports-and-adapters.md">ADR-0022</a>)
 are outlined: provider, tool, skill source, sandbox, retriever and output. Five of them
 have a file; the sandbox port arrives with M21, so it has no node yet.</p>
-<p class="ak-source">The total here is two lines short of the 8,000
+<p class="ak-source">The total here is two lines short of what
 <code>just loc</code> reports: those two live in packages' own
 <code>__init__.py</code> files, which are not nodes because they have nothing to say.</p>
 

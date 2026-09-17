@@ -44,4 +44,4 @@ def test_every_file_in_the_map_has_a_stop_and_a_tier() -> None:
     files = [f for t in data["root"]["children"] for p in t["children"] for f in p["children"]]
     assert len(files) > 80
     assert not [f["path"] for f in files if f["stop"] is None]
-    assert not [f["path"] for f in files if f["tier"] not in {"core", "v1", "v3", "v4"}]
+    assert not [f["path"] for f in files if f["tier"] not in {"core", "v1", "v2", "v3", "v4"}]

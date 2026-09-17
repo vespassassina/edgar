@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 7998,
+    "loc": 8072,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 5960,
+        "loc": 5986,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 1932,
+            "loc": 1958,
             "status": "built",
             "children": [
               {
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 150,
+                "loc": 163,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 284,
+                "loc": 297,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -1163,6 +1163,92 @@ window.EDGAR_MAP = {
                 "summary": "The stdio transport: the server is a child process speaking JSON-RPC, a message",
                 "stop": "mcp.html#p1",
                 "status": "built",
+                "port": false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "v2",
+        "name": "v2, the daily driver",
+        "kind": "tier",
+        "milestones": "M18 to M22",
+        "summary": "Liveable. Not removable.",
+        "loc": 48,
+        "status": "built",
+        "children": [
+          {
+            "id": "v2/cli",
+            "name": "cli/",
+            "kind": "package",
+            "loc": 0,
+            "status": "planned",
+            "children": [
+              {
+                "path": "src/edgar/cli/inspect.py",
+                "name": "inspect.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "cli",
+                "loc": 0,
+                "summary": "",
+                "stop": "working.html#w4",
+                "status": "planned",
+                "port": false
+              }
+            ]
+          },
+          {
+            "id": "v2/context",
+            "name": "context/",
+            "kind": "package",
+            "loc": 48,
+            "status": "built",
+            "children": [
+              {
+                "path": "src/edgar/context/attach.py",
+                "name": "attach.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "context",
+                "loc": 48,
+                "summary": "`@path` in a typed prompt attaches that file's text [CLI-3].",
+                "stop": "working.html#w1",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/context/working.py",
+                "name": "working.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "context",
+                "loc": 0,
+                "summary": "",
+                "stop": "working.html#w2",
+                "status": "planned",
+                "port": false
+              }
+            ]
+          },
+          {
+            "id": "v2/tools/builtin",
+            "name": "tools/builtin/",
+            "kind": "package",
+            "loc": 0,
+            "status": "planned",
+            "children": [
+              {
+                "path": "src/edgar/tools/builtin/todo.py",
+                "name": "todo.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "tools/builtin",
+                "loc": 0,
+                "summary": "",
+                "stop": "working.html#w3",
+                "status": "planned",
                 "port": false
               }
             ]

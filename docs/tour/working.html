@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Working state · A Tour of the Harness</title>
+<meta name="description" content="How edgar attaches a file with @path, keeps a plan and a todo list alive across compaction, and prints what it is about to send.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<!-- Styled with artifactkit, vendored in artifactkit/. Only its theme block is ours. -->
+<link rel="stylesheet" href="artifactkit/theme.css">
+<link rel="stylesheet" href="artifactkit/components.css">
+<link rel="stylesheet" href="artifactkit/print.css">
+<link rel="stylesheet" href="tour.css">
+</head>
+<body>
+<div class="ak-wrap" id="top">
+
+<header class="ak-pagehead">
+  <div>
+    <p class="ak-eyebrow"><a href="index.html">A Tour of the Harness</a> · v2 · M19</p>
+    <h1>Working state</h1>
+    <p class="ak-lede">What you attach, what the model is working on, and what edgar is
+    about to send. Four stops, about half an hour.</p>
+    <ul class="pages">
+      <li><a href="index.html">Core and v1</a></li>
+      <li><a href="memory.html">Memory</a></li>
+      <li><a href="mcp.html">MCP</a></li>
+      <li><a href="agents.html">Subagents</a></li>
+      <li><a href="extensions.html">Extensions</a></li>
+      <li><a href="working.html" aria-current="page">Working state</a></li>
+      <li><a href="map.html">The map</a></li>
+    </ul>
+  </div>
+  <div class="ak-meta">
+    <span class="ak-pill ak-pill-ok">Built</span> M19, the first v2 code<br>
+    Kept in sync by a test
+  </div>
+</header>
+
+<main class="tour-main">
+
+<p>Everything on this page is about the difference between what a session
+<em>remembers</em> and what it is <em>working on</em>. Memory is slow, confirmed and
+shared between sessions. Working state is fast, unconfirmed and thrown away at the
+end: the file you just attached, the plan you agreed on, the list of things still to
+do. The design problem is that working state has to survive compaction without
+becoming memory, and without breaking the pairing invariant that compaction protects
+(<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0025-working-state.md">ADR-0025</a>).</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+    typed["what the human typed<br/>the only learning source"] --> msg["the user message"]
+    at["@path in that line"] --> body["the file's text,<br/>attached=True"]
+    body --> msg
+    msg --> tr["the transcript: compaction works here"]
+    todo["the todo tool"] --> ws["working state on the session"]
+    plan["/plan and plan.md"] --> ws
+    ws --> req["one block just above the current turn"]
+    tr --> req
+    req --> prov["what goes to the provider"]
+</pre></div>
+
+<h3 class="stage" id="stage-1">Stage 1. What you bring in <small>about 10 minutes</small></h3>
+
+<article class="stop" id="w1" data-files="src/edgar/context/attach.py">
+  <h4><span class="n">1</span>@path</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/attach.py"><code>context/attach.py</code></a></p>
+  <p class="look">Look for: <code>TOKEN</code> <code>ACCEPTS</code> <code>Attached</code> <code>attach</code></p>
+  <p>Fifty lines, and almost all of the thinking is in what they refuse. A word
+  beginning with <code>@</code> in a typed line is a file to attach; the line itself is
+  never rewritten, which is the point. What the human typed stays exactly as typed,
+  because that string is the one thing allowed to create an active fact (MEM-9), and
+  the file's text leaves this module as a separate body that can only ever become a
+  <code>TextBlock(attached=True)</code>. The boundary is a type, not a filter.</p>
+  <p>Read <code>_refuse</code> before <code>attach</code>. A missing path, a directory,
+  a credential file, a path outside the working directory and anything that is not
+  text each get a sentence naming the path and saying what <code>@path</code> accepts,
+  and the turn does not run. None of them raises. Notice which case is <em>not</em>
+  there: <code>.edgar/config.toml</code> attaches like any other file, because the
+  permission engine asks about a control file only when a tool would write it. Adding
+  a rule here that the engine does not have would be this module inventing policy of
+  its own, which is exactly what edgar tries never to do.</p>
+  <p>The last line of <code>attach</code> is a reuse worth noticing: an oversized
+  attachment goes through the same <code>spill</code> as oversized tool output, so it
+  keeps its head and tail and leaves a blob path the model can <code>read</code>. One
+  mechanism, two callers.</p>
+  <p class="take"><strong>Take with you:</strong> a feature that only adds context is
+  still a security boundary. The interesting code is the refusals.</p>
+</article>
+
+<article class="stop planned" id="w2" data-files="src/edgar/context/working.py">
+  <h4><span class="n">2</span>The pinned block</h4>
+  <p class="files"><code>context/working.py</code></p>
+  <p class="look">Look for: the plan and the todo list, rendered once and placed just
+  above the current turn</p>
+  <p>Planned. Working state is not part of the transcript, so compaction never sees
+  it and the pairing invariant is safe by construction.</p>
+</article>
+
+<h3 class="stage" id="stage-2">Stage 2. What the model is working on <small>about 20 minutes</small></h3>
+
+<article class="stop planned" id="w3" data-files="src/edgar/tools/builtin/todo.py">
+  <h4><span class="n">3</span>The todo tool</h4>
+  <p class="files"><code>tools/builtin/todo.py</code></p>
+  <p class="look">Look for: the whole list replaced in one call, and the event the
+  status bar draws</p>
+  <p>Planned.</p>
+</article>
+
+<article class="stop planned" id="w4" data-files="src/edgar/cli/inspect.py">
+  <h4><span class="n">4</span>Looking at it</h4>
+  <p class="files"><code>cli/inspect.py</code></p>
+  <p class="look">Look for: the three commands that print what edgar would otherwise
+  only do</p>
+  <p>Planned: <code>edgar context show</code>, <code>edgar sessions compact</code> and
+  <code>edgar config show --resolved</code>.</p>
+</article>
+
+<p class="check"><strong>Before you go:</strong> you attach a file that tells the model
+to remember something about you. Which of edgar's boundaries stops that from becoming
+a fact, and where in the code is it enforced?</p>
+
+<h3 class="stage">Sizes</h3>
+<p>Lines of code: blank lines and comments do not count, docstrings do.
+<code>just loc</code> prints the current totals.</p>
+
+<div class="ak-tblwrap">
+<table class="ak-table sizes">
+  <thead><tr><th>File</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr data-file="src/edgar/context/attach.py"><td><code>context/attach.py</code></td><td class="loc">~48</td><td>@path: find, refuse, read, spill</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="ak-source">Source: <code>just loc</code>, which counts with
+<code>tests/support/budget.py</code>. Rounded; the tour's test fails if a figure drifts
+more than 25 lines of code from the code.</p>
+
+<footer class="ak-footer">
+  <p><strong>Where next:</strong> <a href="memory.html">Memory</a>, which is the other
+  side of the learning boundary, or back to the <a href="index.html">Core tour</a>, or
+  <a href="map.html">the map</a>.</p>
+  <p><strong>Keeping this page honest.</strong> It changes in the same commit as the
+  code it describes, and
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_tour.py"><code>tests/unit/test_tour.py</code></a>
+  fails when a linked file is gone, when a name under "Look for" is no longer defined
+  in its files, or when a size here drifts from the real one. It cannot tell when a
+  description has gone stale, so reread a stop whenever you change its code. The
+  source of this page is
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/tour/working.html"><code>docs/tour/working.html</code></a>.</p>
+</footer>
+
+</main>
+</div>
+
+<!-- Diagrams are Mermaid text above, readable as plain text if this never loads.
+     The classic (UMD) build, so the page also works opened as a local file. -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="tour.js"></script>
+</body>
+</html>
