@@ -8,6 +8,8 @@ format is Chat Completions, streamed:
     user          → {"role": "user", "content": "…"}
     assistant     → {"role": "assistant", "content": "…", "tool_calls": [{id, function}]}
     tool results  → one {"role": "tool", "tool_call_id": …, "content": "…"} each
+    images        → an image_url part with a data: URL, in a user message; a
+                    picture a tool produced follows its result [ADR-0052]
 
 Chat Completions has no standard field for sending reasoning back, so reasoning
 this adapter received stays in the record and is not replayed; reasoning from
@@ -22,9 +24,16 @@ from typing import TYPE_CHECKING, Any
 
 from edgar.core.errors import ProviderError
 from edgar.core.events import EventBus, ReasoningDropped, TextDelta, ThinkingDelta
-from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock, ToolUseBlock
+from edgar.core.message import (
+    ContentBlock,
+    ImageBlock,
+    Message,
+    TextBlock,
+    ThinkingBlock,
+    ToolUseBlock,
+)
 from edgar.providers.base import ProviderResponse, Usage
-from edgar.providers.http import HttpAdapter, events, tool_calls
+from edgar.providers.http import HttpAdapter, encoded, events, tool_calls
 
 if TYPE_CHECKING:
     from edgar.tools.base import ToolSchema
@@ -142,7 +151,12 @@ class OpenAICompatible(HttpAdapter):
                 extra = "" if native or not tools else TEXT_TOOLS + _describe(tools)
                 out.append({"role": "system", "content": m.text + extra})
             elif m.role == "user":
-                _append(out, "user", m.text)
+                # Chat Completions takes a picture as one more part of a user
+                # message's content, a data URL under image_url [ADR-0052].
+                if m.images:
+                    out.append({"role": "user", "content": _parts(m.text, m.images)})
+                else:
+                    _append(out, "user", m.text)
             elif m.role == "assistant":
                 dropped |= {b.origin for b in m.content if isinstance(b, ThinkingBlock)}
                 # Null content is allowed only beside tool calls.
@@ -163,6 +177,14 @@ class OpenAICompatible(HttpAdapter):
                         )
                     else:
                         _append(out, "user", f"Tool result:\n{r.text}")
+                # A `tool` message takes no picture in this wire format, so the ones a
+                # call produced follow it as a user message, which is what OpenAI's
+                # own guidance says to do. The pairing above it is untouched [CTX-4].
+                shots = [i for r in m.tool_results for i in r.images]
+                if shots:
+                    out.append(
+                        {"role": "user", "content": _parts("Images from that tool call:", shots)}
+                    )
         for origin in sorted(o for o in dropped if not o.startswith(FAMILY + ":")):
             bus.emit(ReasoningDropped(from_origin=origin, to_family=FAMILY))
         return out
@@ -215,6 +237,16 @@ def _append(out: list[dict[str, Any]], role: str, text: str) -> None:
         out[-1]["content"] += "\n\n" + text
     else:
         out.append({"role": role, "content": text})
+
+
+def _parts(text: str, images: Sequence[ImageBlock]) -> list[dict[str, Any]]:
+    # A content array: the text first, then one image_url part per picture.
+    said = [{"type": "text", "text": text}] if text else []
+    urls = [
+        {"type": "image_url", "image_url": {"url": f"data:{i.media_type};base64,{encoded(i)}"}}
+        for i in images
+    ]
+    return said + urls
 
 
 def _call(c: ToolUseBlock) -> dict[str, Any]:

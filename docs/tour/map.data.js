@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8481,
+    "loc": 8530,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6172,
+        "loc": 6221,
         "status": "built",
         "children": [
           {
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1200,
+            "loc": 1249,
             "status": "built",
             "children": [
               {
@@ -446,7 +446,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 163,
+                "loc": 171,
                 "summary": "The Anthropic Messages API, streamed [PRV-2].",
                 "stop": "index.html#s13",
                 "status": "built",
@@ -470,7 +470,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 64,
+                "loc": 69,
                 "summary": "`fake/test`: a model that runs nowhere, for trying edgar without a key.",
                 "stop": "index.html#s24",
                 "status": "built",
@@ -482,7 +482,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 236,
+                "loc": 248,
                 "summary": "What the two HTTP adapters share: the request with its retries, server-sent",
                 "stop": "index.html#s24",
                 "status": "built",
@@ -494,7 +494,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 196,
+                "loc": 220,
                 "summary": "One adapter for every OpenAI-compatible server [PRV-1, PRV-3, ADR-0002].",
                 "stop": "index.html#s12",
                 "status": "built",

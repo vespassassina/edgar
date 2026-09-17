@@ -6,6 +6,8 @@ Different enough from Chat Completions to earn its own adapter:
     assistant     → content blocks: thinking (signed), text, tool_use
     tool results  → a user message of tool_result blocks; a /steer after them
                     joins the same message, results first, since roles alternate
+    images        → an image block with the bytes inline, base64, in a user
+                    message or inside a tool result [ADR-0052]
     reasoning     → replayed only when it came from this family, with its
                     signature; anything else is dropped and announced [PRV-13]
 """
@@ -26,7 +28,7 @@ from edgar.core.message import (
     ToolUseBlock,
 )
 from edgar.providers.base import ProviderResponse, Usage
-from edgar.providers.http import HttpAdapter, events, tool_calls
+from edgar.providers.http import HttpAdapter, encoded, events, tool_calls
 
 if TYPE_CHECKING:
     from edgar.tools.base import ToolSchema
@@ -145,10 +147,16 @@ class Anthropic(HttpAdapter):
                 elif isinstance(b, ToolUseBlock):
                     blocks.append({"type": "tool_use", "id": b.id, "name": b.name, "input": b.args})
                 elif isinstance(b, ImageBlock):
-                    continue  # serialised from M20's item 4 on [ADR-0052]
+                    blocks.append(_image(b))
                 else:
                     result: dict[str, Any] = {"type": "tool_result", "tool_use_id": b.tool_use_id}
-                    if b.text:
+                    # Messages takes text and images inside a tool result, in order.
+                    # Without images the content stays the plain string it has always
+                    # been, so a result with no picture goes out unchanged.
+                    if b.images:
+                        parts: list[dict[str, Any]] = [{"type": "text", "text": b.text or "…"}]
+                        result["content"] = parts + [_image(i) for i in b.images]
+                    elif b.text:
                         result["content"] = b.text
                     if b.is_error:
                         result["is_error"] = True
@@ -165,6 +173,12 @@ class Anthropic(HttpAdapter):
         for origin in sorted(dropped):
             bus.emit(ReasoningDropped(from_origin=origin, to_family=FAMILY))
         return out
+
+
+def _image(block: ImageBlock) -> dict[str, Any]:
+    # Messages takes the bytes inline, base64, with the media type beside them.
+    source = {"type": "base64", "media_type": block.media_type, "data": encoded(block)}
+    return {"type": "image", "source": source}
 
 
 def _delta(block: dict[str, Any], delta: Mapping[str, Any], bus: EventBus) -> None:
