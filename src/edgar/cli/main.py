@@ -17,6 +17,7 @@ from edgar.core.errors import EdgarError
 # The subcommands that look at a project rather than run a turn (cli/admin.py).
 ADMIN = {
     "init",
+    "context",
     "doctor",
     "trust",
     "permissions",

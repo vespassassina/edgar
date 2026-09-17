@@ -38,7 +38,8 @@ USAGE = """usage: edgar init | edgar doctor
        edgar sessions list | show ID | rm ID
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
        edgar mcp list | test NAME | login NAME | logout NAME
-       edgar ext list | edgar login PROVIDER | edgar logout PROVIDER"""
+       edgar ext list | edgar login PROVIDER | edgar logout PROVIDER
+       edgar context show [SESSION]"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
@@ -51,6 +52,10 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         from edgar.cli.doctor import command as doctor_command
 
         return doctor_command(cwd, home)
+    if argv[0] == "context":
+        from edgar.cli.inspect import context_show  # the builder and a session record
+
+        return context_show(argv[1:], cwd, home)
     if argv == ["cost"]:
         return _cost(cwd, home)
     if argv[0] == "mcp" and len(argv) in (2, 3):

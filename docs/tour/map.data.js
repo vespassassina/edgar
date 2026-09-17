@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8259,
+    "loc": 8316,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6051,
+        "loc": 6056,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 1997,
+            "loc": 2002,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 209,
+                "loc": 213,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 148,
+                "loc": 149,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -1175,15 +1175,15 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 170,
+        "loc": 222,
         "status": "built",
         "children": [
           {
             "id": "v2/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 52,
+            "status": "built",
             "children": [
               {
                 "path": "src/edgar/cli/inspect.py",
@@ -1191,10 +1191,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "cli",
-                "loc": 0,
-                "summary": "",
+                "loc": 52,
+                "summary": "The commands that print what edgar would otherwise only do [CTX-2].",
                 "stop": "working.html#w4",
-                "status": "planned",
+                "status": "built",
                 "port": false
               }
             ]

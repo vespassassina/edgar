@@ -137,13 +137,23 @@ flowchart TD
   machine to get wrong.</p>
 </article>
 
-<article class="stop planned" id="w4" data-files="src/edgar/cli/inspect.py">
+<article class="stop" id="w4" data-files="src/edgar/cli/inspect.py">
   <h4><span class="n">4</span>Looking at it</h4>
-  <p class="files"><code>cli/inspect.py</code></p>
-  <p class="look">Look for: the three commands that print what edgar would otherwise
-  only do</p>
-  <p>Planned: <code>edgar context show</code>, <code>edgar sessions compact</code> and
-  <code>edgar config show --resolved</code>.</p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/inspect.py"><code>cli/inspect.py</code></a></p>
+  <p class="look">Look for: <code>rows</code> <code>BREAKPOINT</code> <code>context_show</code></p>
+  <p><code>edgar context show</code> prints the prompt a session would send: one row
+  per section, with its token count, and the cache breakpoint drawn where it falls.
+  It calls no provider. It does not re-implement the assembly either, which is the
+  part worth copying: it calls the same <code>build</code> and <code>system_text</code>
+  a turn calls, so a command that lied about the prompt would have to lie by
+  assembling a different one.</p>
+  <p>The counting has a small honest trick in it. The prefix's sections are joined
+  into one system message, so a section's count is the difference between two running
+  totals of that same join. The rows therefore add up to the message, and the message
+  adds up to the prompt, whatever the separator between sections happens to be. The
+  test asserts exactly that: the printed rows sum to the builder's own total.</p>
+  <p class="take"><strong>Take with you:</strong> an inspection command should read the
+  code it inspects, never a second copy of it.</p>
 </article>
 
 <p class="check"><strong>Before you go:</strong> you attach a file that tells the model
@@ -161,6 +171,7 @@ a fact, and where in the code is it enforced?</p>
     <tr data-file="src/edgar/context/attach.py"><td><code>context/attach.py</code></td><td class="loc">~48</td><td>@path: find, refuse, read, spill</td></tr>
     <tr data-file="src/edgar/context/working.py"><td><code>context/working.py</code></td><td class="loc">~81</td><td>the plan, the todo list, plan mode</td></tr>
     <tr data-file="src/edgar/tools/builtin/todo.py"><td><code>tools/builtin/todo.py</code></td><td class="loc">~41</td><td>the model's one way to write the list</td></tr>
+    <tr data-file="src/edgar/cli/inspect.py"><td><code>cli/inspect.py</code></td><td class="loc">~52</td><td>the commands that print what is there</td></tr>
   </tbody>
 </table>
 </div>

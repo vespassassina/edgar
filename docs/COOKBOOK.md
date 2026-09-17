@@ -121,6 +121,19 @@ binary file or a path that is not there gets a message naming it, and the turn
 does not run. A file bigger than `tools.max_output_tokens` keeps its head and
 tail and spills the rest to a blob, exactly as large tool output does.
 
+## See exactly what edgar is about to send
+
+```bash
+edgar context show          # the latest session in this project
+edgar context show a1b2c3   # or one by id
+```
+
+One row per section of the assembled prompt, in order, with its token count and
+the cache breakpoint drawn where it falls: the system prompt, your personality
+and instruction files, pinned facts, the skill index, then the transcript, the
+working state and the current turn. It calls no provider and costs nothing; it
+runs the same assembly a turn runs, so what it prints is what would be sent.
+
 ## Give the agent a CLI
 
 A command tool is an argv template. edgar starts the program directly, never
