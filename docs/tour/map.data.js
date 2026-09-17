@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 10291,
+    "loc": 10455,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6619,
+        "loc": 6654,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2083,
+            "loc": 2113,
             "status": "built",
             "children": [
               {
@@ -80,7 +80,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 139,
+                "loc": 143,
                 "summary": "What reaches the terminal [CLI-5, CLI-15, CLI-21, CLI-23].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 357,
+                "loc": 383,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 789,
+            "loc": 794,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 201,
+                "loc": 206,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -1363,14 +1363,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 923,
+        "loc": 1052,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 541,
+            "loc": 670,
             "status": "built",
             "children": [
               {
@@ -1382,6 +1382,18 @@ window.EDGAR_MAP = {
                 "loc": 123,
                 "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
                 "stop": "controller.html#c4",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/gate.py",
+                "name": "gate.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 129,
+                "summary": "Five numbers, sometimes one call, never a failed turn [CTRL-1, CTRL-3, CTRL-9, CTRL-11].",
+                "stop": "controller.html#c5",
                 "status": "built",
                 "port": false
               },

@@ -364,6 +364,18 @@ class SkillsActivated(Event):
     names: tuple[str, ...]
 
 
+# controller (v3) [CTRL-3]
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ControllerActed(Event):
+    # controller/gate.py, once per proposal the controller returned. It is the only
+    # way the controller reaches a person: it prints nothing itself [ADR-0011].
+    action: str  # one of the eight, or "rejected"
+    message: str
+    mutation_id: int = 0  # the row `edgar controller revert ID` takes; 0 when none
+
+
 # extensions and hooks [EXT-5]
 
 

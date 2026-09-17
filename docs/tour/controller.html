@@ -263,6 +263,52 @@ flowchart TD
   is doing is one more than anybody can keep correct.</p>
 </article>
 
+<article class="stop" id="c5" data-files="src/edgar/controller/gate.py src/edgar/controller/__init__.py">
+  <h4><span class="n">5</span>One call, in the background, that cannot fail your turn</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/gate.py"><code>controller/gate.py</code></a>,
+  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/__init__.py"><code>controller/__init__.py</code></a></p>
+  <p class="look">Look for: <code>Gate</code> <code>BRIEF</code> <code>attach</code> <code>overrides</code> <code>_running</code> <code>_look</code></p>
+  <p>Everything so far has been pure or local. This is the file that watches a real
+  session: it subscribes to one bus, counts failures off <code>ToolFinished</code>,
+  starts a clock on <code>TurnStarted</code>, and when <code>TurnFinished</code>
+  arrives builds the five <code>Signals</code> and asks <code>tripped()</code>. On an
+  ordinary turn that is the end of it — no call, no cost, no latency (CTRL-2).</p>
+  <p>Look at the call itself, and at what it is handed:
+  <code>provider.stream(prompt, [], …)</code>. The second argument is the tool list,
+  and it is empty. <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0008-controller-guardrails.md">ADR-0008</a>
+  asked for a "hard-limited tool set"; the only limit that needs no maintenance is
+  zero. The controller cannot read a file, run a command or call anything at all: its
+  entire power is the shape of its answer, and that answer is one of eight (CTRL-3).
+  The prompt it gets is an <code>Outline</code> — which checks tripped, which tools
+  ran, how many calls failed, what the declared check said. Counts and names. The same
+  discipline the learner works under, for the same reason (MEM-9).</p>
+  <p>The bus is synchronous; a model call is not. So the gate does what
+  <code>extensions/hooks.py</code> already does with a fired hook:
+  <code>asyncio.ensure_future</code>, and a module-level <code>_running</code> set so
+  the task is not collected mid-flight. <code>_ended()</code> returns immediately, and
+  nothing below that line can reach the turn. A <code>-p</code> run that exits at once
+  may drop a call still in flight, and that is CTRL-11 working as written rather than a
+  bug: whatever the controller was about to say, the turn does not wait for it.</p>
+  <p><code>_look()</code> holds the only bare <code>except</code> in the package, on
+  purpose. A housekeeping mechanism that can break your session is worse than no
+  housekeeping at all, so a controller that times out, or answers nonsense, or cannot
+  reach its host, leaves a row in the <code>rejected</code> table and nothing else.</p>
+  <p>Then <code>__init__.py</code>, which is two functions and the whole seam.
+  <code>attach()</code> subscribes the gate; <code>overrides()</code> reads the log.
+  <code>cli/setup.py</code> reaches both by name with <code>importlib</code>, exactly
+  as it reaches <code>edgar.learning</code>, so no Core, v1 or v2 module imports this
+  package and deleting the folder costs one quiet <code>ModuleNotFoundError</code>
+  (NFR-12,
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0015-release-tiers.md">ADR-0015</a>).
+  Note the first line of <code>attach()</code>: with <code>[controller] enabled</code>
+  false, which is the default, it subscribes nothing and returns. A harness whose
+  promise is "no hidden calls" does not start making one a turn because you
+  upgraded.</p>
+  <p class="take"><strong>Take with you:</strong> the cheapest way to make an
+  automated helper safe is to give it nothing to work with. No tools, one answer
+  shape, and a wrapper that swallows its failures.</p>
+</article>
+
 <h3 class="stage" id="stage-5">Sizes</h3>
 
 <table class="ak-table" id="sizes">
@@ -273,6 +319,8 @@ flowchart TD
     <tr data-file="src/edgar/controller/tighten.py"><td><code>controller/tighten.py</code></td><td class="loc">~118</td><td>Policy may only get stricter</td></tr>
     <tr data-file="src/edgar/controller/store.py"><td><code>controller/store.py</code></td><td class="loc">~84</td><td>The mutation log, and the state derived from it</td></tr>
     <tr data-file="src/edgar/controller/apply.py"><td><code>controller/apply.py</code></td><td class="loc">~123</td><td>What each action does, dry-run by default</td></tr>
+    <tr data-file="src/edgar/controller/gate.py"><td><code>controller/gate.py</code></td><td class="loc">~129</td><td>The post-turn gate and its one tools-free call</td></tr>
+    <tr data-file="src/edgar/controller/__init__.py"><td><code>controller/__init__.py</code></td><td class="loc">~37</td><td><code>attach()</code> and <code>overrides()</code>: the whole seam</td></tr>
   </tbody>
 </table>
 
