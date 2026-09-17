@@ -151,16 +151,16 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,450</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,320</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
-    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~130</td><td>Finding skills, reading only their frontmatter, and deterministic activation (v1)</td></tr>
+    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~305</td><td>Finding skills, reading only their frontmatter, deterministic activation, and the audit before a copy (v1, v2)</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~200</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,200</td><td>The REPL, one-shot runs, rendering, setup: routing rules and fallback wired in (v1)</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,350</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
     <tr data-package="sandbox"><td><code>sandbox/</code></td><td class="loc">~110</td><td>The Sandbox port and its backends: nothing, bubblewrap, seatbelt (v2)</td></tr>
-    <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~230</td><td>An extension folder's manifest, discovery, and observe-or-veto hooks (v1)</td></tr>
+    <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
   </tbody>
 </table>
 </div>
@@ -738,8 +738,9 @@ flowchart LR
   files, a hook can observe or veto but never allow (EXT-4..7), and Python is a plugin
   surface only for providers, retrievers and sandboxes (ADR-0018). These are the
   formats 1.0 freezes. <code>edgar ext list</code> is the whole CLI surface 1.0 ships
-  for them — <code>ext validate</code> and <code>ext add</code> moved to v2
-  (ADR-0053).</p>
+  for them; <code>ext validate</code> and <code>ext add</code>, with the skill audit
+  that gates a copy, arrived in v2 — they are
+  <a href="extensions.html#x6">stop 6 on that page</a>.</p>
   <p>One piece belongs here rather than on that page, because it closes Core's verify
   gate (stop 12): deterministic skill activation [SKL-17] means the model never has to
   call the <code>skill</code> tool for a keyword the user typed or a path the last
@@ -765,12 +766,18 @@ flowchart LR
   called both from the CLI and from <code>cli/repl.py</code>'s "nothing configured"
   startup path, so a fresh checkout gets scaffolding, not just a model picker.
   <code>edgar doctor</code> [CFG-5] checks each provider's credentials (reusing
-  <code>cli/models.py</code>'s <code>describe()</code>) and connectivity, and warns
+  <code>cli/models.py</code>'s <code>describe()</code>) and warns
   when a directory sits inside iCloud Drive, OneDrive, Dropbox or Google Drive —
   a plain substring match on the resolved path, which cannot catch macOS's silent
   Desktop &amp; Documents sync; that gap is named in a comment rather than hidden.
-  Its MCP, extension, trust, tick and DB-integrity checks, and <code>--network</code>,
-  moved to v2 (ADR-0053).
+  v2 finished it (<code>_trust</code>, <code>_db</code>, <code>_mcp</code>,
+  <code>_ext</code>): whether this project is trusted, <code>PRAGMA
+  integrity_check</code> on both databases, whether a stdio MCP server's command is on
+  <code>PATH</code>, and whether each extension's required commands are. A default run
+  opens no socket at all — a remote MCP server is not probed, because the only probe
+  worth anything is the handshake <code>edgar mcp test NAME</code> already performs,
+  and the provider check that does go out lives behind <code>--network</code>, where
+  the line says so when it is skipped.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m11--init-doctor-docs--v10-release">Roadmap: M11</a></p>
 </article>
 

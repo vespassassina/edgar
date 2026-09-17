@@ -116,10 +116,35 @@ commands = ["gh"]
 Everything an extension bundles folds straight into the project's own tools,
 skills and agents [EXT-8]; a collision is won the same way a plain project
 file would win, project over user. `edgar ext list` shows what loaded and
-what it brought; there is no `ext validate`/`ext add` in 1.0 (ADR-0053), so
-installing one is `cp -r` or a submodule, and validating it is running
-`edgar tools list`/`edgar skills list`/`edgar ext list` and reading the
-warnings.
+what it brought.
+
+Since 2.0, two commands do the copying and the checking (they did not exist
+in 1.0, ADR-0053):
+
+```bash
+edgar ext validate ../some-extension   # load it with the same loaders a session uses
+edgar ext add ../some-extension        # validate, audit its skills, ask, then copy
+edgar skills audit ../some-skill --strict --diff
+```
+
+`ext validate` reads the manifest, the tools, the skills, the agents and
+`hooks.toml`, and prints every problem a session would hit; exit 1 if there
+is one. `ext add` runs that first and refuses to copy anything if it fails.
+It then audits every skill it would copy [SKL-18] and prints the report
+before writing: the question defaults to yes when the audit is clean and to
+no when there is a danger finding, and with no terminal a danger finding is
+refused unless you pass `--yes`. The copy goes to a staging folder and is
+moved into place with one rename, so a half-copied extension is not a state
+you can end up in.
+
+`edgar skills audit PATH` runs the same audit on its own, on a candidate or
+on a skill already in place. It separates conformance findings (which set the
+exit code) from danger findings, `--strict` also requires SKL-16's four
+sections, and `--diff` prints the fixes it would make — it never applies
+them, and the audit writes nothing. A clean audit means no known pattern
+matched; it does not mean the skill is safe, and no model is asked for an
+opinion, because the text under review may be written to talk one out of its
+verdict ([ADR-0042](adr/0042-skill-audit.md)).
 
 A `hooks.toml` (or `[[hooks]]` directly in config, for a project's own,
 unbundled hooks) declares shell commands the harness runs at lifecycle

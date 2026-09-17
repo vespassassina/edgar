@@ -26,7 +26,7 @@ reads the same functions `context/builder.py` uses and never calls a provider.
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +37,14 @@ from edgar.context.builder import Section, build, system_text
 from edgar.context.prompts import load_prompt, profile_prompt
 from edgar.context.tokens import approx_message_tokens, approx_tokens, message_text
 from edgar.core.message import Message
+from edgar.providers.routing import (
+    Role,
+    Route,
+    RoutingContext,
+    matches,
+    routes_from_config,
+    select_model,
+)
 from edgar.storage.transcript import find, replay
 
 BREAKPOINT = "---- cache breakpoint ----"
@@ -113,6 +121,95 @@ def sessions_compact(which: str, cwd: Path, home: Path) -> int:
         return 0
     print(f"{session.id}: {before} messages → {len(session.transcript)}, appended to the record")
     return 0
+
+
+# edgar route explain [PROMPT]:
+#   1. the [[route]] rules, in the order select_model() reads them
+#   2. one row per role: the model it resolves to, the rule that decided, and why
+#   3. for the main role, every rule with matched or skipped against that context
+#
+# It calls `routing.select_model()` — the same pure function a turn calls — and
+# prints its `Selection.reason`. No provider is resolved and nothing is sent, so
+# this is free and works with no key set [ROUTE-9].
+#
+# The context it builds is the one the real path builds, not a richer one: the
+# main turn (`cli/setup.py`'s `runtime()`) passes a bare `RoutingContext()`, so a
+# rule keyed on `mode`, `tags` or `schedule` cannot match for the main role. That
+# is a property of edgar, not of this command, so the command shows it rather
+# than papering over it with a context no turn would ever use.
+
+ROLES: tuple[Role, ...] = ("main", "subagent", "compactor", "controller", "condenser")
+
+
+def route_explain(argv: list[str], cwd: Path, home: Path) -> int:
+    if argv[:1] != ["explain"]:
+        print("usage: edgar route explain [PROMPT]", file=sys.stderr)
+        return 2
+    config = load(cwd, home=home)
+    rules = routes_from_config(config.later)
+    tokens = approx_tokens(" ".join(argv[1:]))
+    print(f"{len(rules)} [[route]] rules · prompt ~{tokens:,} tokens · no provider contacted")
+    for role in ROLES:
+        ctx = RoutingContext(role=role, prompt_tokens=tokens)
+        chosen = select_model(ctx, config.model, rules)
+        print(f"{role:<11} {chosen.model:<32} {chosen.rule:<14} {chosen.reason}")
+    main = RoutingContext(prompt_tokens=tokens)
+    for rule in rules:
+        verdict = "matched" if matches(rule, main) else "skipped"
+        print(f"  rule {rule.name:<20} {verdict} for role main: {_conditions(rule)}")
+    return 0
+
+
+def _conditions(rule: Route) -> str:
+    # Every condition the rule actually sets, in the config's own spelling.
+    set_here = [
+        f"{f.name}={getattr(rule, f.name)!r}"
+        for f in fields(rule)
+        if f.name not in ("name", "model") and getattr(rule, f.name) not in (None, frozenset())
+    ]
+    return ", ".join(set_here) or "no conditions: it matches anything"
+
+
+# edgar agents list | validate:
+#   list      every agent a session here would find, with its scope and its model
+#   validate  every file discovery had to skip, with its path, line and reason
+#
+# Both read `agents/discovery.py`'s own walk, extensions folded in exactly as a
+# session folds them [SUB-1, SUB-2, EXT-8], so what they print is what a turn
+# would get. A model of "-" means no `model:` in the file: routing picks one for
+# the subagent role, which `edgar route explain` will show.
+
+
+def agents_command(argv: list[str], cwd: Path, home: Path) -> int:
+    from edgar.agents.discovery import discover
+    from edgar.cli import trust
+    from edgar.extensions.discovery import disabled_from_config
+    from edgar.extensions.discovery import discover as discover_extensions
+    from edgar.skills.discovery import discover as discover_skills
+
+    if argv not in (["list"], ["validate"]):
+        print("usage: edgar agents list | edgar agents validate", file=sys.stderr)
+        return 2
+    config = load(cwd, home=home)
+    found = discover(cwd, home)
+    if trust.trusted(cwd, config, home):  # an extension's agents, on the same terms
+        discover_extensions(
+            cwd, home, discover_skills(cwd, home), found, disabled_from_config(config.later)
+        )
+    for warning in found.warnings:
+        print(f"warning: {warning}", file=sys.stderr)
+    if argv == ["list"]:
+        for agent in found.agents.values():
+            print(
+                f"{agent.name:<24} {agent.origin:<12} {agent.model or '-':<28} {agent.description}"
+            )
+        if not found.agents:
+            print("no agents; add one as .edgar/agents/NAME.md")
+        return 0
+    for problem in found.problems:
+        print(problem, file=sys.stderr)
+    print(f"{len(found.agents)} agents ok, {len(found.problems)} with problems")
+    return 1 if found.problems else 0
 
 
 SECRET = ("api_key", "token", "secret", "password")

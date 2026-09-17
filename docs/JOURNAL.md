@@ -25,8 +25,13 @@ In order:
    ([ADR-0059](adr/0059-m19-working-state-as-built.md)); it flipped
    `TARGET_TIER` to `"v2"` and `just loc` read 8,374 of 9,500.
    ~~**M20, seeing and searching.**~~ Done 2026-09-17
-   ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)); `just loc` now
-   reads 8,592 of 9,500. **M21, isolation**, is next.
+   ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)).
+   ~~**M21, isolation.**~~ Done 2026-09-17
+   ([ADR-0061](adr/0061-m21-isolation-as-built.md)).
+   ~~**M22's code.**~~ Done 2026-09-17
+   ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)); `just loc` now
+   reads 9,305 of 9,500. **The 2.0 release itself is not started** and needs the
+   maintainer's authorisation, as every push, tag and release here does.
 4. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 5. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
@@ -36,14 +41,52 @@ In order:
    one-line description, one line per entry in the terminal. Logged in
    `ROADMAP.md`'s "Past v4" list as items 10 and 11.
 
-v2 sits at 8,592 of 9,500 `src/` lines of code after M20, so M21 and M22 share
-the 908 that are left. ADR-0053's cuts are no longer forbidden: plan
-mode, `todo`, `context show` and `config show --resolved` landed in M19; the
-rest are M21 (worktrees, sandboxes) and M22 (`route explain`,
-`agents list|validate`, `ext validate|add`, the contract kit, the rest of
-`doctor`). `AGENTS.md` rule 10 and its size table still
+v2 sits at 9,305 of 9,500 `src/` lines of code with every M22 code item built
+except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
+(ADR-0062 §6). ADR-0053's cuts are all reversed now bar that one.
+`AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-17 · M22 — the inspection commands (code only)
+
+**Asked:** build M22's code items on a worktree branch off `main`, one commit per
+roadmap item, `just check` green before each. Do not push, merge, tag, open a PR
+or edit `AGENTS.md` or `config.toml`; do not call a paid provider. **Do not do
+the release** — that needs the maintainer's authorisation every time. Watch the
+budget after every commit and drop from the end of the item list rather than
+cross 9,500. Flag for scrutiny: what the MCP and `--network` checks do and do not
+verify, whether `ext add` can land a partial copy, and what the danger report
+actually flags, checked against ADR-0042 rather than invented.
+
+**Done:** five commits. `c3e7d18` finishes `edgar doctor` — trust state, `PRAGMA
+integrity_check` on both databases, stdio MCP commands and extensions' required
+commands on `PATH` — and moves the provider connectivity call, which used to run
+unasked, behind `--network`. `d4da60f` adds `edgar route explain [PROMPT]`, which
+calls `routing.select_model()` and prints its own `Selection.reason` per role and
+then rule by rule. `cb03b77` adds `edgar agents list|validate`, with problems
+carrying the line the mistake is on. `3a06545` adds `edgar ext validate|add` and
+`edgar skills audit`, the audit gating the copy. `8d9290b` is the tour: the Core
+tour's surface stage, the working-state stop and a new stop 6 on the extensions
+page. `just loc` 9,305 of 9,500; `just check` green on macOS, 869 tests.
+
+**Decided** ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)): a default
+`doctor` run opens no socket, a remote MCP server is not probed because `edgar
+mcp test NAME` is the only probe worth making, and `--network` is an
+*authenticated* `models()` call (no tokens, but it needs the key). `route
+explain` shows the bare `RoutingContext` a main turn really builds, so a rule
+keyed on `mode`, `tags` or `schedule` prints as skipped rather than being made to
+look useful. `ext add` stages the copy and renames it into place, so a partial
+copy is not reachable. ADR-0042's opt-in `--review` is **not built**: it is
+advisory by design and never sets a verdict, so it is the part that can be
+missing without changing one, and the budget is the reason.
+
+**Open:** `edgar.testing.contract` [PRV-14] was dropped to v3 — the suite is 265
+lines of test code, so packaging it costs about 200 lines of code, not the 70
+estimated, and 195 remained. `--diff` normalises hidden characters and adds
+missing sections but does not normalise frontmatter. **The 2.0 release is not
+started**, deliberately: no version bump, no tag, no `CHANGELOG.md` version
+header, and M22's two human "Done when" criteria are untouched.
 
 ## 2026-09-17 · M21 — isolation
 

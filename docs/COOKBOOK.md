@@ -134,6 +134,23 @@ and instruction files, pinned facts, the skill index, then the transcript, the
 working state and the current turn. It calls no provider and costs nothing; it
 runs the same assembly a turn runs, so what it prints is what would be sent.
 
+## Find out which model a turn would use, and why
+
+```bash
+edgar route explain                 # the roles, with no prompt in hand
+edgar route explain "refactor this" # the same, sized for that prompt
+```
+
+One row per role — main, subagent, compactor, controller, condenser — with the
+model it resolves to, the rule that decided and the reason in words, then every
+`[[route]]` rule with `matched` or `skipped` and the conditions it sets. It
+calls the same pure function a turn calls and resolves no provider, so it needs
+no key and costs nothing.
+
+The context it asks about is the one a real turn builds. A main turn passes no
+mode, tags or schedule, so a rule keyed on those can only match a subagent; the
+listing shows that rather than hiding it.
+
 ## Shrink a session you are not in
 
 ```bash
@@ -360,10 +377,28 @@ Every event but `pre_tool` is fire-and-forget: its exit code and output are
 never read, so a broken hook here changes nothing about the session it
 watches. A `pre_tool` hook is the one that can say no — exit 2 denies the
 call with stderr as the reason shown to the model, and it fails closed on
-any other error or a timeout, never open. There is no `edgar ext validate` or
-`edgar ext add` in 1.0 ([ADR-0053](adr/0053-what-1-0-actually-ships.md));
-`edgar ext list`'s warnings are the check. [`EXTENDING.md`](EXTENDING.md)
+any other error or a timeout, never open. [`EXTENDING.md`](EXTENDING.md)
 has the full manifest and hook grammar.
+
+## Install someone else's extension without trusting it blind
+
+```bash
+edgar ext validate ../their-extension   # would a session load it? what breaks?
+edgar skills audit ../their-extension/skills/tidy --strict --diff
+edgar ext add ../their-extension        # checks both, shows the report, then asks
+```
+
+`ext add` copies nothing until the bundle loads cleanly and every skill in it
+has been audited and shown to you. A clean audit answers `[Y/n]`, a danger
+finding answers `[y/N]`, and unattended (no terminal) a danger finding is
+refused outright unless you pass `--yes`. The copy is staged and renamed into
+place, so there is no half-installed state. `skills audit` on its own prints
+conformance findings, which set the exit code, and danger findings — piped
+downloads, `sudo`, recursive deletes, text telling a session not to ask or
+not to tell you, hidden characters, the hosts it names, credential locations,
+and every bundled script with the programs it calls. `--diff` shows the fixes
+and never applies them. A clean audit means no known pattern matched, not
+that the skill is safe ([ADR-0042](adr/0042-skill-audit.md)).
 
 ## Make "done" mean your tests pass
 

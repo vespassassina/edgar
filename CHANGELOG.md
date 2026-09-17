@@ -9,6 +9,40 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **`edgar doctor` finished, and it no longer reaches the network unasked.** It
+  now also reports whether this project is trusted, runs `PRAGMA integrity_check`
+  on the project and user databases, says whether each stdio MCP server's command
+  is on your `PATH`, and whether each extension's required commands are. A plain
+  run opens no socket at all: a remote MCP server is not probed, because the only
+  probe worth making is the handshake `edgar mcp test NAME` already performs, and
+  asking each provider for its model list now needs `--network` — the skipped line
+  says so. Note that `--network` uses your key, since listing models is an
+  authenticated call for most providers; it costs no tokens [CFG-5, ADR-0062].
+- **`edgar route explain [PROMPT]`** prints which model each role would get, which
+  `[[route]]` rule decided and why, then every rule with matched or skipped against
+  a main turn. It calls the same pure function a turn calls, contacts no provider
+  and needs no key [ROUTE-9].
+- **`edgar agents list|validate`** lists every agent a session here would find,
+  with its scope and model, and reports every file it had to skip with the line
+  the mistake is on.
+- **`edgar ext validate PATH` and `edgar ext add PATH`.** `validate` loads a
+  bundle with the same loaders a session uses and prints what would break. `add`
+  refuses to copy anything unless that passes, then audits every skill it would
+  copy and shows you the report before writing. The question defaults to yes when
+  the audit is clean and to no when there is a danger finding; with no terminal a
+  danger finding is refused unless you pass `--yes`. The copy is staged and moved
+  into place in one step, so a half-installed extension is not a state you can end
+  up in [EXT-3].
+- **`edgar skills audit PATH [--strict] [--diff]`** runs that audit on its own.
+  Conformance findings set the exit code; danger findings are listed apart —
+  piped downloads, `sudo`, recursive deletes, `eval`, instructions to widen policy
+  or skip checks, "don't tell the user", hidden and bidi characters, HTML
+  comments, long base64 runs, credential locations, every host named, and every
+  bundled script with the programs it calls. `--diff` prints the fixes it would
+  make and never applies them; the audit writes nothing. No model is asked for an
+  opinion, because the text under review may be written to talk one out of its
+  verdict. A clean audit means no known pattern matched — not that the skill is
+  safe [SKL-18, ADR-0042].
 - **A subagent that writes can get its own git worktree.** An agent whose
   frontmatter says `isolation: worktree` runs in `.edgar/worktrees/<agent>-<session>`
   on a branch called `edgar/<agent>-<session>`, so two agents editing the same

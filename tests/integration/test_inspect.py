@@ -121,3 +121,116 @@ def test_context_show_says_how_to_use_it_and_never_guesses_a_session(
 ) -> None:
     assert admin.command(["context", "frobnicate"], tmp_project, home) == 2
     assert "usage: edgar context show" in capsys.readouterr().err
+
+
+def test_route_explain_names_the_rule_that_decided_and_contacts_nothing(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[ROUTE-9] The rules are read in order, and the first match wins."""
+    (tmp_project / ".edgar").mkdir(exist_ok=True)
+    (tmp_project / ".edgar" / "config.toml").write_text(
+        '[model]\ndefault = "fake/test"\ncompactor = "fake/small"\n\n'
+        '[[route]]\nname = "long-prompts"\nmodel = "fake/big"\nprompt_tokens_gt = 10\n\n'
+        '[[route]]\nname = "never-here"\nmodel = "fake/other"\nagent = "reviewer"\n'
+    )
+    capsys.readouterr()
+
+    # A short prompt: no rule matches, so each role falls back to its own binding.
+    assert admin.command(["route", "explain", "hi"], tmp_project, home) == 0
+    rows = {line.split()[0]: line for line in capsys.readouterr().out.splitlines()}
+    assert "fake/test" in rows["main"] and "default" in rows["main"]
+    assert "fake/small" in rows["compactor"] and "[model] compactor" in rows["compactor"]
+
+    # A long one crosses prompt_tokens_gt, and the row says which rule did it.
+    assert admin.command(["route", "explain", "word " * 200], tmp_project, home) == 0
+    out = capsys.readouterr().out
+    rows = {line.split()[0]: line for line in out.splitlines()}
+    assert "fake/big" in rows["main"] and "'long-prompts' matched" in rows["main"]
+    assert "rule long-prompts" in out and "matched for role main" in out
+    assert "rule never-here" in out and "skipped for role main" in out
+
+
+def test_agents_list_and_validate_point_at_the_line_that_is_wrong(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[SUB-1, SUB-2] validate says file, line and reason; list says scope and model."""
+    folder = tmp_project / ".edgar" / "agents"
+    folder.mkdir(parents=True)
+    (folder / "reviewer.md").write_text(
+        '---\nname: reviewer\ndescription: reviews a diff\nmodel: "fake/big"\n---\nReview it.\n'
+    )
+    (folder / "broken.md").write_text(
+        "---\nname: broken\ndescription: a bad one\nmode: sideways\n---\nGo.\n"
+    )
+    capsys.readouterr()
+
+    assert admin.command(["agents", "list"], tmp_project, home) == 0
+    out = capsys.readouterr().out
+    assert "reviewer" in out and "project" in out and "fake/big" in out
+    assert "broken" not in out  # it never loaded, so no session would see it
+
+    assert admin.command(["agents", "validate"], tmp_project, home) == 1
+    captured = capsys.readouterr()
+    assert "1 agents ok, 1 with problems" in captured.out
+    # The line number is the offending key's own line, not the file's first.
+    assert f"{folder / 'broken.md'}:4: `mode` must be one of" in captured.err
+
+
+def test_agents_says_how_to_use_it(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert admin.command(["agents", "frobnicate"], tmp_project, home) == 2
+    assert "usage: edgar agents list" in capsys.readouterr().err
+
+
+def test_route_explain_says_how_to_use_it(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert admin.command(["route", "frobnicate"], tmp_project, home) == 2
+    assert "usage: edgar route explain" in capsys.readouterr().err
+
+
+def labelled(out: str) -> dict[str, str]:
+    # doctor prints "<check> <name> …": key each line by its first two words.
+    return {" ".join(line.split()[:2]): line for line in out.splitlines()}
+
+
+def test_doctor_checks_trust_the_db_mcp_and_extensions_without_touching_the_network(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[CFG-5] The whole run is offline: `no_network` fails the test on a socket."""
+    (tmp_project / ".edgar").mkdir(exist_ok=True)
+    (tmp_project / ".edgar" / "config.toml").write_text(
+        '[model]\ndefault = "fake/test"\n\n'
+        '[mcp.local]\ncommand = "definitely-not-a-real-program"\n\n'
+        '[mcp.remote]\nurl = "https://mcp.example.test/mcp"\n'
+    )
+    bundle = tmp_project / ".edgar" / "extensions" / "demo"
+    bundle.mkdir(parents=True)
+    (bundle / "extension.toml").write_text(
+        'name = "demo"\nversion = "0.1.0"\ndescription = "a demo"\n'
+        '[requires]\ncommands = ["definitely-not-a-real-program"]\n'
+    )
+    capsys.readouterr()
+
+    assert admin.command(["doctor"], tmp_project, home) == 0
+    lines = labelled(capsys.readouterr().out)
+    # An MCP server is executable config, so the project is untrusted until asked.
+    assert "edgar trust" in lines["trust untrusted"]
+    assert "not written yet" in lines["db project"]
+    assert "not on PATH" in lines["mcp local"]
+    assert "edgar mcp test remote" in lines["mcp remote"]
+    assert "not on PATH" in lines["ext demo"]
+    # Nothing was asked of any endpoint; the line says how to ask.
+    assert "--network" in lines["conn (skipped)"]
+
+
+def test_doctor_reports_a_real_database_as_sound(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from edgar.storage.db import Store
+
+    Store(tmp_project / ".edgar" / "edgar.db").grant("read", "a.txt")  # a session's own file
+    capsys.readouterr()
+    assert admin.command(["doctor"], tmp_project, home) == 0
+    assert "db       project     integrity_check ok" in capsys.readouterr().out

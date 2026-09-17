@@ -53,7 +53,7 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M19 Working state | Done ([ADR-0059](adr/0059-m19-working-state-as-built.md)) | 2.0 |
 | M20 Seeing and searching | Done ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)) | 2.0 |
 | M21 Isolation | Done ([ADR-0061](adr/0061-m21-isolation-as-built.md)) — the sandbox confines writes and the network, **not reads**; see ADR-0061 §2 | 2.0 |
-| M22 Inspection, 2.0 release | Next | 2.0 |
+| M22 Inspection, 2.0 release | Code done ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)) — **the 2.0 release is not started**, `edgar.testing.contract` [PRV-14] dropped to v3 for budget, and the two human "Done when" criteria are open | 2.0 |
 | M12–M15 Learning, controller, synthesis, escalation | Planned | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
@@ -532,7 +532,7 @@ number stays.
 | M19 Working state | 374 (built) | 8,374 |
 | M20 Seeing and searching | 218 (built) | 8,592 |
 | M21 Isolation | 277 (built) | 8,869 |
-| M22 Inspection, 2.0 release | ~440 | ~9,309 |
+| M22 Inspection, 2.0 release | 436 (built, PRV-14 dropped) | 9,305 |
 
 **How to read a v2 milestone.** Each item names the files it touches, the
 requirement IDs it closes, the test that proves it and its size. Items are
@@ -802,8 +802,11 @@ if the budget is short.
   folder against the manifest rules, `add` copies it in after `validate` and
   the skill audit both pass, `audit` prints the conformance and danger report
   and the diff it proposes, never applying it.
-- **`edgar.testing.contract`** [PRV-14], ~70: the provider contract suite as an
-  importable kit so a plugin provider in its own package can run it.
+- ~~**`edgar.testing.contract`** [PRV-14], ~70~~ — **dropped to v3 for budget**
+  ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md) §6). The suite is 265
+  lines of test code, so packaging it would cost about 200 lines of code against
+  the tier, not 70; 195 remained. `tests/contract/test_provider_contract.py` still
+  runs for every built-in provider in the meantime.
 - **Release 2.0.0:** bump `pyproject.toml` and `src/edgar/__init__.py`, move
   `CHANGELOG.md`'s Unreleased under 2.0.0, tag, watch the three release jobs.
 - **Tour delivery:** the commands join the Core tour's surface stage and the

@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8867,
+    "loc": 9303,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6356,
+        "loc": 6555,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2025,
+            "loc": 2042,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 219,
+                "loc": 234,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 150,
+                "loc": 152,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1249,
+            "loc": 1251,
             "status": "built",
             "children": [
               {
@@ -554,7 +554,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 116,
+                "loc": 118,
                 "summary": "Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].",
                 "stop": "agents.html#a4",
                 "status": "built",
@@ -566,9 +566,21 @@ window.EDGAR_MAP = {
             "id": "core/skills",
             "name": "skills/",
             "kind": "package",
-            "loc": 91,
+            "loc": 271,
             "status": "built",
             "children": [
+              {
+                "path": "src/edgar/skills/audit.py",
+                "name": "audit.py",
+                "kind": "file",
+                "tier": "core",
+                "package": "skills",
+                "loc": 180,
+                "summary": "Judge a skill before it is copied in [SKL-18, ADR-0042].",
+                "stop": "extensions.html#x6",
+                "status": "built",
+                "port": false
+              },
               {
                 "path": "src/edgar/skills/discovery.py",
                 "name": "discovery.py",
@@ -738,14 +750,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2058,
+        "loc": 2233,
         "status": "built",
         "children": [
           {
             "id": "v1/agents",
             "name": "agents/",
             "kind": "package",
-            "loc": 259,
+            "loc": 275,
             "status": "built",
             "children": [
               {
@@ -766,7 +778,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 86,
+                "loc": 102,
                 "summary": "Finding subagents: `.edgar/agents/*.md`, project over user [SUB-1, SUB-2].",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -847,7 +859,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 164,
+            "loc": 221,
             "status": "built",
             "children": [
               {
@@ -856,8 +868,8 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 40,
-                "summary": "`edgar doctor`: credentials, connectivity, and a cloud-synced-folder warning",
+                "loc": 97,
+                "summary": "`edgar doctor`: what this machine and this project would do to a session",
                 "stop": "isolation.html#w2",
                 "status": "built",
                 "port": false
@@ -913,7 +925,7 @@ window.EDGAR_MAP = {
             "id": "v1/extensions",
             "name": "extensions/",
             "kind": "package",
-            "loc": 229,
+            "loc": 331,
             "status": "built",
             "children": [
               {
@@ -949,6 +961,18 @@ window.EDGAR_MAP = {
                 "loc": 43,
                 "summary": "Extension manifests: `extension.toml` in a folder alongside `tools/`, `skills/`,",
                 "stop": "extensions.html#x1",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/extensions/validate.py",
+                "name": "validate.py",
+                "kind": "file",
+                "tier": "v1",
+                "package": "extensions",
+                "loc": 102,
+                "summary": "`edgar ext validate PATH` and `edgar ext add PATH` [EXT-3].",
+                "stop": "extensions.html#x6",
                 "status": "built",
                 "port": false
               }
@@ -1175,7 +1199,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 453,
+        "loc": 515,
         "status": "built",
         "children": [
           {
@@ -1203,7 +1227,7 @@ window.EDGAR_MAP = {
             "id": "v2/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 101,
+            "loc": 163,
             "status": "built",
             "children": [
               {
@@ -1212,7 +1236,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "cli",
-                "loc": 101,
+                "loc": 163,
                 "summary": "The commands that print or shrink what a session holds [CTX-2, CTX-10].",
                 "stop": "working.html#w4",
                 "status": "built",
