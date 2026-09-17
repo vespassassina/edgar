@@ -12,6 +12,8 @@
 #   tool output        a ToolResultBlock in the transcript; no event carries it
 #   an error's text    a ToolResultBlock; the bus carries only ErrorRecord [MEM-22]
 #   model text         an assistant message, and TextDelta, which is not read here
+#   a subagent's task   a PromptTyped, but at depth > 0: the `task` tool's argument
+#                       is text the model wrote, so the depth check drops it [SUB-3]
 #
 # So there is nothing to filter. This file opens no file, reads no transcript and
 # subscribes to no other event; an attacker who controls any of the sources above
@@ -59,9 +61,11 @@ class Learner:
         self.memory, self.scope, self.bus = memory, scope, bus
 
     def __call__(self, event: Event) -> None:
-        # 1. One event type. Every other event, including every one that could
-        #    carry tool output, falls out here.
-        if not isinstance(event, PromptTyped):
+        # 1. One event type, at depth 0 only. Every other event, including every
+        #    one that could carry tool output, falls out here. The depth matters
+        #    as much as the type: a subagent's prompt is the `task` tool's
+        #    argument, which the model wrote, so it is not typed text [SUB-3].
+        if not isinstance(event, PromptTyped) or event.depth:
             return
         text = extract(event.text)
         if text is None:

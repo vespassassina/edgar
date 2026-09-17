@@ -80,9 +80,16 @@ flowchart TD
   <p class="look">Look for: <code>Learner</code> <code>extract</code> <code>DIRECTIVE</code> <code>attach</code></p>
   <p>Read <code>Learner.__call__</code> first, and read its opening line as the whole
   security argument: it returns immediately unless the event is a
-  <code>PromptTyped</code>. That is the entire filter, and it is not a filter — it is a
-  type check. There is no branch below it that could be reached by anything else,
-  because nothing else is ever passed in.</p>
+  <code>PromptTyped</code> at depth zero. That is the entire filter, and it is not a
+  filter — it is a type check. There is no branch below it that could be reached by
+  anything else, because nothing else is ever passed in.</p>
+  <p>The depth half of that line was not in the first draft. The property test on the
+  next page of this repository generated a subagent emitting a prompt and put an active
+  fact in the store with it, which is correct behaviour for a <em>typed</em> line and
+  wrong here: a subagent's prompt is the <code>task</code> tool's argument, and the
+  model wrote it. It is the same class of mistake the whole milestone is about, found
+  by a generator rather than by reading, which is the argument for writing the property
+  test at all.</p>
   <p>So the question moves one step back: who constructs a <code>PromptTyped</code>?
   Two places, and you can read both in a minute. <code>cli/repl.py</code>'s
   <code>submit()</code> emits one with the input line, before <code>attach()</code> has
