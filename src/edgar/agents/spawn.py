@@ -136,7 +136,9 @@ async def spawn(
     session = start(session)
     check = None
     if agent.verify:  # the agent's own frontmatter, ahead of a loaded skill's [VER-1]
-        check = Check(agent.verify, config.verify.max_attempts, config.shell.program)
+        # The same walls the parent's `shell` runs in: a subagent never widens them.
+        walls = getattr(registry.get("shell"), "sandbox", None)
+        check = Check(agent.verify, config.verify.max_attempts, config.shell.program, walls)
     rt = Runtime(
         provider=provider,
         model=model,

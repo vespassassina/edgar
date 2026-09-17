@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from edgar.sandbox.base import Sandbox
 from edgar.tools.base import ToolContext, ToolResult, builtin_schema
 from edgar.tools.spill import spill_image
 
@@ -210,8 +211,19 @@ class Edit:
         return ToolResult(f"edited {args['path']}: {count} replacement{'s' * (count > 1)}")
 
 
-def builtins(shell: str = "auto") -> tuple[Any, ...]:
+def builtins(shell: str = "auto", sandbox: Sandbox | None = None) -> tuple[Any, ...]:
+    # `sandbox` is the Sandbox port or None (`none`); only `shell` runs a process.
     from edgar.tools.builtin.shell import Fetch, Shell
     from edgar.tools.builtin.todo import TodoTool
 
-    return (Read(), Ls(), Glob(), Grep(), Write(), Edit(), Shell(shell), Fetch(), TodoTool())
+    return (
+        Read(),
+        Ls(),
+        Glob(),
+        Grep(),
+        Write(),
+        Edit(),
+        Shell(shell, sandbox),
+        Fetch(),
+        TodoTool(),
+    )

@@ -64,6 +64,7 @@ from edgar.providers.routing import (
     routes_from_config,
     select_model,
 )
+from edgar.sandbox.base import Sandbox, backend
 from edgar.skills.activate import verify_command as skill_verify
 from edgar.skills.discovery import Found, Skill, discover
 from edgar.storage.db import Store
@@ -135,6 +136,7 @@ class Setup:
     hooks: tuple[Hook, ...]  # `[[hooks]]`, config and every found extension's [EXT-4]
     skills: dict[str, Skill]  # by name, for deterministic activation between turns [SKL-17]
     explicit_verify: bool  # `--verify` was passed: it outranks a loaded skill's own [VER-1]
+    sandbox: Sandbox | None = None  # the backend `[shell] sandbox` named [PERM-15]
 
 
 def setup(
@@ -163,7 +165,13 @@ def setup(
     guard = Guard(base, asker=asker, store=Store(root / ".edgar" / "edgar.db"))
     # 2. Tools, skills, agents, extensions and MCP servers; `task` only when there
     #    is an agent to run [EXT-2, EXT-8].
-    tools, found, servers_here, agents, ext = toolset(root, home, config, project_exec=project_exec)
+    #    The backend is resolved once, here: a configured sandbox that cannot run on
+    #    this machine ends the session start rather than becoming a quiet `none`
+    #    [PERM-15]. `none` is the default and always available.
+    walls = None if config.shell.sandbox == "none" else backend(config.shell.sandbox)
+    tools, found, servers_here, agents, ext = toolset(
+        root, home, config, project_exec=project_exec, sandbox=walls
+    )
     if agents.agents:
         limits = subagents_config(config.later)
         tools.add([TaskTool(agents.agents, tools, guard, config, env, limits)])
@@ -174,7 +182,9 @@ def setup(
     skills = list(found.skills.values())
     from_project = config.origins.get("verify.command") == str(project_config(root))
     command = verify or (config.verify.command if project_exec or not from_project else None)
-    check = Check(command, config.verify.max_attempts, config.shell.program) if command else None
+    check = (
+        Check(command, config.verify.max_attempts, config.shell.program, walls) if command else None
+    )
     files = config.instructions.files
     # 4. The prompt's prefix. Pinned facts are chosen now and frozen: a fact saved
     #    mid-session is found by `recall`, and pinned from the next session on [MEM-6].
@@ -221,6 +231,7 @@ def setup(
         hooks,
         found.skills,
         verify is not None,
+        walls,
     )
 
 
@@ -239,7 +250,7 @@ def open_memory(home: Path, config: Config) -> Memory:
 
 
 def toolset(
-    root: Path, home: Path, config: Config, *, project_exec: bool
+    root: Path, home: Path, config: Config, *, project_exec: bool, sandbox: Sandbox | None = None
 ) -> tuple[ToolRegistry, Found, list[Server], AgentsFound, ExtFound]:
     # The session's tools, the skills and agents found (a plain project's, then
     # each extension's own, folded in [EXT-8]), and the MCP servers configured.
@@ -271,6 +282,7 @@ def toolset(
         mcp=cached,
         ext=ext.tools,
         budget=config.tools.schema_budget,
+        sandbox=sandbox,
     )
     searchable(registry, [s for s in here if s.tools() is None])
     return registry, found, here, agents, ext
@@ -380,7 +392,7 @@ def verify_for_turn(s: Setup, rt: Runtime, activated: Sequence[Skill]) -> Runtim
     command = skill_verify(activated)
     if command is None:
         return rt
-    check = Check(command, s.config.verify.max_attempts, s.config.shell.program)
+    check = Check(command, s.config.verify.max_attempts, s.config.shell.program, s.sandbox)
     return replace(rt, verify=check)
 
 

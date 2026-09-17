@@ -13,13 +13,14 @@ import asyncio
 import json
 import time
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any
 
 from edgar.core.events import ToolFinished, ToolProposed, ToolStarted
 from edgar.core.message import ErrorKind, ErrorRecord, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.extensions.hooks import veto as hooks_veto
 from edgar.permissions.guard import Guard
-from edgar.permissions.policy import Deny
+from edgar.permissions.policy import Deny, network_allowed
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry
 from edgar.tools.spill import spill
@@ -74,6 +75,9 @@ async def execute(
     if isinstance(decision, Deny):
         return _failed(call, "permission_denied", f"denied: {decision.reason}")
 
+    # The sandbox is told what the engine just decided, read fresh: taint is sticky
+    # but can be set by an earlier call in this same turn [PERM-15, PERM-11].
+    ctx = replace(ctx, network=network_allowed(mode, tainted))
     bus.emit(ToolStarted(id=call.id, tool=call.name))
     timeout = getattr(tool, "timeout_s", None) or ctx.timeout_s
     started = time.monotonic()
