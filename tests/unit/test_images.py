@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from edgar.config.schema import ProviderSection
+from edgar.context.compact import elide
 from edgar.context.tokens import approx_message_tokens, image_tokens
 from edgar.core.errors import ConfigError
 from edgar.core.message import ImageBlock, Message, TextBlock, ToolResultBlock, ToolUseBlock
@@ -203,3 +204,39 @@ def test_counting_a_message_includes_an_image_a_tool_produced() -> None:
     result = ToolResultBlock("tu_1", (TextBlock("read"),), images=(shot,))
     counted = approx_message_tokens([Message("tool", (result,))])
     assert counted > 85 + 170
+
+
+# 5. S1 elides an old picture to a line naming it [CTX-4, CTX-11, ADR-0052].
+
+
+def test_an_old_image_elides_to_a_line_that_keeps_its_reference() -> None:
+    view = [
+        Message("user", (TextBlock("look"), ImageBlock("image/png", "blobs/a.png", 640, 480))),
+        Message("assistant", (TextBlock("I see"),)),
+        Message.user("and now?"),
+    ]
+    out = elide(view, 2)
+    assert out[0].images == ()  # nothing left to pay for
+    said = out[0].content[1]
+    assert isinstance(said, TextBlock)
+    assert "image/png 640x480" in said.text and "blobs/a.png" in said.text
+
+
+def test_an_image_a_tool_produced_elides_with_its_result() -> None:
+    view = [*unit_with_an_image("blobs/shot.png"), Message.user("next")]
+    out = elide(view, 3)
+    assert pairing_violations(out) == []  # the unit stayed whole [CTX-4]
+    assert out[2].images == ()
+    assert "image blobs/shot.png" in out[2].tool_results[0].text
+
+
+def test_eliding_an_image_twice_changes_nothing_more() -> None:
+    view = [*unit_with_an_image(), Message.user("next")]
+    once = elide(view, 3)
+    assert elide(once, 3) == once
+
+
+def test_the_recent_turn_keeps_its_images() -> None:
+    shot = ImageBlock("image/png", "blobs/a.png", 640, 480)
+    view = [Message("user", (TextBlock("look"), shot))]
+    assert elide(view, 0) == view  # nothing before the cut: nothing to elide

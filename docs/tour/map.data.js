@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8551,
+    "loc": 8558,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6242,
+        "loc": 6249,
         "status": "built",
         "children": [
           {
@@ -185,7 +185,7 @@ window.EDGAR_MAP = {
             "id": "core/context",
             "name": "context/",
             "kind": "package",
-            "loc": 269,
+            "loc": 276,
             "status": "built",
             "children": [
               {
@@ -206,7 +206,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 139,
+                "loc": 146,
                 "summary": "Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].",
                 "stop": "index.html#s16",
                 "status": "built",
