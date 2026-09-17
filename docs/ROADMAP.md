@@ -51,8 +51,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M11 Init, doctor, docs | Done · 1.0 ([ADR-0056](adr/0056-m11-as-built.md)) — PRD §11's two human criteria still open | 1.0 |
 | M18 Tours for v1 and the map | Done ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)) | 2.0 |
 | M19 Working state | Done ([ADR-0059](adr/0059-m19-working-state-as-built.md)) | 2.0 |
-| M20 Seeing and searching | Next | 2.0 |
-| M21 Isolation | Planned | 2.0 |
+| M20 Seeing and searching | Done ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)) | 2.0 |
+| M21 Isolation | Next | 2.0 |
 | M22 Inspection, 2.0 release | Planned | 2.0 |
 | M12–M15 Learning, controller, synthesis, escalation | Planned | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
@@ -675,7 +675,18 @@ either.
 
 ---
 
-## M20 — Seeing and searching
+## M20 — Seeing and searching · DONE 2026-09-17
+
+Built in ten commits, `e512b90..33e1d90`, one per item;
+[ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md) records the decisions
+and flags three of them for extra review. 218 lines of code against the ~200
+estimated, all in the image items; web search and git cost none, as planned.
+Two deviations from the plan below, both recorded in ADR-0060 and the journal:
+the contract suite's image cases assert on the request body of the existing
+scenarios rather than adding cassettes, because serialising an image is entirely
+outbound and no provider returns one; and the `post_tool` hook example is an
+observe-only commit trail (`examples/extensions/git-trail/`) rather than a
+formatter run after `edit`.
 
 **Goal:** the agent can look at an image, search the web and use git properly.
 About 200 lines of code; web search and git cost none.

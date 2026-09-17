@@ -23,19 +23,100 @@ In order:
    ([ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)).
    ~~**M19, working state.**~~ Done 2026-09-17
    ([ADR-0059](adr/0059-m19-working-state-as-built.md)); it flipped
-   `TARGET_TIER` to `"v2"` and `just loc` now reads 8,374 of 9,500. **M20,
-   seeing and searching**, is next.
+   `TARGET_TIER` to `"v2"` and `just loc` read 8,374 of 9,500.
+   ~~**M20, seeing and searching.**~~ Done 2026-09-17
+   ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)); `just loc` now
+   reads 8,592 of 9,500. **M21, isolation**, is next.
 4. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 
-v2 sits at 8,374 of 9,500 `src/` lines of code after M19, so M20, M21 and M22
-share the 1,126 that are left. ADR-0053's cuts are no longer forbidden: plan
+v2 sits at 8,592 of 9,500 `src/` lines of code after M20, so M21 and M22 share
+the 908 that are left. ADR-0053's cuts are no longer forbidden: plan
 mode, `todo`, `context show` and `config show --resolved` landed in M19; the
 rest are M21 (worktrees, sandboxes) and M22 (`route explain`,
 `agents list|validate`, `ext validate|add`, the contract kit, the rest of
 `doctor`). `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-17 · M20 — seeing and searching
+
+**Asked:** build M20 in ten ordered items, one commit each, on a worktree branch
+off `main`: seven for images (the block, the spill, the capability gate,
+serialisation, token cost, elision, input), then web search and git as
+zero-code extensions, then the tour page. Take the conservative option wherever
+`core/message.py` or `context/compact.py` forces a judgement, write down why,
+and flag it for extra human review. No paid or live provider API.
+
+**Done.** Ten commits, `e512b90..33e1d90`. `just check` green at 815 tests,
+`just loc` 8,592 of 9,500 — 218 lines added against the ~200 estimated, all of
+it in items 1–7. Web search and git added nothing to `src/`, as planned.
+
+**Decided** (all in [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md),
+three of them flagged there for extra review):
+
+- **`ImageBlock` has four fields** — `ref`, `media_type`, `width`, `height` —
+  and the test for inclusion was "does serialisation or token counting read
+  it?". `filename`, `bytes`, `caption`, `sha256`, `created_at` and `origin` each
+  had a plausible case and no caller. In a frozen vocabulary the asymmetry
+  decides it: adding a field later is additive, removing one is a migration.
+- **Elision extends `_stub()`** rather than adding a second pass, so `elide()`
+  stays the only function that knows where a turn may be cut. A separate
+  `_elide_images()` reads better in isolation and would have been a second home
+  for the pairing invariant. Verified idempotent, and verified that a tool
+  result is stubbed together with its images so no unit is trimmed internally.
+- **`spill_image()` is new, beside `spill()`**, sharing the file write and not
+  the policy: text spills conditionally and keeps a head and tail, an image
+  spills always and whole, because half a PNG is not a smaller PNG.
+- **`core/loop.py` keeps `images` as a separate channel** from `attached`,
+  which cost one line more than widening `attached` to
+  `Sequence[str | ImageBlock]`. The file was at exactly 200/200; the line came
+  back from two type aliases and three narration docstrings turned into `#`
+  comments. `attached` means piped stdin or an `@file:` context and keeps
+  meaning only that.
+- **No image dependency.** PNG, JPEG, GIF and WebP announce themselves in their
+  first bytes, so geometry is about fifteen lines of header reading rather than
+  Pillow. A header that cannot be parsed yields an image sized 0×0, which
+  `image_tokens` charges one tile for — wrong, but bounded and in a known
+  direction.
+
+**Deviations from the brief, both deliberate:**
+
+1. **No new cassettes.** The contract suite's image cases reuse the existing
+   `text` and `round_trip` scenarios and assert on the request body, because
+   serialising an image is entirely outbound and no provider returns one. The
+   brief asked for "one image case per provider", which is what exists; it is
+   just not a recorded exchange. No live API was called.
+2. **The `post_tool` hook example is a commit trail, not a formatter.** The
+   roadmap said "running the formatter after `edit`"; this session's brief said
+   "observe-only". `examples/extensions/git-trail/` logs one line per commit,
+   which demonstrates the shape more honestly — a `post_tool` hook's output is
+   never read, so an example whose whole point is to change a file invites the
+   misreading that it can.
+
+**Verified beyond the suite:** a cold subagent, given only `COOKBOOK.md`,
+`EXTENDING.md` and `examples/` and forbidden from opening `src/`, produced the
+same Brave host, header name and environment variable unaided — the same check
+the weather tool got in September. It found one error in the new recipe (a claim
+that `edgar tools list` prints `read_only` and the category, which it does not),
+now fixed. Each git argv template was rendered with and without its optional
+argument to confirm an absent argument drops its whole element, and that a
+commit message containing newlines, a semicolon and backticks stays one element.
+
+**Still open, found by that subagent and older than this milestone:**
+
+- There is no `edgar tools validate` to match `edgar skills validate`. For the
+  surface that has secrets, a fixed host and slot substitution, that asymmetry
+  is the biggest friction a first-time tool author hits.
+- A `{slot}` in an HTTP tool's URL that is not in `[input].properties` loads
+  without a word, though `EXTENDING.md` documents the rule. It surfaces at call
+  time, mid-turn, after a wasted model call.
+- `edgar trust` lists a tool file by its first comment line rather than its
+  `name`, `description` or host. For the one prompt whose purpose is "look at
+  this before you allow it", showing the host would be worth more.
+- `EXTENDING.md` never gives the HTTP-tool grammar in full — no `body` example,
+  and no statement about where a query string belongs. The examples carry that
+  knowledge instead.
 
 ## 2026-09-17 · M19 — working state, and the first v2 code
 
