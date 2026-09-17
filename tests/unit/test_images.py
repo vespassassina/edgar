@@ -15,9 +15,19 @@ import pytest
 from edgar.core.message import ImageBlock, Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.units import pairing_violations
 from edgar.storage.transcript import from_dict, to_dict
+from edgar.tools.spill import spill, spill_image
 
 PNG = (  # a 2x3 PNG: the eight-byte signature, then an IHDR saying 2 wide, 3 high
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x02\x00\x00\x00\x03\x08\x06\x00\x00\x00"
+)
+GIF = b"GIF89a" + (7).to_bytes(2, "little") + (5).to_bytes(2, "little") + b"\x00" * 8
+# A start-of-frame segment is all `geometry` reads: precision, height, width.
+JPEG = b"\xff\xd8\xff\xc0\x00\x11\x08" + (9).to_bytes(2) + (4).to_bytes(2) + b"\x03" * 10
+WEBP = (
+    b"RIFF\x00\x00\x00\x00WEBPVP8X"
+    + b"\x00" * 8  # chunk size, then the flag byte and its three reserved bytes
+    + (11).to_bytes(3, "little")  # width - 1
+    + (13).to_bytes(3, "little")  # height - 1
 )
 
 
@@ -79,3 +89,43 @@ def test_a_result_written_before_m20_still_reads_back(tmp_path: Path) -> None:
         "meta": {},
     }
     assert from_dict(old).tool_results[0].images == ()
+
+
+# 2. The bytes go to a blob, never into the block or the record [ADR-0052].
+
+
+@pytest.mark.parametrize(
+    ("data", "kind", "size"),
+    [
+        (PNG, "image/png", (2, 3)),
+        (GIF, "image/gif", (7, 5)),
+        (JPEG, "image/jpeg", (4, 9)),
+        (WEBP, "image/webp", (12, 14)),
+    ],
+)
+def test_each_format_is_recognised_and_measured(
+    data: bytes, kind: str, size: tuple[int, int], tmp_path: Path
+) -> None:
+    block = spill_image(data, blob_dir=tmp_path / "blobs", name="tu_1")
+    assert block is not None
+    assert (block.media_type, block.width, block.height) == (kind, *size)
+    assert Path(block.ref).read_bytes() == data
+
+
+def test_bytes_that_are_not_a_known_image_spill_nothing(tmp_path: Path) -> None:
+    assert spill_image(b"not a picture at all", blob_dir=tmp_path / "blobs", name="x") is None
+    assert not (tmp_path / "blobs").exists()
+
+
+def test_a_truncated_header_is_unknown_geometry_not_a_crash(tmp_path: Path) -> None:
+    block = spill_image(PNG[:12], blob_dir=tmp_path / "blobs", name="tu_2")
+    assert block is not None and (block.width, block.height) == (0, 0)
+
+
+def test_an_image_blob_lands_beside_the_spilled_text_under_the_same_rule(tmp_path: Path) -> None:
+    # Same directory, same name sanitising, different suffix: one blob rule [CTX-13].
+    blobs = tmp_path / "blobs"
+    spill("x" * 4000, max_tokens=10, blob_dir=blobs, name="tu/3", root=tmp_path)
+    block = spill_image(PNG, blob_dir=blobs, name="tu/3")
+    assert block is not None
+    assert sorted(p.name for p in blobs.iterdir()) == ["tu_3.png", "tu_3.txt"]

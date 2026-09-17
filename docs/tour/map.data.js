@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8400,
+    "loc": 8463,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6091,
+        "loc": 6154,
         "status": "built",
         "children": [
           {
@@ -620,7 +620,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 505,
+            "loc": 568,
             "status": "built",
             "children": [
               {
@@ -677,7 +677,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 30,
+                "loc": 93,
                 "summary": "Stage S0 of the context pipeline: large output keeps its head and tail [TOOL-4, CTX-13].",
                 "stop": "index.html#s22",
                 "status": "built",
