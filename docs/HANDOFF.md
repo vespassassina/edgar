@@ -30,13 +30,20 @@ list is done. Read it first, then the three documents under "Read".
 - **M22's code is done and merged** (2026-09-17,
   [ADR-0062](adr/0062-m22-inspection-commands-as-built.md)): the rest of `edgar
   doctor`, `route explain`, `agents list|validate`, `ext validate|add` with
-  `skills audit`, and the tour stops. `just loc` reads **9,305 of 9,500**, 195
-  lines of headroom left in the v2 budget. `edgar.testing.contract` [PRV-14]
+  `skills audit`, and the tour stops. `edgar.testing.contract` [PRV-14]
   was **dropped to v3** for budget — see ADR-0062 §6 for the measurement.
   **What is left of M22 is the 2.0 release itself and its two human criteria
   (a two-week dogfood period, an outside person's PRD §11 checks), and the
   release needs the maintainer's explicit authorisation, as every push, tag
   and release in this project does.** v2's code is otherwise complete.
+- **Fixed on `main`, 2026-09-17:** the bug M22's build agent found and correctly
+  left alone — `cli/setup.py`'s `runtime()` built the main turn's
+  `RoutingContext` with every field bare, so a `[[route]]` rule keyed on `mode`
+  could never match it. `mode` and `tools_required` are now the real ones for
+  that turn; `tags` and `schedule` stay unset since nothing produces either
+  yet. See `JOURNAL.md`'s "fix: the main turn's routing context was always
+  bare" entry. `just loc` now reads **9,306 of 9,500**, 194 lines of headroom
+  left in the v2 budget.
 - **M21 is done and merged** (2026-09-17,
   [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
   sandbox backends. Two of
@@ -207,7 +214,7 @@ What a later milestone needs to know:
   should arrive the same way; ADR-0060's last section says why a built-in
   `web_search` was refused (PRV-15: it would need a default host).
 
-## Step 4 — M21, isolation · DONE 2026-09-17, NOT MERGED
+## Step 4 — M21, isolation · DONE AND MERGED 2026-09-17
 
 Built in three commits on `feat/m21-isolation`, one per roadmap item plus this
 trace. New files: `agents/worktree.py` and the `sandbox/` package
@@ -257,7 +264,7 @@ What a later milestone needs to know:
   `templates/gitignore.fragment`). Without `.edgar/` ignored, a worktree always
   reads dirty and is therefore always kept: safe, but useless.
 
-## Step 5 — M22, inspection · CODE DONE 2026-09-17, NOT MERGED, RELEASE NOT STARTED
+## Step 5 — M22, inspection · CODE DONE AND MERGED 2026-09-17, RELEASE NOT STARTED
 
 Built in five commits on `feat/m22-inspection-commands`, one per roadmap item:
 `c3e7d18` doctor, `d4da60f` `route explain`, `cb03b77` `agents list|validate`,
