@@ -26,7 +26,7 @@ reads the same functions `context/builder.py` uses and never calls a provider.
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +37,14 @@ from edgar.context.builder import Section, build, system_text
 from edgar.context.prompts import load_prompt, profile_prompt
 from edgar.context.tokens import approx_message_tokens, approx_tokens, message_text
 from edgar.core.message import Message
+from edgar.providers.routing import (
+    Role,
+    Route,
+    RoutingContext,
+    matches,
+    routes_from_config,
+    select_model,
+)
 from edgar.storage.transcript import find, replay
 
 BREAKPOINT = "---- cache breakpoint ----"
@@ -113,6 +121,53 @@ def sessions_compact(which: str, cwd: Path, home: Path) -> int:
         return 0
     print(f"{session.id}: {before} messages → {len(session.transcript)}, appended to the record")
     return 0
+
+
+# edgar route explain [PROMPT]:
+#   1. the [[route]] rules, in the order select_model() reads them
+#   2. one row per role: the model it resolves to, the rule that decided, and why
+#   3. for the main role, every rule with matched or skipped against that context
+#
+# It calls `routing.select_model()` — the same pure function a turn calls — and
+# prints its `Selection.reason`. No provider is resolved and nothing is sent, so
+# this is free and works with no key set [ROUTE-9].
+#
+# The context it builds is the one the real path builds, not a richer one: the
+# main turn (`cli/setup.py`'s `runtime()`) passes a bare `RoutingContext()`, so a
+# rule keyed on `mode`, `tags` or `schedule` cannot match for the main role. That
+# is a property of edgar, not of this command, so the command shows it rather
+# than papering over it with a context no turn would ever use.
+
+ROLES: tuple[Role, ...] = ("main", "subagent", "compactor", "controller", "condenser")
+
+
+def route_explain(argv: list[str], cwd: Path, home: Path) -> int:
+    if argv[:1] != ["explain"]:
+        print("usage: edgar route explain [PROMPT]", file=sys.stderr)
+        return 2
+    config = load(cwd, home=home)
+    rules = routes_from_config(config.later)
+    tokens = approx_tokens(" ".join(argv[1:]))
+    print(f"{len(rules)} [[route]] rules · prompt ~{tokens:,} tokens · no provider contacted")
+    for role in ROLES:
+        ctx = RoutingContext(role=role, prompt_tokens=tokens)
+        chosen = select_model(ctx, config.model, rules)
+        print(f"{role:<11} {chosen.model:<32} {chosen.rule:<14} {chosen.reason}")
+    main = RoutingContext(prompt_tokens=tokens)
+    for rule in rules:
+        verdict = "matched" if matches(rule, main) else "skipped"
+        print(f"  rule {rule.name:<20} {verdict} for role main: {_conditions(rule)}")
+    return 0
+
+
+def _conditions(rule: Route) -> str:
+    # Every condition the rule actually sets, in the config's own spelling.
+    set_here = [
+        f"{f.name}={getattr(rule, f.name)!r}"
+        for f in fields(rule)
+        if f.name not in ("name", "model") and getattr(rule, f.name) not in (None, frozenset())
+    ]
+    return ", ".join(set_here) or "no conditions: it matches anything"
 
 
 SECRET = ("api_key", "token", "secret", "password")

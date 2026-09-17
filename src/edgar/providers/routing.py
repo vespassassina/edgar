@@ -68,7 +68,7 @@ def select_model(
         return Selection(ctx.agent_model, "agent", f"agent {ctx.agent} names its model")
     # 2. First matching declarative rule [ROUTE-2].
     for rule in rules:
-        if _matches(rule, ctx):
+        if matches(rule, ctx):
             return Selection(rule.model, rule.name, f"[[route]] {rule.name!r} matched")
     # 3. The role's own static binding, Core's mechanism [ROUTE-1].
     own = getattr(models, ctx.role, None) if ctx.role not in ("main", "subagent") else None
@@ -84,7 +84,9 @@ def select_model(
     return Selection(models.default, "default", f"[model] default{why}")
 
 
-def _matches(rule: Route, ctx: RoutingContext) -> bool:
+def matches(rule: Route, ctx: RoutingContext) -> bool:
+    """True when every condition this rule sets holds. Public because
+    `edgar route explain` shows the verdict rule by rule [ROUTE-9]."""
     return (
         (rule.role is None or rule.role == ctx.role)
         and (rule.agent is None or rule.agent == ctx.agent)

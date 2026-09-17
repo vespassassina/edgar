@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8924,
+    "loc": 8964,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6356,
+        "loc": 6363,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2025,
+            "loc": 2030,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 219,
+                "loc": 223,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 150,
+                "loc": 151,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1249,
+            "loc": 1251,
             "status": "built",
             "children": [
               {
@@ -554,7 +554,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 116,
+                "loc": 118,
                 "summary": "Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].",
                 "stop": "agents.html#a4",
                 "status": "built",
@@ -1175,7 +1175,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 453,
+        "loc": 486,
         "status": "built",
         "children": [
           {
@@ -1203,7 +1203,7 @@ window.EDGAR_MAP = {
             "id": "v2/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 101,
+            "loc": 134,
             "status": "built",
             "children": [
               {
@@ -1212,7 +1212,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "cli",
-                "loc": 101,
+                "loc": 134,
                 "summary": "The commands that print or shrink what a session holds [CTX-2, CTX-10].",
                 "stop": "working.html#w4",
                 "status": "built",

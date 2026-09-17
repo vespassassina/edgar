@@ -20,6 +20,7 @@ ADMIN = {
     "config",
     "context",
     "doctor",
+    "route",
     "trust",
     "permissions",
     "sessions",

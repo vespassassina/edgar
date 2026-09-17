@@ -123,6 +123,40 @@ def test_context_show_says_how_to_use_it_and_never_guesses_a_session(
     assert "usage: edgar context show" in capsys.readouterr().err
 
 
+def test_route_explain_names_the_rule_that_decided_and_contacts_nothing(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[ROUTE-9] The rules are read in order, and the first match wins."""
+    (tmp_project / ".edgar").mkdir(exist_ok=True)
+    (tmp_project / ".edgar" / "config.toml").write_text(
+        '[model]\ndefault = "fake/test"\ncompactor = "fake/small"\n\n'
+        '[[route]]\nname = "long-prompts"\nmodel = "fake/big"\nprompt_tokens_gt = 10\n\n'
+        '[[route]]\nname = "never-here"\nmodel = "fake/other"\nagent = "reviewer"\n'
+    )
+    capsys.readouterr()
+
+    # A short prompt: no rule matches, so each role falls back to its own binding.
+    assert admin.command(["route", "explain", "hi"], tmp_project, home) == 0
+    rows = {line.split()[0]: line for line in capsys.readouterr().out.splitlines()}
+    assert "fake/test" in rows["main"] and "default" in rows["main"]
+    assert "fake/small" in rows["compactor"] and "[model] compactor" in rows["compactor"]
+
+    # A long one crosses prompt_tokens_gt, and the row says which rule did it.
+    assert admin.command(["route", "explain", "word " * 200], tmp_project, home) == 0
+    out = capsys.readouterr().out
+    rows = {line.split()[0]: line for line in out.splitlines()}
+    assert "fake/big" in rows["main"] and "'long-prompts' matched" in rows["main"]
+    assert "rule long-prompts" in out and "matched for role main" in out
+    assert "rule never-here" in out and "skipped for role main" in out
+
+
+def test_route_explain_says_how_to_use_it(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    assert admin.command(["route", "frobnicate"], tmp_project, home) == 2
+    assert "usage: edgar route explain" in capsys.readouterr().err
+
+
 def labelled(out: str) -> dict[str, str]:
     # doctor prints "<check> <name> …": key each line by its first two words.
     return {" ".join(line.split()[:2]): line for line in out.splitlines()}
