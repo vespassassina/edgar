@@ -32,9 +32,11 @@ list is done. Read it first, then the three documents under "Read".
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
   numbers did not change; the order of work is M18, M19, M20, M21, M22, then
   M12.
-- The re-tiering docs, M18 and M19 landed on `main`; M20 is on the branch
-  `feat/m20-seeing-and-searching`, unmerged and unpushed, waiting for review of
-  ADR-0060's three flagged decisions. Next up: Step 0b (the dogfood week, the
+- The re-tiering docs, M18, M19 and M20 landed on `main`, merged after
+  independent re-verification of ADR-0060's three flagged decisions
+  (`ImageBlock`'s field list, the compaction-elision approach, the
+  spill-reuse-versus-new-helper choice) — all three held up on direct
+  reading. Not yet pushed to `origin`. Next up: Step 0b (the dogfood week, the
   maintainer's own task) and Step 4 (M21).
 - **Four documentation gaps** were found by the cold subagent that verified the
   web-search example; all four are older than M20 and none is fixed. They are in
@@ -218,7 +220,7 @@ still describe the removable tier as "v2". Proposed wording:
 ## Resume commands
 
 ```bash
-git switch feat/m20-seeing-and-searching
+git switch main
 ```
 
 ```bash
