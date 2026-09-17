@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast
 
+from edgar.context.working import Working
 from edgar.core.events import EventBus
 from edgar.core.message import ErrorKind
 
@@ -68,6 +69,7 @@ class ToolContext:
     chain: tuple[str, ...] = ()  # agent names already running in this call stack [SUB-10]
     budget_remaining: float | None = None  # what is left to inherit [SUB-7]
     hooks: tuple[Hook, ...] = ()  # `pre_tool` rules that may veto this call [EXT-6]
+    working: Working | None = None  # the session's plan and todo list, for `todo` [CTX-18]
 
 
 def build_context(session: Session, rt: Runtime) -> ToolContext:
@@ -84,6 +86,7 @@ def build_context(session: Session, rt: Runtime) -> ToolContext:
         chain=session.agent_chain,
         budget_remaining=remaining,
         hooks=cast("tuple[Hook, ...]", rt.hooks),
+        working=session.working,
     )
 
 

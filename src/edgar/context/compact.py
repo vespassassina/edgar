@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from edgar.context.prompts import load_prompt
 from edgar.context.tokens import approx_tokens, message_text
+from edgar.context.working import render
 from edgar.core.errors import ContextOverflow
 from edgar.core.events import Compacted, EventBus
 from edgar.core.message import Message, TextBlock, ThinkingBlock, ToolResultBlock
@@ -31,7 +32,7 @@ from edgar.providers.base import plus
 
 if TYPE_CHECKING:
     from edgar.core.loop import Runtime
-    from edgar.core.session import Session
+from edgar.core.session import Session
 
 ELIDED = "[elided: "
 
@@ -108,8 +109,13 @@ async def compact(
     usable = caps.max_context - min(caps.max_output, caps.max_context // 2)
     system = Message("system", (TextBlock(rt.system_prompt),))
 
+    # Working state is not in the transcript, so compaction cannot touch it, but it
+    # is in the request: count it or every stage under-reads the prompt [CTX-18].
+    block = render(session.working)
+    fixed = [system, *([block] if block else [])]
+
     def size(view: list[Message]) -> int:
-        return rt.provider.count_tokens([system, *view])
+        return rt.provider.count_tokens([*fixed, *view])
 
     view = session.transcript
     before = size(view)

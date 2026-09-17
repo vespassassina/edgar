@@ -52,6 +52,14 @@ V1_FILES = (
     "tools/builtin/task.py",
     "tools/builtin/tool_search.py",
 )
+# v2 extends Core and v1 in their own packages, so it is a list of files, never a
+# prefix: a new v2 module has to be named here or it is reported as Core (M19).
+V2_FILES = (
+    "cli/inspect.py",
+    "context/attach.py",
+    "context/working.py",
+    "tools/builtin/todo.py",
+)
 V3_PREFIXES = ("controller/", "learning/")
 V3_FILES = ("providers/escalation.py",)
 V4_PREFIXES = ("broker/", "schedule/")
@@ -59,6 +67,7 @@ V4_PREFIXES = ("broker/", "schedule/")
 TIERS = (
     ("core", "Core", "M0 to M6", "The smallest honest harness."),
     ("v1", "v1", "M7 to M11", "Extensible, and it remembers."),
+    ("v2", "v2, the daily driver", "M18 to M22", "Liveable. Not removable."),
     ("v3", "v3, learning", "M12 to M15", "Learns from verified work. Removable."),
     ("v4", "v4, unattended", "M17 then M16", "Runs while you are away. Removable."),
 )
@@ -107,6 +116,8 @@ def tier_of(rel: str) -> str:
     # 3. The milestone that first shipped this file, by the table above.
     if rel.startswith(V1_PREFIXES) or rel in V1_FILES:
         return "v1"
+    if rel in V2_FILES:
+        return "v2"
     if rel.startswith(V3_PREFIXES) or rel in V3_FILES:
         return "v3"
     if rel.startswith(V4_PREFIXES):

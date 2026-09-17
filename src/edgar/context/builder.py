@@ -17,13 +17,16 @@ facts sit between the instruction files and the skills, as BLUEPRINT §8.1 order
 #   pinned facts               "- fact", at most [memory] pinned_max, as notes (v1)
 #   skill index                "- name: description", one line per skill
 #   ---- cache breakpoint ----
-#   rolling summary, transcript, the current turn
+#   rolling summary, transcript
+#   working state              the plan and the todo list, if there are any (v2)
+#   the current turn
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
+from edgar.context.working import place
 from edgar.core.message import Message, TextBlock
 from edgar.core.session import Session
 from edgar.skills.discovery import Skill
@@ -86,4 +89,6 @@ def system_text(system_prompt: str, pinned: list[Section]) -> str:
 
 
 def build(session: Session, system_prompt: str) -> list[Message]:
-    return [Message("system", (TextBlock(system_prompt),)), *session.transcript]
+    # The working-state block goes in last, just above the current turn [CTX-18].
+    prompt = [Message("system", (TextBlock(system_prompt),)), *session.transcript]
+    return place(prompt, session.working)

@@ -107,6 +107,57 @@ only the answer, and status goes to stderr, so `> out.txt` holds just the
 result. `-p` needs `--mode`: nobody is there to answer a question, so you choose
 up front what it may do.
 
+## Attach a file to what you type
+
+```bash
+edgar -p "explain @README.md in one paragraph" --mode read-only
+```
+
+In the REPL and in `-p`, a word starting with `@` attaches that file's text to
+your message. Like piped input it is context, never the prompt, and like piped
+input it is never a learning source: nothing you attach can turn into a
+remembered fact. Text files only, inside the working directory; a directory, a
+binary file or a path that is not there gets a message naming it, and the turn
+does not run. A file bigger than `tools.max_output_tokens` keeps its head and
+tail and spills the rest to a blob, exactly as large tool output does.
+
+## See exactly what edgar is about to send
+
+```bash
+edgar context show          # the latest session in this project
+edgar context show a1b2c3   # or one by id
+```
+
+One row per section of the assembled prompt, in order, with its token count and
+the cache breakpoint drawn where it falls: the system prompt, your personality
+and instruction files, pinned facts, the skill index, then the transcript, the
+working state and the current turn. It calls no provider and costs nothing; it
+runs the same assembly a turn runs, so what it prints is what would be sent.
+
+## Shrink a session you are not in
+
+```bash
+edgar sessions compact a1b2c3
+```
+
+Runs the same stages `/compact` runs, against a stored session: old tool results
+become stubs, old turns fold into one summary. It appends the stages to that
+session's record rather than rewriting it, so nothing is lost and `--resume`
+replays to the compacted view. Folding costs one model call, and it says what
+it did.
+
+## Find out which config file won
+
+```bash
+edgar config show --resolved
+```
+
+Every effective key, its value, and the layer it resolved from: `default`, the
+path of the user or project config that set it, or the environment variable that
+overrode both. Nothing in a config file is ever a key — only the name of the
+variable holding one — so a provider's key shows as `***` with the variable it
+came from, never the key itself.
+
 ## Give the agent a CLI
 
 A command tool is an argv template. edgar starts the program directly, never

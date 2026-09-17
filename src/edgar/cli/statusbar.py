@@ -29,6 +29,7 @@ from edgar.core.events import (
     Resumed,
     TextDelta,
     ThinkingDelta,
+    TodoUpdated,
     ToolStarted,
     TurnFinished,
     TurnStarted,
@@ -56,6 +57,7 @@ class Status:
         self.cost: float | None = 0.0  # this session; None once a price is unknown
         self.queued = 0
         self.paused = False
+        self.todo = ""  # "todo 2/5" while a list exists [CTX-18]
         self.started = 0.0
         self.agents: dict[str, _Row] = {}  # subagents running now, insertion order [SUB-9]
 
@@ -84,6 +86,9 @@ class Status:
             self.queued = event.position
         elif isinstance(event, Paused | Resumed):
             self.paused = isinstance(event, Paused)
+        elif isinstance(event, TodoUpdated):
+            done = sum(1 for i in event.items if i.get("status") == "done")
+            self.todo = f"todo {done}/{len(event.items)}" if event.items else ""
 
     def _subagent(self, event: Event) -> None:
         # A row per running agent_id; consecutive `task` calls fan out [TOOL-12],
@@ -103,6 +108,8 @@ class Status:
 
     def line(self) -> str:
         parts = [self.model, f"{self.context / 1000:.1f}k tok", _money(self.cost)]
+        if self.todo:
+            parts.append(self.todo)
         if self.queued:
             parts.append(f"{self.queued} queued")
         if self.paused:

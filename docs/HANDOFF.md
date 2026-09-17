@@ -17,20 +17,26 @@ list is done. Read it first, then the three documents under "Read".
   [ADR-0058](adr/0058-m18-the-tour-pages-and-the-map-as-built.md)): the tour has
   a page per v1 feature, Core's missing stops, a [map](tour/map.html) behind
   `just map`, and a test that fails on a source file with no stop. It added no
-  line to `src/`. **M19, working state, is next.**
+  line to `src/`.
+- **M19 is done** (2026-09-17,
+  [ADR-0059](adr/0059-m19-working-state-as-built.md)): `@path` attachments, plan
+  mode and the `todo` tool, `edgar context show`, `edgar sessions compact ID`
+  and `edgar config show --resolved`. It is the first milestone since 1.0 with
+  `src/` code: `just loc` reads 8,374 of 9,500. **M20, seeing and searching, is
+  next.**
 - The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md)):
   **v2 is the daily driver**, M18–M22, ≤ 9,500 lines of code. Learning
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
   numbers did not change; the order of work is M18, M19, M20, M21, M22, then
   M12.
-- The re-tiering docs and M18 landed on `main`. Next up: Step 0b (the dogfood
-  week, the maintainer's own task) and Step 2 (M19).
+- The re-tiering docs, M18 and M19 landed on `main`. Next up: Step 0b (the
+  dogfood week, the maintainer's own task) and Step 3 (M20).
 
 ## Read, in this order
 
 1. [ADR-0057](adr/0057-daily-driver-before-learning.md): why, and the eight
    decisions. Ten minutes.
-2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M19.
+2. [`ROADMAP.md`](ROADMAP.md), section "v2 — 2.0, the daily driver", then M20.
    Every item names its files, requirement IDs, test and size.
 3. [`AGENTS.md`](../AGENTS.md): the standing rules. Lines mean lines of code;
    pseudocode comments in every file you touch; shallow functions; the tour
@@ -88,12 +94,38 @@ What a later milestone needs to know:
 - `map.html` reads `window.EDGAR_MAP` from `map.data.js`, not `map.json`, so it
   works opened as a local file. Both are generated from the same function.
 
-## Step 2 — M19 onward
+## Step 2 — M19, working state · DONE 2026-09-17
 
-Before the first M19 commit, in `tests/support/budget.py`, set
-`TARGET_TIER = "v2"`. From then on `just loc` reports against 9,500. Then the
-same loop as M18, item by item, with the milestone's tour page as its last
-item. Never start M20 with M19's tour missing.
+Built in six commits, `41052a8..` on the M19 branch, one per roadmap item plus
+this trace. New files: `context/attach.py`, `context/working.py`,
+`tools/builtin/todo.py`, `cli/inspect.py`; the tour page is
+[`tour/working.html`](tour/working.html). `TARGET_TIER` in
+`tests/support/budget.py` is now `"v2"`, so `just loc` reports against 9,500 and
+reads 8,374. The decisions are in
+[ADR-0059](adr/0059-m19-working-state-as-built.md).
+
+What a later milestone needs to know:
+
+- Working state (plan, todos, the mode to give back) lives on the `Session` as
+  `session.working`, **not** in the transcript. `context/builder.py`'s `build()`
+  calls `place()` last to render it just above the current turn. If you add a
+  compaction stage, it does not need to know about working state — but anything
+  that measures the prompt does: `compact()`'s `size()` counts the rendered
+  block, and a new measurer that forgets it will under-read.
+- Plan mode is `session.mode == "read-only"` plus `working.previous_mode`.
+  There is no plan-mode flag in `permissions/`, and there must not be one:
+  `decide()` stays a pure function of tool, subject and mode. Only `/plan`,
+  `--plan` and `/go` call `enter()`/`leave()`.
+- The three inspection commands share `cli/inspect.py`. M22's `route explain`,
+  `agents list|validate` and the rest of `doctor` belong there too, not in
+  `cli/admin.py`.
+
+## Step 3 — M20 onward
+
+The same loop as M18 and M19, item by item, with the milestone's tour page as
+its last item. Never start M21 with M20's tour missing. 1,126 lines of code are
+left in the v2 budget for M20, M21 and M22; if a milestone would push past
+9,500, something moves out, the budget does not move.
 
 ## Proposed diff to `AGENTS.md` (maintainer applies by hand)
 

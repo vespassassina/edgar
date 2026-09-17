@@ -21,6 +21,7 @@ from edgar.cli.setup import spending
 from edgar.config.schema import Mode
 from edgar.context.compact import compact, rewind, turn_starts
 from edgar.context.tokens import message_text
+from edgar.context.working import enter, leave
 from edgar.core.errors import EdgarError
 from edgar.core.events import FactSaved, Paused, Resumed
 from edgar.core.session import Session
@@ -39,8 +40,9 @@ from edgar.storage.transcript import (
 Command = Callable[[Shell, str], Awaitable[None]]
 COMMANDS: dict[str, tuple[Command, str]] = {}
 
-# Commands still owed, and when; plan mode moved to v2 in ADR-0053.
-LATER = {"v2": "/plan /go"}
+# Commands still owed, and when. Empty since M19 landed /plan and /go (ADR-0053
+# had moved them to v2); the machinery stays for the next one that is owed.
+LATER: dict[str, str] = {}
 
 
 def command(names: str, help: str) -> Callable[[Command], Command]:
@@ -164,6 +166,7 @@ async def _mode(shell: Shell, arg: str) -> None:
         shell.say(f"mode: {shell.session.mode}")
     elif arg in get_args(Mode):
         shell.session.mode = arg
+        shell.session.working.plan_mode = False  # /mode is the human saying it plainly
         shell.say(f"mode: {arg}")
     else:
         shell.say(f"modes: {', '.join(get_args(Mode))}")
@@ -258,6 +261,25 @@ def _idle(shell: Shell) -> bool:
     if shell.busy:
         shell.say("a turn is running; /stop it first")
     return not shell.busy
+
+
+@command("/plan", "plan first: read-only until /go; /plan TEXT asks for one now")
+async def _plan(shell: Shell, arg: str) -> None:
+    # Tightening, typed by a human. The plan itself is whatever the turn answers,
+    # saved to sessions/<id>/plan.md and pinned above the current turn [CLI-20].
+    was = shell.session.mode
+    enter(shell.session)
+    shell.say(f"plan mode: {was} → read-only. /go when the plan is right.")
+    if arg:
+        shell.submit(arg)
+
+
+@command("/go", "leave plan mode: back to the mode you had, plan still pinned")
+async def _go(shell: Shell, arg: str) -> None:
+    if not shell.session.working.plan_mode:
+        shell.say(f"not in plan mode; mode: {shell.session.mode}")
+        return
+    shell.say(f"mode: {leave(shell.session)}; the plan stays pinned")
 
 
 @command("/compact", "compact the conversation now; /compact FOCUS steers the summary")

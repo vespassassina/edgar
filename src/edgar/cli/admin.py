@@ -35,10 +35,11 @@ from edgar.tools.mcp.schema import hints
 
 USAGE = """usage: edgar init | edgar doctor
        edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
-       edgar sessions list | show ID | rm ID
+       edgar sessions list | show ID | rm ID | compact ID
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
        edgar mcp list | test NAME | login NAME | logout NAME
-       edgar ext list | edgar login PROVIDER | edgar logout PROVIDER"""
+       edgar ext list | edgar login PROVIDER | edgar logout PROVIDER
+       edgar context show [SESSION] | edgar config show --resolved"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
@@ -51,12 +52,24 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         from edgar.cli.doctor import command as doctor_command
 
         return doctor_command(cwd, home)
+    if argv[0] == "config":
+        from edgar.cli.inspect import config_show  # the layered config and its origins
+
+        return config_show(argv[1:], cwd, home)
+    if argv[0] == "context":
+        from edgar.cli.inspect import context_show  # the builder and a session record
+
+        return context_show(argv[1:], cwd, home)
     if argv == ["cost"]:
         return _cost(cwd, home)
     if argv[0] == "mcp" and len(argv) in (2, 3):
         return _mcp(argv, cwd, home)
     if argv[0] in ("login", "logout") and len(argv) == 2:
         return _sign_in(argv[0], argv[1])
+    if argv[:2] == ["sessions", "compact"] and len(argv) == 3:
+        from edgar.cli.inspect import sessions_compact  # the loop's own compaction
+
+        return sessions_compact(argv[2], cwd, home)
     if argv[0] == "sessions" and len(argv) in (2, 3):
         return _sessions(argv[1:], cwd)
     if argv[0] in ("tools", "skills") and len(argv) in (2, 3):

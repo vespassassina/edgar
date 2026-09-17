@@ -34,6 +34,8 @@ from edgar.cli.setup import (
     verify_for_turn,
 )
 from edgar.cli.statusbar import Status
+from edgar.context.attach import attach
+from edgar.context.working import enter, save_plan
 from edgar.core import aside
 from edgar.core.errors import EdgarError
 from edgar.core.events import Event, EventBus, FactProposed, FactSaved, InputQueued
@@ -156,20 +158,17 @@ class Shell:
 
     async def _run(self, text: str) -> None:
         try:
-            touched = touched_paths(self.session.transcript)
-            hits = matching(self.setup.skills, text, touched)
-            rt = verify_for_turn(self.setup, self.rt, hits)
-            await authorise_verify(rt, self.session)
-            rt = daily(self.setup, rt)
-            result = await run_turn(self.session, text, rt, attached=bodies(hits))
-            if result.reason == "verification_failed":  # [VER-5]
-                self.say(
-                    f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "
-                    "still fails after its last attempt; the session goes on"
-                )
-            elif result.reason == "budget_exceeded":  # [BUD-3]
-                self.say("⚠ a cost cap was reached; the turn stopped. See [budget] and /cost")
-            await self.confirm_facts()
+            files = attach(
+                text,
+                cwd=self.session.cwd,
+                home=self.setup.home,
+                max_tokens=self.rt.max_output_tokens,
+                blob_dir=self.session.dir / "blobs",
+            )
+            if files.problems:  # a typo in an @path costs a message, never a turn [CLI-3]
+                self.say("\n".join(files.problems))
+            else:
+                await self._turn(text, files.bodies)
         except asyncio.CancelledError:
             return  # the loop sealed the transcript; nothing queued runs after a cancel
         except EdgarError as exc:
@@ -178,6 +177,25 @@ class Shell:
             following = self.queue.popleft()
             self.status.queued = len(self.queue)
             self.turn = asyncio.create_task(self._run(following))
+
+    async def _turn(self, text: str, attached: tuple[str, ...]) -> None:
+        # The turn itself: skills that match go in beside the @path bodies.
+        touched = touched_paths(self.session.transcript)
+        hits = matching(self.setup.skills, text, touched)
+        rt = verify_for_turn(self.setup, self.rt, hits)
+        await authorise_verify(rt, self.session)
+        rt = daily(self.setup, rt)
+        result = await run_turn(self.session, text, rt, attached=[*attached, *bodies(hits)])
+        if self.session.working.plan_mode:  # in plan mode the answer is the plan [CLI-20]
+            save_plan(self.session, result.text)
+        if result.reason == "verification_failed":  # [VER-5]
+            self.say(
+                f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "
+                "still fails after its last attempt; the session goes on"
+            )
+        elif result.reason == "budget_exceeded":  # [BUD-3]
+            self.say("⚠ a cost cap was reached; the turn stopped. See [budget] and /cost")
+        await self.confirm_facts()
 
     def stop(self) -> str:
         """Cancel the turn, like one Ctrl-C. Queued and undelivered steered text comes
@@ -232,6 +250,7 @@ async def interact(
     verify: str | None = None,
     project_exec: bool = True,
     resume: str | None = None,
+    plan: bool = False,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -290,6 +309,8 @@ async def interact(
         shell_ref.append(shell)
         if resume is not None:  # the conversation as it was left [CLI-11]
             renderer.show(session.transcript)
+        if plan:  # --plan is the human choosing read-only up front [CLI-20]
+            enter(session)
         printer.block(f"edgar {__version__} · {rt.name} · {session.mode} · /help", dim=True)
         await _read(shell, prompt.prompt_async)
     return 0

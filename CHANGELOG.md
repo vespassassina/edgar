@@ -8,6 +8,37 @@ extension formats freeze.
 
 ## Unreleased
 
+### Added
+- **Attach a file to what you type.** A bare `@path` anywhere in a REPL line or
+  in `edgar -p` attaches that file's text to the message as context, leaving the
+  line you typed exactly as you typed it. A missing path, a directory, a
+  credential file, a path outside the working directory or anything that is not
+  text is refused in one sentence naming the path, and the turn does not run —
+  never a traceback. A file bigger than `tools.max_output_tokens` spills to
+  `sessions/<id>/blobs/` like oversized tool output. Attached text is context,
+  not something a human typed, so it can never become a memory fact [CLI-3,
+  MEM-9].
+- **Plan mode and a `todo` list.** `/plan what should we do about X` (or
+  `edgar --plan`) puts the session in `read-only` and asks for a plan: the model
+  can read, search and think, and a `write` or `edit` is denied by the ordinary
+  permission rules. The plan is pinned just above the current turn, so it
+  survives compaction, and is saved to `sessions/<id>/plan.md`. `/go` gives back
+  the mode the session had before — never a wider one — and leaves the plan
+  pinned. A new `todo` tool lets the model keep a checklist next to the plan;
+  the status bar shows `todo 2/5`, and `--resume` brings both back [CLI-20,
+  TOOL-14, CTX-18, ADR-0025].
+- **`edgar context show [SESSION]`** prints the prompt edgar would send: one row
+  per section with its token count, the cache breakpoint marked, the transcript
+  below it and the total at the bottom. No provider is called [CTX-2].
+- **`edgar sessions compact ID`** runs the same compaction stages `/compact`
+  runs, but on a stored session you are not in. Nothing is rewritten: the stages
+  are appended to the session's record, so `--resume` shows the compacted view
+  and the original lines are all still there [CTX-10].
+- **`edgar config show --resolved`** lists every effective setting with the layer
+  it came from — `default`, a config file's path, `env EDGAR_…` or a flag — so
+  "which file won" is one command. API keys render as `***`; edgar stores the
+  name of an environment variable, never a key [CFG-2, CFG-6].
+
 ### Docs
 - The tour covers all of v1 and now has a map. Four new pages —
   [memory](docs/tour/memory.html), [MCP and signing in](docs/tour/mcp.html),
