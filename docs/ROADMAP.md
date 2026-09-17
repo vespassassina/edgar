@@ -55,7 +55,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M21 Isolation | Done ([ADR-0061](adr/0061-m21-isolation-as-built.md)) — the sandbox confines writes and the network, **not reads**; see ADR-0061 §2 | 2.0 |
 | M22 Inspection, 2.0 release | Code done ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)) — **the 2.0 release is not started**, `edgar.testing.contract` [PRV-14] dropped to v3 for budget, and the two human "Done when" criteria are open | 2.0 |
 | M12 Learning foundations | Done 2026-09-17 ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)) | 3.0 |
-| M13–M15 Controller, synthesis, escalation | Planned | 3.0 |
+| M13 Controller | Done 2026-09-18 ([ADR-0064](adr/0064-m13-controller-as-built.md)) | 3.0 |
+| M14–M15 Synthesis, escalation | Planned | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -880,12 +881,33 @@ folders for all of M13, M14 and M15.
 - Never fails the turn [CTRL-11]
 - `edgar controller log|revert|apply`
 
-- **Tour delivery:** `docs/tour/controller.html`, s26 turned into a link; `just map`
+- **Tour delivery:** `docs/tour/controller.html`, s32 turned into a link; `just map`
 
 **Done when:** every whitelist action is exercised with fabricated proposals, a
 proposal attempting to loosen policy or naming an arbitrary model is rejected and
 logged, no controller path can write `AGENTS.md` or a fact, and the suite is
 green with `controller/` deleted [NFR-12].
+
+**Built 2026-09-18** at 745 lines of code in `controller/`, plus 47 outside it
+for the `[controller]` config section, the two `importlib` seams and the two
+overrides in `cli/setup.py`, `ControllerActed`, the renderer's notice and the CLI
+dispatch. `just loc` reads 10,558 of 12,000 for v3, and 9,406 of 9,500 for `src/`
+without the removable packages — the binding number, leaving **94 lines of code**
+outside v3's own folders for all of M14 and M15. `core/loop.py` is untouched at
+200 of 200 and does not know the controller exists.
+
+All four "done when" criteria hold, the fourth by hand: with
+`src/edgar/controller/` deleted and its own six test files excluded, the suite is
+917 passed and 11 failed, every failure being a tour or map test naming a file
+that is gone. Four decisions a reasonable person could make differently are in
+[ADR-0064](adr/0064-m13-controller-as-built.md), including two deviations from
+[ADR-0008](adr/0008-controller-guardrails.md): the `learn` action is gone
+(ADR-0017 removed it), and `propose_instruction` writes a Markdown note rather
+than a unified diff against a file this code refuses to name.
+
+Left for later, deliberately: `propose_skill` writes a proposal and stops until
+M14 owns `skills.synthesis`, and `switch_model`'s targets are the configured
+models until M15 adds the escalation chain [ROUTE-8].
 
 ---
 

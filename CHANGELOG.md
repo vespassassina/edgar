@@ -9,6 +9,31 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **The controller, off until you turn it on (v3, M13).** After a turn ends, five
+  deterministic checks look at how full the context got, how many turns in a row
+  ended with a failing tool call, how much of today's cost cap is gone, how much
+  the model wrote and how long it took. If none of them trips, nothing happens —
+  no call, no cost, no wait. If one does, edgar asks a second model, **with no
+  tools at all**, and that model may ask for exactly eight things: compact
+  earlier, switch to a model you already configured, tighten a permission, warn
+  you, stop acting, propose an instruction, propose a skill, or do nothing. It
+  cannot loosen a permission, pick a model you never named, write your
+  instructions file, or save anything to memory. Set `[controller] enabled =
+  true` to switch it on; `mode = "always"` looks at every turn
+  [CTRL-1..CTRL-12, ROUTE-8, ADR-0008, ADR-0064].
+- **Everything it does is a dry run first, and revertible.** `compact` and
+  `switch_model` outlive the session, so they are logged as "would have" until
+  you say otherwise. **`edgar controller log`** shows what it did, what it would
+  have done and what it was refused, newest first; **`edgar controller apply ID`**
+  turns one into the real thing; **`edgar controller revert ID`** takes one back
+  out. What edgar is running under is derived from that log, so the log and the
+  live state cannot disagree [CTRL-6, CTRL-7, CTRL-10].
+- **A proposed instruction is a file you read, never an edit you did not make.**
+  `propose_instruction` and `propose_skill` write Markdown into
+  `.edgar/proposals/`, named after their own log row, and stop there. edgar does
+  not write your instructions file and does not know its name [CTRL-12].
+- A controller that cannot reach its host, times out or answers nonsense leaves a
+  line in its own log and **never fails your turn** [CTRL-11].
 - **edgar learns from what you type and from what breaks (v3, M12).** A line that
   starts with `remember that`, `note that` or `keep in mind` becomes a fact, in
   that session, with no `/remember` — and it is printed when it is saved, because
