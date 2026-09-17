@@ -738,8 +738,9 @@ flowchart LR
   files, a hook can observe or veto but never allow (EXT-4..7), and Python is a plugin
   surface only for providers, retrievers and sandboxes (ADR-0018). These are the
   formats 1.0 freezes. <code>edgar ext list</code> is the whole CLI surface 1.0 ships
-  for them — <code>ext validate</code> and <code>ext add</code> moved to v2
-  (ADR-0053).</p>
+  for them; <code>ext validate</code> and <code>ext add</code>, with the skill audit
+  that gates a copy, arrived in v2 — they are
+  <a href="extensions.html#x6">stop 6 on that page</a>.</p>
   <p>One piece belongs here rather than on that page, because it closes Core's verify
   gate (stop 12): deterministic skill activation [SKL-17] means the model never has to
   call the <code>skill</code> tool for a keyword the user typed or a path the last
@@ -765,12 +766,18 @@ flowchart LR
   called both from the CLI and from <code>cli/repl.py</code>'s "nothing configured"
   startup path, so a fresh checkout gets scaffolding, not just a model picker.
   <code>edgar doctor</code> [CFG-5] checks each provider's credentials (reusing
-  <code>cli/models.py</code>'s <code>describe()</code>) and connectivity, and warns
+  <code>cli/models.py</code>'s <code>describe()</code>) and warns
   when a directory sits inside iCloud Drive, OneDrive, Dropbox or Google Drive —
   a plain substring match on the resolved path, which cannot catch macOS's silent
   Desktop &amp; Documents sync; that gap is named in a comment rather than hidden.
-  Its MCP, extension, trust, tick and DB-integrity checks, and <code>--network</code>,
-  moved to v2 (ADR-0053).
+  v2 finished it (<code>_trust</code>, <code>_db</code>, <code>_mcp</code>,
+  <code>_ext</code>): whether this project is trusted, <code>PRAGMA
+  integrity_check</code> on both databases, whether a stdio MCP server's command is on
+  <code>PATH</code>, and whether each extension's required commands are. A default run
+  opens no socket at all — a remote MCP server is not probed, because the only probe
+  worth anything is the handshake <code>edgar mcp test NAME</code> already performs,
+  and the provider check that does go out lives behind <code>--network</code>, where
+  the line says so when it is skipped.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m11--init-doctor-docs--v10-release">Roadmap: M11</a></p>
 </article>
 

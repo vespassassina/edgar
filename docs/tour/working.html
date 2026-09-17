@@ -142,7 +142,7 @@ flowchart TD
 <article class="stop" id="w4" data-files="src/edgar/cli/inspect.py">
   <h4><span class="n">4</span>Looking at it</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/inspect.py"><code>cli/inspect.py</code></a></p>
-  <p class="look">Look for: <code>rows</code> <code>BREAKPOINT</code> <code>context_show</code></p>
+  <p class="look">Look for: <code>rows</code> <code>BREAKPOINT</code> <code>context_show</code> <code>route_explain</code> <code>agents_command</code></p>
   <p><code>edgar context show</code> prints the prompt a session would send: one row
   per section, with its token count, and the cache breakpoint drawn where it falls.
   It calls no provider. It does not re-implement the assembly either, which is the
@@ -162,6 +162,17 @@ flowchart TD
   view. <code>edgar config show --resolved</code> prints every effective key beside
   the layer it came from, with a credential shown as <code>***</code>: a key is never
   in the config in the first place, only the name of the variable holding it.</p>
+  <p>M22 added two more of the same shape. <code>edgar route explain [PROMPT]</code>
+  calls <code>routing.select_model()</code> — the pure function a turn calls — once per
+  role and prints its <code>Selection.reason</code>, then walks the rules saying
+  matched or skipped and why. It contacts nothing and needs no key. It also declines to
+  flatter itself: the main turn passes a bare <code>RoutingContext()</code>, so a rule
+  keyed on <code>mode</code>, <code>tags</code> or <code>schedule</code> can never match
+  for the main role, and the command shows that instead of inventing a richer context
+  no turn would ever build. <code>edgar agents list|validate</code> runs
+  <code>agents/discovery.py</code>'s own walk, folding an extension's agents in only
+  when the project is trusted, exactly as a session does; <code>validate</code> reports
+  each problem with the line the offending key sits on, so the fix is one jump away.</p>
   <p class="take"><strong>Take with you:</strong> an inspection command should read the
   code it inspects, never a second copy of it.</p>
 </article>
