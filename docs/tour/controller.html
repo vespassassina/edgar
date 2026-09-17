@@ -208,7 +208,62 @@ flowchart TD
   mode is stricter is a sentence you can only hope about.</p>
 </article>
 
-<h3 class="stage" id="stage-4">Sizes</h3>
+<h3 class="stage" id="stage-4">Stage 4. The log is the state <small>about 10 minutes</small></h3>
+
+<article class="stop" id="c4" data-files="src/edgar/controller/store.py src/edgar/controller/apply.py">
+  <h4><span class="n">4</span>Dry run, one row, and a revert by id</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/store.py"><code>controller/store.py</code></a>,
+  <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/apply.py"><code>controller/apply.py</code></a></p>
+  <p class="look">Look for: <code>Controls</code> <code>Mutation</code> <code>overrides</code> <code>apply</code> <code>Site</code> <code>Outcome</code> <code>revert</code> <code>approve</code> <code>PERSISTED</code></p>
+  <p>Read <code>overrides()</code> before anything else on this stop, because the
+  design is in that one query. There is no table of current settings. What edgar is
+  running under is <em>derived</em> from the log: the newest <code>applied</code> row
+  per action wins. So reverting is a single <code>UPDATE</code> on a single row, the
+  log and the live state can never disagree, and there is no second place to look when
+  they seem to (CTRL-10). Compare <code>memory/store.py</code>'s undo, which reached
+  the same shape from the other direction.</p>
+  <p><code>apply()</code> is eight branches with no table, which is the opposite of
+  <code>proposals.py</code> two stops ago and worth the inconsistency: a dict keyed on
+  the class would hand every handler a bare <code>Proposal</code> and need a cast in
+  all eight to get the real type back. Where the type checker can do the work, let
+  it.</p>
+  <p>The eight split three ways, and the split is the whole safety argument.
+  <code>compact</code> and <code>switch_model</code> outlive the session, so they are
+  dry-run by default: the row says what <em>would</em> have changed, and
+  <code>edgar controller apply ID</code> is a person turning it into what did
+  (CTRL-6). <code>tighten_policy</code>, <code>abort</code>, <code>warn_user</code> and
+  <code>noop</code> act now and die with the process. And the two
+  <code>propose_*</code> actions write a file and stop — they are never "applied", in
+  any mode.</p>
+  <p><code>tighten_policy</code> not being dry-run is a decision you could make
+  differently, so it is worth the sentence. CTRL-8 guarantees the change can only make
+  the session stricter; a tightening that waits for approval is a tightening that does
+  not happen while the thing it was reacting to is still going on. It is logged like
+  everything else, and it ends with the session either way.</p>
+  <p>Then <code>abort</code>, which is the one that sounds like it should do more than
+  it does. The gate runs <em>after</em> a turn, so there is no turn left to stop. What
+  abort does instead is take the session's hands away: <code>narrow()</code> to
+  <code>read-only</code> for the rest of it, in memory, never persisted. That is not a
+  consolation prize. The failure it exists for — a model looping, repeating the same
+  edit, burning the budget — is a failure that continues into the next turn, and
+  read-only is exactly the thing that stops it.</p>
+  <p>Last, the rule this file is shaped around: nothing here can write a
+  hand-authored file. <code>propose_instruction</code> writes Markdown into
+  <code>.edgar/proposals/</code>, named after its own log row, saying what to add; a
+  person adds it. Notice what the code does <em>not</em> contain — the name of the
+  file the instructions live in. edgar genuinely does not know whether that is
+  <code>AGENTS.md</code>, a <code>CLAUDE.md</code> or a prompt profile, and a path this
+  code never spells is a path it can never open. That is also what
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_controller_boundary.py"><code>tests/unit/test_controller_boundary.py</code></a>
+  checks, by reading every string literal in the package out of its syntax tree
+  (CTRL-12,
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0008-controller-guardrails.md">ADR-0008</a>).</p>
+  <p class="take"><strong>Take with you:</strong> if you can derive the current state
+  from the audit log, do, and delete the copy. Two sources of truth about what a system
+  is doing is one more than anybody can keep correct.</p>
+</article>
+
+<h3 class="stage" id="stage-5">Sizes</h3>
 
 <table class="ak-table" id="sizes">
   <thead><tr><th>File</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
@@ -216,6 +271,8 @@ flowchart TD
     <tr data-file="src/edgar/controller/triggers.py"><td><code>controller/triggers.py</code></td><td class="loc">~40</td><td>Five deterministic checks, no model involved</td></tr>
     <tr data-file="src/edgar/controller/proposals.py"><td><code>controller/proposals.py</code></td><td class="loc">~176</td><td>The eight actions, parsed and refused</td></tr>
     <tr data-file="src/edgar/controller/tighten.py"><td><code>controller/tighten.py</code></td><td class="loc">~118</td><td>Policy may only get stricter</td></tr>
+    <tr data-file="src/edgar/controller/store.py"><td><code>controller/store.py</code></td><td class="loc">~84</td><td>The mutation log, and the state derived from it</td></tr>
+    <tr data-file="src/edgar/controller/apply.py"><td><code>controller/apply.py</code></td><td class="loc">~123</td><td>What each action does, dry-run by default</td></tr>
   </tbody>
 </table>
 

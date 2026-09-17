@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 10084,
+    "loc": 10291,
     "status": "built",
     "children": [
       {
@@ -1363,16 +1363,28 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 716,
+        "loc": 923,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 334,
+            "loc": 541,
             "status": "built",
             "children": [
+              {
+                "path": "src/edgar/controller/apply.py",
+                "name": "apply.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 123,
+                "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
+                "stop": "controller.html#c4",
+                "status": "built",
+                "port": false
+              },
               {
                 "path": "src/edgar/controller/proposals.py",
                 "name": "proposals.py",
@@ -1382,6 +1394,18 @@ window.EDGAR_MAP = {
                 "loc": 176,
                 "summary": "The eight things the controller may ask for, and nothing else [CTRL-4, CTRL-5].",
                 "stop": "controller.html#c2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/store.py",
+                "name": "store.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 84,
+                "summary": "Everything the controller did, and everything it was refused [CTRL-7, CTRL-10].",
+                "stop": "controller.html#c4",
                 "status": "built",
                 "port": false
               },
