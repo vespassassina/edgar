@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8590,
+    "loc": 8668,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6269,
+        "loc": 6274,
         "status": "built",
         "children": [
           {
@@ -380,7 +380,7 @@ window.EDGAR_MAP = {
             "id": "core/permissions",
             "name": "permissions/",
             "kind": "package",
-            "loc": 291,
+            "loc": 296,
             "status": "built",
             "children": [
               {
@@ -389,7 +389,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "permissions",
-                "loc": 35,
+                "loc": 40,
                 "summary": "Control files: the files that steer edgar itself [PERM-12].",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -738,14 +738,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2038,
+        "loc": 2052,
         "status": "built",
         "children": [
           {
             "id": "v1/agents",
             "name": "agents/",
             "kind": "package",
-            "loc": 244,
+            "loc": 258,
             "status": "built",
             "children": [
               {
@@ -754,7 +754,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 27,
+                "loc": 28,
                 "summary": "A subagent's definition: markdown + YAML frontmatter [SUB-1].",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -766,7 +766,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 82,
+                "loc": 86,
                 "summary": "Finding subagents: `.edgar/agents/*.md`, project over user [SUB-1, SUB-2].",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -778,7 +778,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 135,
+                "loc": 144,
                 "summary": "Spawning a subagent: the `task` tool re-enters the loop with a narrower",
                 "stop": "agents.html#a2",
                 "status": "built",
@@ -1175,9 +1175,30 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 283,
+        "loc": 342,
         "status": "built",
         "children": [
+          {
+            "id": "v2/agents",
+            "name": "agents/",
+            "kind": "package",
+            "loc": 59,
+            "status": "built",
+            "children": [
+              {
+                "path": "src/edgar/agents/worktree.py",
+                "name": "worktree.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "agents",
+                "loc": 59,
+                "summary": "`isolation: worktree`: a write-capable subagent works in its own git worktree,",
+                "stop": "isolation.html#w1",
+                "status": "built",
+                "port": false
+              }
+            ]
+          },
           {
             "id": "v2/cli",
             "name": "cli/",
@@ -1228,6 +1249,63 @@ window.EDGAR_MAP = {
                 "summary": "The plan and the todo list: what the session is working on [CTX-18, ADR-0025].",
                 "stop": "working.html#w2",
                 "status": "built",
+                "port": false
+              }
+            ]
+          },
+          {
+            "id": "v2/sandbox",
+            "name": "sandbox/",
+            "kind": "package",
+            "loc": 0,
+            "status": "planned",
+            "children": [
+              {
+                "path": "src/edgar/sandbox/base.py",
+                "name": "base.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 0,
+                "summary": "",
+                "stop": "isolation.html#w2",
+                "status": "planned",
+                "port": true
+              },
+              {
+                "path": "src/edgar/sandbox/bwrap.py",
+                "name": "bwrap.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 0,
+                "summary": "",
+                "stop": "isolation.html#w3",
+                "status": "planned",
+                "port": false
+              },
+              {
+                "path": "src/edgar/sandbox/none.py",
+                "name": "none.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 0,
+                "summary": "",
+                "stop": "isolation.html#w2",
+                "status": "planned",
+                "port": false
+              },
+              {
+                "path": "src/edgar/sandbox/seatbelt.py",
+                "name": "seatbelt.py",
+                "kind": "file",
+                "tier": "v2",
+                "package": "sandbox",
+                "loc": 0,
+                "summary": "",
+                "stop": "isolation.html#w3",
+                "status": "planned",
                 "port": false
               }
             ]

@@ -55,11 +55,14 @@ V1_FILES = (
 # v2 extends Core and v1 in their own packages, so it is a list of files, never a
 # prefix: a new v2 module has to be named here or it is reported as Core (M19).
 V2_FILES = (
+    "agents/worktree.py",
     "cli/inspect.py",
     "context/attach.py",
     "context/working.py",
     "tools/builtin/todo.py",
 )
+# …except `sandbox/`, which is a package v2 adds outright (M21).
+V2_PREFIXES = ("sandbox/",)
 V3_PREFIXES = ("controller/", "learning/")
 V3_FILES = ("providers/escalation.py",)
 V4_PREFIXES = ("broker/", "schedule/")
@@ -114,10 +117,12 @@ def summary_of(path: Path) -> str:
 
 def tier_of(rel: str) -> str:
     # 3. The milestone that first shipped this file, by the table above.
+    # v2 is checked first: it extends v1's own packages, so `agents/worktree.py`
+    # would otherwise be read as v1 by the `agents/` prefix (M21).
+    if rel.startswith(V2_PREFIXES) or rel in V2_FILES:
+        return "v2"
     if rel.startswith(V1_PREFIXES) or rel in V1_FILES:
         return "v1"
-    if rel in V2_FILES:
-        return "v2"
     if rel.startswith(V3_PREFIXES) or rel in V3_FILES:
         return "v3"
     if rel.startswith(V4_PREFIXES):

@@ -3,3 +3,5 @@
 # hand-authored and belongs in version control.
 .edgar/sessions/
 .edgar/edgar.db
+# A worktree subagent's tree lives here; its branch is what you review [SUB-11].
+.edgar/worktrees/
