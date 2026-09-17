@@ -27,14 +27,16 @@ list is done. Read it first, then the three documents under "Read".
   [ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)): images end to end,
   plus web search and git as example files costing no code. `just loc` read
   8,592 of 9,500.
-- **M22's code is done, on a branch, not merged** (2026-09-17,
+- **M22's code is done and merged** (2026-09-17,
   [ADR-0062](adr/0062-m22-inspection-commands-as-built.md)): the rest of `edgar
   doctor`, `route explain`, `agents list|validate`, `ext validate|add` with
-  `skills audit`, and the tour stops. `just loc` reads **9,305 of 9,500**.
-  `edgar.testing.contract` [PRV-14] was **dropped to v3** for budget — see
-  ADR-0062 §6 for the measurement. **What is left of M22 is the 2.0 release
-  itself and its two human criteria, and the release needs the maintainer's
-  explicit authorisation, as every push, tag and release in this project does.**
+  `skills audit`, and the tour stops. `just loc` reads **9,305 of 9,500**, 195
+  lines of headroom left in the v2 budget. `edgar.testing.contract` [PRV-14]
+  was **dropped to v3** for budget — see ADR-0062 §6 for the measurement.
+  **What is left of M22 is the 2.0 release itself and its two human criteria
+  (a two-week dogfood period, an outside person's PRD §11 checks), and the
+  release needs the maintainer's explicit authorisation, as every push, tag
+  and release in this project does.** v2's code is otherwise complete.
 - **M21 is done and merged** (2026-09-17,
   [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
   sandbox backends. Two of
@@ -51,12 +53,12 @@ list is done. Read it first, then the three documents under "Read".
   (M12–M15) is v3, the broker and scheduling (M17, M16) are v4. Milestone
   numbers did not change; the order of work is M18, M19, M20, M21, M22, then
   M12.
-- The re-tiering docs, M18, M19, M20 and M21 landed on `main`, each merged
-  after independent re-verification of its ADR's flagged decisions by reading
-  the actual source (not the agent's self-report) — every one held up. Not yet
-  pushed to `origin`. Next up: Step 0b (the dogfood week, the maintainer's own
-  task), then reviewing M22's branch, then the 2.0 release when the maintainer
-  decides to cut it.
+- The re-tiering docs, M18, M19, M20, M21 and M22's code all landed on `main`,
+  each merged after independent re-verification of its ADR's flagged
+  decisions by reading the actual source (not the agent's self-report) —
+  every one held up. Not yet pushed to `origin`. Next up: Step 0b (the
+  dogfood week, the maintainer's own task), then the 2.0 release when the
+  maintainer decides to cut it.
 - **Four documentation gaps** were found by the cold subagent that verified the
   web-search example; all four are older than M20 and none is fixed. They are in
   `JOURNAL.md`'s M20 entry: there is no `edgar tools validate` to match
@@ -351,7 +353,7 @@ Proposed, under the existing `[shell]` block:
 ## Resume commands
 
 ```bash
-git switch feat/m22-inspection-commands
+git switch main
 ```
 
 ```bash
