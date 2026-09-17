@@ -1,0 +1,13 @@
+# See git-status.toml for how these four files fit together.
+#
+# An argv element naming an argument that was not passed is dropped whole, so
+# leaving `path` out leaves `git diff HEAD --`, which is the whole tree.
+# `HEAD` means staged and unstaged together: what this working copy has that the
+# last commit does not, which is the question worth one tool.
+name = "git-diff"
+description = "Show what changed since the last commit, staged and unstaged. Pass path to narrow to one file or folder."
+argv = ["git", "diff", "HEAD", "--", "{path}"]
+read_only = true
+[input]
+type = "object"
+properties.path = { type = "string", description = "one file or folder, relative to the repository root" }

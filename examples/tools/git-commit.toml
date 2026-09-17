@@ -1,0 +1,20 @@
+# See git-status.toml for how these four files fit together.
+#
+# The one of the four that writes, so it is not read_only: it goes through the
+# guard like any other write and you see the message before it lands.
+#
+# The whole message is ONE argv element. That is the point of an argv template:
+# newlines, quotes, backticks and semicolons in a commit message are message
+# text, never shell syntax, because no shell ever sees them.
+#
+# It commits what is already staged — there is deliberately no `git-add` here.
+# Staging is the moment a human decides what goes in, and edgar's own built-in
+# `shell` tool can run `git add` under the permission prompt if you want that.
+name = "git-commit"
+description = "Commit what is already staged. The message is one argument: a short imperative subject, a blank line, then why."
+argv = ["git", "commit", "-m", "{message}"]
+timeout_s = 30
+[input]
+type = "object"
+required = ["message"]
+properties.message = { type = "string", description = "the full commit message, subject and body" }

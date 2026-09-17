@@ -214,6 +214,45 @@ cp examples/tools/weather.toml .edgar/tools/
 edgar trust
 ```
 
+## Working with git
+
+edgar has no built-in git support, on purpose: git is a CLI, and a CLI is four
+small argv templates you can read.
+
+```bash
+cp examples/tools/git-status.toml examples/tools/git-diff.toml \
+   examples/tools/git-log.toml examples/tools/git-commit.toml .edgar/tools/
+cp -r examples/skills/git .edgar/skills/
+edgar trust
+edgar tools list
+```
+
+The three that only look are `read_only = true`, so they run without asking.
+`git-commit` is not: it writes, so it goes through the guard like any other
+write. Its message is **one argv element**, which is the whole reason this is a
+command tool and not a shell string — newlines, backticks and semicolons in a
+commit message stay message text, because no shell ever sees them.
+
+There is deliberately no `git-add`, and no push, merge or tag. Staging is where
+a human decides what goes in, and the rest are the user's calls; the `git` skill
+says so, along with reading the repository's own `AGENTS.md` first and matching
+the house style in `git-log`.
+
+To keep a note of what the agent committed, add the
+[`git-trail`](../examples/extensions/git-trail/) extension: a `post_tool` hook
+matched to `git-commit` that appends one line per commit to a local log.
+
+```bash
+mkdir -p .edgar/extensions
+cp -r examples/extensions/git-trail .edgar/extensions/
+edgar trust && edgar ext list
+```
+
+`post_tool` is observation only — fired and forgotten, its output never reaching
+the model [EXT-6]. It learns *that* a commit happened, not what the tool
+printed, so the script reads the commit back out of git itself. Only `pre_tool`
+can stop a call.
+
 ## Search the web
 
 edgar ships no search engine and no default search host: web search is an HTTP
