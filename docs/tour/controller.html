@@ -309,6 +309,35 @@ flowchart TD
   shape, and a wrapper that swallows its failures.</p>
 </article>
 
+<article class="stop" id="c6" data-files="src/edgar/controller/cli.py">
+  <h4><span class="n">6</span>Three commands, and the one that is missing</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/cli.py"><code>controller/cli.py</code></a></p>
+  <p class="look">Look for: <code>command</code> <code>USAGE</code></p>
+  <p><code>edgar controller log</code> prints what it did, what it would have done
+  and what it was refused, newest first, with the id in the first column because the
+  id is what the other two commands take. <code>edgar controller apply ID</code> turns
+  one dry run into the real thing; <code>edgar controller revert ID</code> takes one
+  applied row back out. That is the entire surface.</p>
+  <p>The refusals are printed under the mutations rather than hidden behind a flag,
+  and that is the deliberate part. A controller that gets refused every single turn is
+  a configuration problem — a threshold set too low, a model that cannot follow the
+  brief — and the failure mode worth designing against is the one where nothing says
+  so.</p>
+  <p>Now the missing command. There is no <code>edgar controller run</code>. You
+  cannot ask for a controller call from the outside, because the gate is the only
+  thing that starts one and a crossed threshold is the only thing that asks the gate
+  (CTRL-2). Adding a manual trigger would be one line and would quietly undo the
+  argument the rest of this page makes.</p>
+  <p>The file lives here rather than in <code>cli/</code>, like
+  <code>learning/cli.py</code> before it, and for the same reason: a module under
+  <code>cli/</code> that imported <code>edgar.controller</code> would break tier
+  isolation and fail <code>tests/unit/test_architecture.py</code>.
+  <code>cli/main.py</code> reaches it by name, so deleting the package deletes the
+  commands and nothing else (NFR-12).</p>
+  <p class="take"><strong>Take with you:</strong> the commands you leave out are part
+  of the design. Ask what each new verb lets someone bypass.</p>
+</article>
+
 <h3 class="stage" id="stage-5">Sizes</h3>
 
 <table class="ak-table" id="sizes">
@@ -320,6 +349,7 @@ flowchart TD
     <tr data-file="src/edgar/controller/store.py"><td><code>controller/store.py</code></td><td class="loc">~84</td><td>The mutation log, and the state derived from it</td></tr>
     <tr data-file="src/edgar/controller/apply.py"><td><code>controller/apply.py</code></td><td class="loc">~123</td><td>What each action does, dry-run by default</td></tr>
     <tr data-file="src/edgar/controller/gate.py"><td><code>controller/gate.py</code></td><td class="loc">~129</td><td>The post-turn gate and its one tools-free call</td></tr>
+    <tr data-file="src/edgar/controller/cli.py"><td><code>controller/cli.py</code></td><td class="loc">~38</td><td><code>edgar controller log|apply|revert</code></td></tr>
     <tr data-file="src/edgar/controller/__init__.py"><td><code>controller/__init__.py</code></td><td class="loc">~37</td><td><code>attach()</code> and <code>overrides()</code>: the whole seam</td></tr>
   </tbody>
 </table>

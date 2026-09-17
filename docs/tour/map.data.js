@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 10455,
+    "loc": 10494,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6654,
+        "loc": 6655,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2113,
+            "loc": 2114,
             "status": "built",
             "children": [
               {
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 160,
+                "loc": 161,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -1363,14 +1363,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 1052,
+        "loc": 1090,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 670,
+            "loc": 708,
             "status": "built",
             "children": [
               {
@@ -1382,6 +1382,18 @@ window.EDGAR_MAP = {
                 "loc": 123,
                 "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
                 "stop": "controller.html#c4",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/cli.py",
+                "name": "cli.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 38,
+                "summary": "`edgar controller log|apply|revert` [CTRL-7, CTRL-10].",
+                "stop": "controller.html#c6",
                 "status": "built",
                 "port": false
               },
