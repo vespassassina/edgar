@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8372,
+    "loc": 8400,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6063,
+        "loc": 6091,
         "status": "built",
         "children": [
           {
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 758,
+            "loc": 769,
             "status": "built",
             "children": [
               {
@@ -311,7 +311,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 76,
+                "loc": 87,
                 "summary": "The one message vocabulary. Nothing outside providers/ sees a provider-native shape.",
                 "stop": "index.html#s2",
                 "status": "built",
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1174,
+            "loc": 1183,
             "status": "built",
             "children": [
               {
@@ -446,7 +446,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 154,
+                "loc": 163,
                 "summary": "The Anthropic Messages API, streamed [PRV-2].",
                 "stop": "index.html#s13",
                 "status": "built",
@@ -587,7 +587,7 @@ window.EDGAR_MAP = {
             "id": "core/storage",
             "name": "storage/",
             "kind": "package",
-            "loc": 282,
+            "loc": 290,
             "status": "built",
             "children": [
               {
@@ -608,7 +608,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "storage",
-                "loc": 200,
+                "loc": 208,
                 "summary": "The session record: `.edgar/sessions/<id>.jsonl`, append-only [CTX-14, ADR-0010].",
                 "stop": "memory.html#m4",
                 "status": "built",

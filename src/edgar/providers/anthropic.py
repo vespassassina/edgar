@@ -17,7 +17,14 @@ from typing import TYPE_CHECKING, Any
 
 from edgar.core.errors import ProviderError
 from edgar.core.events import EventBus, ReasoningDropped, TextDelta, ThinkingDelta
-from edgar.core.message import ContentBlock, Message, TextBlock, ThinkingBlock, ToolUseBlock
+from edgar.core.message import (
+    ContentBlock,
+    ImageBlock,
+    Message,
+    TextBlock,
+    ThinkingBlock,
+    ToolUseBlock,
+)
 from edgar.providers.base import ProviderResponse, Usage
 from edgar.providers.http import HttpAdapter, events, tool_calls
 
@@ -137,6 +144,8 @@ class Anthropic(HttpAdapter):
                         blocks.append({"type": "text", "text": b.text})
                 elif isinstance(b, ToolUseBlock):
                     blocks.append({"type": "tool_use", "id": b.id, "name": b.name, "input": b.args})
+                elif isinstance(b, ImageBlock):
+                    continue  # serialised from M20's item 4 on [ADR-0052]
                 else:
                     result: dict[str, Any] = {"type": "tool_result", "tool_use_id": b.tool_use_id}
                     if b.text:
