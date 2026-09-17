@@ -547,3 +547,34 @@ def test_browser_with_no_block_says_what_to_write(tmp_project: Path) -> None:
         await r.type("/browser")
 
     assert "[browser]" in play(tmp_project, scenario).text
+
+
+# A 2x3 PNG: enough for @path to recognise a picture and measure it [ADR-0052].
+PNG = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x02\x00\x00\x00\x03\x08\x06\x00\x00\x00"
+
+
+def test_an_image_on_a_model_that_cannot_see_is_refused_before_the_turn(tmp_project: Path) -> None:
+    # The loud refusal of M20's "done when": said where the model is chosen, with
+    # nothing spent and no request sent [ROUTE-6, ADR-0052].
+    (tmp_project / "shot.png").write_bytes(PNG)
+
+    async def scenario(rig: Rig) -> None:
+        rig.provider.capabilities = replace(rig.provider.capabilities, images=False)
+        await rig.type("what is in @shot.png")
+        await rig.settle()
+
+    rig = play(tmp_project, scenario, texts(1))
+    assert "cannot take images" in rig.text
+    assert rig.provider.requests == []
+
+
+def test_an_image_reaches_a_model_that_can_see(tmp_project: Path) -> None:
+    (tmp_project / "shot.png").write_bytes(PNG)
+
+    async def scenario(rig: Rig) -> None:
+        await rig.type("what is in @shot.png")
+        await rig.settle()
+
+    rig = play(tmp_project, scenario, texts(1))
+    (sent,) = rig.provider.requests
+    assert [i.media_type for m in sent for i in m.images] == ["image/png"]

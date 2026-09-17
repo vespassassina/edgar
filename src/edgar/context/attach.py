@@ -1,4 +1,4 @@
-"""`@path` in a typed prompt attaches that file's text [CLI-3].
+"""`@path` in a typed prompt attaches that file's text, or the picture in it [CLI-3].
 
 The typed line is never rewritten. What the human typed stays exactly as typed,
 which is what the learning path is allowed to read (MEM-9); the file's text leaves
@@ -10,8 +10,10 @@ attached block is context, never a source of active facts.
 #   1. find every @token that starts a word
 #   2. resolve it under the working directory
 #   3. refuse: missing, a directory, a credential file, outside the cwd, not text
-#   4. read it, and spill it past tools.max_output_tokens the way tool output spills
-#   5. hand the bodies back for run_turn(attached=...), which marks them attached
+#   4. a picture goes to the session's blobs and comes back as an ImageBlock
+#   5. otherwise read it, and spill it past tools.max_output_tokens the way tool
+#      output spills
+#   6. hand the bodies back for run_turn(attached=..., images=...)
 #
 # Reading a control file (.edgar/config.toml) is deliberately not refused: the
 # permission engine asks about a control file only when a tool would *write* it
@@ -24,22 +26,25 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+from edgar.core.message import ImageBlock
 from edgar.permissions.matcher import credential, inside
-from edgar.tools.spill import spill
+from edgar.tools.spill import spill, spill_image
 
 TOKEN = re.compile(r"(?:(?<=\s)|\A)@(\S+)")
-ACCEPTS = "@path attaches one text file inside the working directory"
+ACCEPTS = "@path attaches one text file or image inside the working directory"
 
 
 @dataclass(frozen=True, slots=True)
 class Attached:
     bodies: tuple[str, ...]  # one per accepted @path, headed by the path as typed
     problems: tuple[str, ...]  # user-facing refusals; the turn does not run
+    images: tuple[ImageBlock, ...] = ()  # one per @path that held a picture [ADR-0052]
 
 
 def attach(prompt: str, *, cwd: Path, home: Path, max_tokens: int, blob_dir: Path) -> Attached:
     bodies: list[str] = []
     problems: list[str] = []
+    images: list[ImageBlock] = []
     for i, token in enumerate(TOKEN.findall(prompt)):
         path = (cwd / token).resolve()
         refusal = _refuse(token, path, cwd=cwd, home=home)
@@ -47,8 +52,17 @@ def attach(prompt: str, *, cwd: Path, home: Path, max_tokens: int, blob_dir: Pat
             problems.append(refusal)
             continue
         try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):  # images arrive in M20 [CLI-22]
+            data = path.read_bytes()
+        except OSError:
+            problems.append(f"@{token} is not a readable file. {ACCEPTS}")
+            continue
+        shot = spill_image(data, blob_dir=blob_dir, name=f"attach_{i}")
+        if shot is not None:  # a picture: its bytes go to the blobs, never inline
+            images.append(shot)
+            continue
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
             problems.append(f"@{token} is not a readable text file. {ACCEPTS}")
             continue
         if "\0" in text:  # decodable, but not something a model should read as text
@@ -56,7 +70,7 @@ def attach(prompt: str, *, cwd: Path, home: Path, max_tokens: int, blob_dir: Pat
             continue
         out = spill(text, max_tokens=max_tokens, blob_dir=blob_dir, name=f"attach_{i}", root=cwd)
         bodies.append(f"{token}\n{out.text}")
-    return Attached(tuple(bodies), tuple(problems))
+    return Attached(tuple(bodies), tuple(problems), tuple(images))
 
 
 def _refuse(token: str, path: Path, *, cwd: Path, home: Path) -> str | None:

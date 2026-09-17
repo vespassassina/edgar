@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from edgar.tools.base import ToolContext, ToolResult, builtin_schema
+from edgar.tools.spill import spill_image
 
 READ_LIMIT = 2000  # lines
 LS_LIMIT = 1000  # entries
@@ -47,6 +48,13 @@ class Read:
             return ToolResult(f"no such file: {args['path']}", error="not_found")
         except PermissionError:
             return ToolResult(f"the OS denied reading {args['path']}", error="permission_denied")
+        # A picture is answered with the picture, not with its bytes [ADR-0052].
+        shot = spill_image(data, blob_dir=ctx.blob_dir, name=Path(args["path"]).stem)
+        if shot is not None:
+            seen = f"{shot.media_type} {shot.width}x{shot.height}"
+            if not ctx.images:  # the model cannot see: say so rather than send nothing
+                return ToolResult(f"{args['path']} is a {seen} image; this model cannot see")
+            return ToolResult(f"{args['path']}: {seen}", image=shot)
         if b"\0" in data[:8192]:
             return ToolResult(f"{args['path']} looks binary; not shown", error="validation")
         lines = data.decode("utf-8", errors="replace").splitlines()

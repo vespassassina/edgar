@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8558,
+    "loc": 8590,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6249,
+        "loc": 6269,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2009,
+            "loc": 2016,
             "status": "built",
             "children": [
               {
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 169,
+                "loc": 173,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 303,
+                "loc": 306,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 769,
+            "loc": 770,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 190,
+                "loc": 191,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "index.html#s3",
                 "status": "built",
@@ -620,7 +620,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 568,
+            "loc": 573,
             "status": "built",
             "children": [
               {
@@ -629,7 +629,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 76,
+                "loc": 79,
                 "summary": "The tool contract, MCP-shaped so MCP is a translation layer, not a second system [TOOL-1].",
                 "stop": "index.html#s5",
                 "status": "built",
@@ -653,7 +653,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 150,
+                "loc": 152,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -689,7 +689,7 @@ window.EDGAR_MAP = {
             "id": "core/tools/builtin",
             "name": "tools/builtin/",
             "kind": "package",
-            "loc": 312,
+            "loc": 319,
             "status": "built",
             "children": [
               {
@@ -698,7 +698,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools/builtin",
-                "loc": 178,
+                "loc": 185,
                 "summary": "File system built-ins: `read` `ls` `glob` `grep` `write` `edit` [TOOL-5].",
                 "stop": "index.html#s9",
                 "status": "built",
@@ -1175,7 +1175,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 271,
+        "loc": 283,
         "status": "built",
         "children": [
           {
@@ -1203,7 +1203,7 @@ window.EDGAR_MAP = {
             "id": "v2/context",
             "name": "context/",
             "kind": "package",
-            "loc": 129,
+            "loc": 141,
             "status": "built",
             "children": [
               {
@@ -1212,8 +1212,8 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "context",
-                "loc": 48,
-                "summary": "`@path` in a typed prompt attaches that file's text [CLI-3].",
+                "loc": 60,
+                "summary": "`@path` in a typed prompt attaches that file's text, or the picture in it [CLI-3].",
                 "stop": "working.html#w1",
                 "status": "built",
                 "port": false

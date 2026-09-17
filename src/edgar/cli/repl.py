@@ -39,10 +39,10 @@ from edgar.context.working import enter, save_plan
 from edgar.core import aside
 from edgar.core.errors import EdgarError
 from edgar.core.events import Event, EventBus, FactProposed, FactSaved, InputQueued
-from edgar.core.loop import Runtime, run_turn
+from edgar.core.loop import Runtime, Shots, run_turn
 from edgar.core.session import Session
 from edgar.permissions.guard import Answer
-from edgar.providers.routing import Selection
+from edgar.providers.routing import Selection, check_images
 from edgar.skills.activate import bodies, matching, touched_paths
 from edgar.tools.mcp.client import close
 
@@ -168,7 +168,7 @@ class Shell:
             if files.problems:  # a typo in an @path costs a message, never a turn [CLI-3]
                 self.say("\n".join(files.problems))
             else:
-                await self._turn(text, files.bodies)
+                await self._turn(text, files.bodies, files.images)
         except asyncio.CancelledError:
             return  # the loop sealed the transcript; nothing queued runs after a cancel
         except EdgarError as exc:
@@ -178,14 +178,18 @@ class Shell:
             self.status.queued = len(self.queue)
             self.turn = asyncio.create_task(self._run(following))
 
-    async def _turn(self, text: str, attached: tuple[str, ...]) -> None:
-        # The turn itself: skills that match go in beside the @path bodies.
+    async def _turn(self, text: str, attached: tuple[str, ...], images: Shots = ()) -> None:
+        # The turn itself: skills that match go in beside the @path bodies, and any
+        # picture rides with them; a model that cannot see refuses here [ROUTE-6].
         touched = touched_paths(self.session.transcript)
         hits = matching(self.setup.skills, text, touched)
         rt = verify_for_turn(self.setup, self.rt, hits)
         await authorise_verify(rt, self.session)
         rt = daily(self.setup, rt)
-        result = await run_turn(self.session, text, rt, attached=[*attached, *bodies(hits)])
+        if images:
+            check_images(rt.name, has_images=rt.provider.capabilities.images)
+        joined = [*attached, *bodies(hits)]
+        result = await run_turn(self.session, text, rt, attached=joined, images=images)
         if self.session.working.plan_mode:  # in plan mode the answer is the plan [CLI-20]
             save_plan(self.session, result.text)
         if result.reason == "verification_failed":  # [VER-5]

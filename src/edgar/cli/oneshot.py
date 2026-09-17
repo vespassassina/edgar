@@ -32,8 +32,9 @@ from edgar.core.events import (
     ToolStarted,
     TurnFinished,
 )
-from edgar.core.loop import Runtime, TurnResult, run_turn
+from edgar.core.loop import Runtime, Shots, TurnResult, run_turn
 from edgar.core.session import Session
+from edgar.providers.routing import check_images
 from edgar.skills.activate import bodies, matching
 from edgar.tools.mcp.client import Server, close
 
@@ -109,7 +110,9 @@ def run_prompt(
     try:
         turn = daily(s, rt)
         bits = [*files.bodies, *stdin, *bodies(hits)]
-        result = asyncio.run(_run(session, prompt, turn, bits, status, s.servers))
+        if files.images:  # a model that cannot see refuses here, not mid-turn [ROUTE-6]
+            check_images(rt.name, has_images=rt.provider.capabilities.images)
+        result = asyncio.run(_run(session, prompt, turn, bits, files.images, status, s.servers))
         if plan:  # in plan mode the answer is the plan [CLI-20]
             save_plan(session, result.text)
     finally:
@@ -152,6 +155,7 @@ async def _run(
     prompt: str,
     rt: Runtime,
     attached: list[str],
+    images: Shots,
     status: Status | None,
     servers: list[Server],
 ) -> TurnResult:
@@ -159,7 +163,7 @@ async def _run(
     ticker = asyncio.create_task(line.run()) if line else None
     try:
         await authorise_verify(rt, session)
-        return await run_turn(session, prompt, rt, attached=attached)
+        return await run_turn(session, prompt, rt, attached=attached, images=images)
     finally:
         await close(servers)  # a server the turn started stops with it [TOOL-8]
         if ticker and line:

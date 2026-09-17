@@ -7,20 +7,27 @@ without opening six test files.
 
 from __future__ import annotations
 
+import asyncio
 import dataclasses
 from pathlib import Path
 
 import pytest
+from harness import Recorder, guard
 
 from edgar.config.schema import ProviderSection
 from edgar.context.compact import elide
 from edgar.context.tokens import approx_message_tokens, image_tokens
 from edgar.core.errors import ConfigError
+from edgar.core.events import EventBus, ToolFinished
 from edgar.core.message import ImageBlock, Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.units import pairing_violations
 from edgar.providers.quirks import QUIRKS, quirks_for
 from edgar.providers.routing import check_images
 from edgar.storage.transcript import from_dict, to_dict
+from edgar.tools.base import ToolContext
+from edgar.tools.builtin.fs import Read
+from edgar.tools.execute import execute
+from edgar.tools.registry import core_registry
 from edgar.tools.spill import spill, spill_image
 
 PNG = (  # a 2x3 PNG: the eight-byte signature, then an IHDR saying 2 wide, 3 high
@@ -240,3 +247,42 @@ def test_the_recent_turn_keeps_its_images() -> None:
     shot = ImageBlock("image/png", "blobs/a.png", 640, 480)
     view = [Message("user", (TextBlock("look"), shot))]
     assert elide(view, 0) == view  # nothing before the cut: nothing to elide
+
+
+# 6. `read` on a picture answers with the picture [TOOL-5, ADR-0052].
+
+
+def _ctx(root: Path, *, images: bool) -> ToolContext:
+    return ToolContext(
+        cwd=root, bus=EventBus(), blob_dir=root / "blobs", max_output_tokens=8000, images=images
+    )
+
+
+def test_reading_an_image_gives_the_model_an_image_block(tmp_path: Path) -> None:
+    (tmp_path / "shot.png").write_bytes(PNG)
+    result = asyncio.run(Read().run({"path": "shot.png"}, _ctx(tmp_path, images=True)))
+    assert result.image is not None
+    assert (result.image.media_type, result.image.width, result.image.height) == ("image/png", 2, 3)
+    assert "image/png 2x3" in result.text and result.error is None
+
+
+def test_reading_an_image_on_a_blind_model_says_so_instead(tmp_path: Path) -> None:
+    # Not an error: the call worked, the model just cannot look [ADR-0052].
+    (tmp_path / "shot.png").write_bytes(PNG)
+    result = asyncio.run(Read().run({"path": "shot.png"}, _ctx(tmp_path, images=False)))
+    assert result.image is None and result.error is None
+    assert "cannot see" in result.text
+
+
+def test_a_picture_a_tool_produced_reaches_the_result_block_and_the_events(tmp_path: Path) -> None:
+    (tmp_path / "shot.png").write_bytes(PNG)
+    recorder = Recorder()
+    ctx = _ctx(tmp_path, images=True)
+    ctx.bus.subscribe(recorder)
+    call = ToolUseBlock("tu_1", "read", {"path": "shot.png"})
+    block = asyncio.run(
+        execute(call, registry=core_registry(), ctx=ctx, guard=guard(tmp_path), mode="read-only")
+    )
+    (shot,) = block.images
+    (finished,) = recorder.of(ToolFinished)
+    assert finished.image == shot.ref  # --events carries the reference [CLI-18]
