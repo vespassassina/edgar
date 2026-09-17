@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8316,
+    "loc": 8342,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6056,
+        "loc": 6059,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2002,
+            "loc": 2005,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 213,
+                "loc": 216,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -1175,14 +1175,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 222,
+        "loc": 245,
         "status": "built",
         "children": [
           {
             "id": "v2/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 52,
+            "loc": 75,
             "status": "built",
             "children": [
               {
@@ -1191,8 +1191,8 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "cli",
-                "loc": 52,
-                "summary": "The commands that print what edgar would otherwise only do [CTX-2].",
+                "loc": 75,
+                "summary": "The commands that print or shrink what a session holds [CTX-2, CTX-10].",
                 "stop": "working.html#w4",
                 "status": "built",
                 "port": false

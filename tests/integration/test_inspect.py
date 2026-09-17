@@ -52,6 +52,37 @@ def test_context_show_rows_add_up_to_the_builders_own_count(
     assert out.count("\n") == len(counts) + 2  # a header, the rows, the breakpoint
 
 
+def test_sessions_compact_appends_to_the_record_and_keeps_the_pairing(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[CTX-10, CTX-4, CTX-14]"""
+    from edgar.core.units import pairing_violations
+    from edgar.storage.transcript import entries, replay
+
+    sid = a_session(tmp_project, home)
+    for n in range(7):
+        assert (
+            run_prompt(
+                f"turn {n}", cwd=tmp_project, model=None, mode="ask", env={}, home=home, resume=sid
+            )
+            == 0
+        )
+    stored = replay(find(tmp_project, sid))[0]
+    before = entries(find(tmp_project, sid))
+    capsys.readouterr()
+
+    assert admin.command(["sessions", "compact", sid], tmp_project, home) == 0
+    assert "appended to the record" in capsys.readouterr().out
+    after, _ = replay(find(tmp_project, sid))  # what --resume shows [CTX-14]
+    assert pairing_violations(after.transcript) == []
+    assert len(after.transcript) < len(stored.transcript)
+    assert after.transcript[1].meta.get("via") == "summary"
+    # Nothing was rewritten: every old line is still there, with the stages after them.
+    now = entries(find(tmp_project, sid))
+    assert now[: len(before)] == before and len(now) > len(before)
+    assert now[len(before)]["type"] == "compaction"
+
+
 def test_context_show_says_how_to_use_it_and_never_guesses_a_session(
     tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

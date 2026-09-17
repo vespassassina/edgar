@@ -134,6 +134,18 @@ and instruction files, pinned facts, the skill index, then the transcript, the
 working state and the current turn. It calls no provider and costs nothing; it
 runs the same assembly a turn runs, so what it prints is what would be sent.
 
+## Shrink a session you are not in
+
+```bash
+edgar sessions compact a1b2c3
+```
+
+Runs the same stages `/compact` runs, against a stored session: old tool results
+become stubs, old turns fold into one summary. It appends the stages to that
+session's record rather than rewriting it, so nothing is lost and `--resume`
+replays to the compacted view. Folding costs one model call, and it says what
+it did.
+
 ## Give the agent a CLI
 
 A command tool is an argv template. edgar starts the program directly, never

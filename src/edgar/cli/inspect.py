@@ -1,8 +1,9 @@
-"""The commands that print what edgar would otherwise only do [CTX-2].
+"""The commands that print or shrink what a session holds [CTX-2, CTX-10].
 
 `edgar context show [ID]` prints the assembled prompt for a session, in order, one
 row per section with its token count and the cache breakpoint where it falls. It
 reads the same functions `context/builder.py` uses and never calls a provider.
+`edgar sessions compact ID` runs `/compact`'s own stages against a stored session.
 """
 
 # edgar context show [ID]:
@@ -14,6 +15,13 @@ reads the same functions `context/builder.py` uses and never calls a provider.
 # A section's count is its share of the joined system message, taken as the
 # difference between two running totals, so the rows add up to the message and the
 # message adds up to the prompt: no row is counted twice and none is invented.
+#
+# edgar sessions compact ID:
+#   1. replay the record into the view the user last saw
+#   2. run compact(force=True): the same stages /compact runs, no copy of them
+#   3. compact() appends one line per stage to the same record, so the history is
+#      added to and never rewritten, and --resume replays to the compacted view
+#      [CTX-14, ADR-0016]. S2 costs one model call, which is why it says so.
 
 from __future__ import annotations
 
@@ -76,4 +84,30 @@ def context_show(argv: list[str], cwd: Path, home: Path) -> int:
             continue
         print(f"{row.tokens:>8,}  {row.name:<18} {row.detail}")
     print(f"{approx_message_tokens(prompt):>8,}  total (approximate, ~4 chars a token)")
+    return 0
+
+
+def sessions_compact(which: str, cwd: Path, home: Path) -> int:
+    import asyncio  # only the compacting command awaits anything
+
+    from edgar.cli.setup import runtime as build_runtime
+    from edgar.context.compact import compact
+    from edgar.core.events import Compacted, EventBus
+
+    s = setup(cwd, load(cwd, home=home), home=home)
+    session, _ = replay(find(cwd, which))
+    bus = EventBus()
+    bus.subscribe(
+        lambda e: (
+            print(f"{e.stages}: {e.before:,} → {e.after:,} tokens")
+            if isinstance(e, Compacted)
+            else None
+        )
+    )
+    before = len(session.transcript)
+    asyncio.run(compact(session, build_runtime(s, bus), force=True))
+    if len(session.transcript) == before:
+        print(f"{session.id}: nothing to compact")
+        return 0
+    print(f"{session.id}: {before} messages → {len(session.transcript)}, appended to the record")
     return 0
