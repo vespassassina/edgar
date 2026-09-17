@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8463,
+    "loc": 8481,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6154,
+        "loc": 6172,
         "status": "built",
         "children": [
           {
@@ -152,7 +152,7 @@ window.EDGAR_MAP = {
             "id": "core/config",
             "name": "config/",
             "kind": "package",
-            "loc": 390,
+            "loc": 391,
             "status": "built",
             "children": [
               {
@@ -173,7 +173,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "config",
-                "loc": 146,
+                "loc": 147,
                 "summary": "The config model (BLUEPRINT §14). The dataclasses are the schema.",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1183,
+            "loc": 1200,
             "status": "built",
             "children": [
               {
@@ -458,7 +458,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 65,
+                "loc": 66,
                 "summary": "The Provider port [ADR-0022]. Adapters translate; they never decide [ADR-0002].",
                 "stop": "index.html#s11",
                 "status": "built",
@@ -470,7 +470,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 63,
+                "loc": 64,
                 "summary": "`fake/test`: a model that runs nowhere, for trying edgar without a key.",
                 "stop": "index.html#s24",
                 "status": "built",
@@ -482,7 +482,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 235,
+                "loc": 236,
                 "summary": "What the two HTTP adapters share: the request with its retries, server-sent",
                 "stop": "index.html#s24",
                 "status": "built",
@@ -518,7 +518,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 163,
+                "loc": 168,
                 "summary": "How providers differ, as data [PRV-3, ADR-0002, ADR-0020].",
                 "stop": "index.html#s12",
                 "status": "built",
@@ -554,7 +554,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 107,
+                "loc": 116,
                 "summary": "Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].",
                 "stop": "agents.html#a4",
                 "status": "built",

@@ -49,6 +49,7 @@ class Capabilities:
     streaming: bool
     reasoning: bool
     prompt_caching: bool
+    images: bool
     max_context: int
     max_output: int
 

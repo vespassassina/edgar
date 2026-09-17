@@ -14,6 +14,7 @@ CAPS = Capabilities(
     streaming=True,
     reasoning=True,
     prompt_caching=True,
+    images=False,
     max_context=100_000,
     max_output=8_000,
 )
@@ -23,6 +24,7 @@ NO_TOOLS = Capabilities(
     streaming=True,
     reasoning=False,
     prompt_caching=False,
+    images=False,
     max_context=100_000,
     max_output=8_000,
 )

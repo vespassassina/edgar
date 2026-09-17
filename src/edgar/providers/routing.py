@@ -112,6 +112,17 @@ def check_capabilities(selection: Selection, *, tools_required: bool, has_tools:
         )
 
 
+def check_images(model: str, *, has_images: bool) -> None:
+    """The same rule as tool support, for pictures: the model in use either takes an
+    image or the prompt does not run. Never a silent drop [ROUTE-6, ADR-0052]."""
+    if not has_images:
+        raise ConfigError(
+            f"{model!r} cannot take images, and this prompt attaches one",
+            hint="choose a model that sees images, or leave the image out; a "
+            "server that does take them says images = true in [providers.NAME]",
+        )
+
+
 def routes_from_config(later: dict[str, Any]) -> tuple[Route, ...]:
     """`[[route]]` arrives in `Config.later["route"]` as a list of raw tables
     (`config/schema.py`'s `LATER`); this is where v1 finally reads it."""

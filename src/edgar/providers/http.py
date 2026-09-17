@@ -77,6 +77,7 @@ class HttpAdapter:
             streaming=True,
             reasoning=quirks.reasoning,
             prompt_caching=self.caching,
+            images=quirks.images,
             max_context=quirks.max_context,
             max_output=quirks.max_output,
         )

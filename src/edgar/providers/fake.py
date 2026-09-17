@@ -36,6 +36,7 @@ class FakeProvider:
         streaming=True,
         reasoning=True,
         prompt_caching=False,
+        images=True,  # it round-trips an ImageBlock, which is what the tests need
         max_context=200_000,
         max_output=32_000,
     )

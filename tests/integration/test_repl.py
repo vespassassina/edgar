@@ -248,6 +248,7 @@ def test_model_switch_refuses_a_model_with_no_tool_support(
             streaming=True,
             reasoning=False,
             prompt_caching=False,
+            images=False,
             max_context=1000,
             max_output=100,
         )

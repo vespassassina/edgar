@@ -12,8 +12,12 @@ from pathlib import Path
 
 import pytest
 
+from edgar.config.schema import ProviderSection
+from edgar.core.errors import ConfigError
 from edgar.core.message import ImageBlock, Message, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.core.units import pairing_violations
+from edgar.providers.quirks import QUIRKS, quirks_for
+from edgar.providers.routing import check_images
 from edgar.storage.transcript import from_dict, to_dict
 from edgar.tools.spill import spill, spill_image
 
@@ -129,3 +133,30 @@ def test_an_image_blob_lands_beside_the_spilled_text_under_the_same_rule(tmp_pat
     block = spill_image(PNG, blob_dir=blobs, name="tu/3")
     assert block is not None
     assert sorted(p.name for p in blobs.iterdir()) == ["tu_3.png", "tu_3.txt"]
+
+
+# 3. A model that cannot see refuses where it is chosen, never mid-turn [ROUTE-6].
+
+
+def test_a_provider_without_images_is_refused_by_name() -> None:
+    with pytest.raises(ConfigError) as raised:
+        check_images("ollama/qwen3:8b", has_images=False)
+    assert "cannot take images" in str(raised.value)
+    assert raised.value.hint and "images = true" in raised.value.hint
+
+
+def test_a_provider_with_images_passes_quietly() -> None:
+    check_images("openai/gpt-5", has_images=True)  # no exception is the whole assertion
+
+
+@pytest.mark.parametrize("name", ["openai", "azure", "openrouter", "anthropic"])
+def test_the_cloud_rows_take_images(name: str) -> None:
+    assert QUIRKS[name].images
+
+
+def test_a_server_edgar_knows_nothing_about_does_not_claim_to_see() -> None:
+    # The conservative default, like every other quirk of an unknown server [PRV-12].
+    assert not QUIRKS["ollama"].images
+    assert not quirks_for("mine", ProviderSection(base_url="http://localhost:1234/v1")).images
+    stated = ProviderSection(base_url="http://localhost:1234/v1", images=True)
+    assert quirks_for("mine", stated).images
