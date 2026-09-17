@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from edgar.context.working import Working
 from edgar.core.message import Message
 
 if TYPE_CHECKING:
@@ -55,6 +56,8 @@ class Session:
     tainted: bool = False  # untrusted content entered the transcript; sticky [PERM-11, OQ-7]
     cost: float | None = 0.0  # USD so far; None once any price was unknown [BUD-5]
     log: Log | None = None  # the JSONL record; None keeps the session in memory
+    working: Working = field(default_factory=Working)  # plan and todos, outside the
+    # transcript so compaction never touches them [CTX-18, ADR-0025]
     _resumed: asyncio.Event = field(default_factory=asyncio.Event, repr=False)
 
     def __post_init__(self) -> None:

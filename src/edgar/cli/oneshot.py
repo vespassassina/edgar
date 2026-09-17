@@ -21,6 +21,7 @@ from edgar.cli.render import event_line
 from edgar.cli.setup import authorise_verify, begin, daily, finish, prepare, setup, verify_for_turn
 from edgar.cli.statusbar import Status, StderrLine, terminal_ready
 from edgar.context.attach import attach
+from edgar.context.working import enter, save_plan
 from edgar.core.errors import ConfigError
 from edgar.core.events import (
     Event,
@@ -55,6 +56,7 @@ def run_prompt(
     verify: str | None = None,
     project_exec: bool = True,
     resume: str | None = None,
+    plan: bool = False,
 ) -> int:
     if mode is None:
         # Nobody is there to answer a permission prompt, so the mode must be a
@@ -86,6 +88,8 @@ def run_prompt(
         status = Status(config.model.default or "")
         bus.subscribe(status)
     session, rt = begin(s, bus, resume)
+    if plan:  # --plan is the human choosing read-only up front [CLI-20]
+        enter(session)
     if session.log is not None:
         bus.subscribe(session.log.event)  # the audit trail and the turn's cost [PERM-10]
     files = attach(
@@ -106,6 +110,8 @@ def run_prompt(
         turn = daily(s, rt)
         bits = [*files.bodies, *stdin, *bodies(hits)]
         result = asyncio.run(_run(session, prompt, turn, bits, status, s.servers))
+        if plan:  # in plan mode the answer is the plan [CLI-20]
+            save_plan(session, result.text)
     finally:
         finish(s, session, bus)
     codes = {"verification_failed": 9, "budget_exceeded": 6}

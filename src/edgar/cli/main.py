@@ -57,6 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     again.add_argument("--fork", metavar="ID[@TURN]", help="branch a session into a new one")
     again.add_argument("--load", type=Path, metavar="PATH", help="open a file /save wrote")
+    parser.add_argument(
+        "--plan", action="store_true", help="plan first: read-only until /go [CLI-20]"
+    )
     parser.add_argument("--quiet", action="store_true", help="no status line")
     parser.add_argument("--show-thinking", action="store_true", help="show reasoning")
     parser.add_argument("--no-color", action="store_true", help="no colour (also NO_COLOR)")
@@ -123,6 +126,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
                 verify=args.verify,
                 project_exec=not args.no_project_exec,
                 resume=args.resume,
+                plan=args.plan,
             )
         )
     from edgar.cli.oneshot import run_prompt
@@ -133,7 +137,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         args.prompt,
         cwd=args.cwd,
         model=args.model,
-        mode=args.mode,
+        mode="read-only" if args.plan else args.mode,  # --plan is an explicit mode
         output="json" if args.json else "events" if args.events else "text",
         quiet=args.quiet,
         show_thinking=args.show_thinking,
@@ -141,6 +145,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         verify=args.verify,
         project_exec=not args.no_project_exec,
         resume=args.resume,
+        plan=args.plan,
     )
 
 

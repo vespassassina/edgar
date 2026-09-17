@@ -204,5 +204,6 @@ class Edit:
 
 def builtins(shell: str = "auto") -> tuple[Any, ...]:
     from edgar.tools.builtin.shell import Fetch, Shell
+    from edgar.tools.builtin.todo import TodoTool
 
-    return (Read(), Ls(), Glob(), Grep(), Write(), Edit(), Shell(shell), Fetch())
+    return (Read(), Ls(), Glob(), Grep(), Write(), Edit(), Shell(shell), Fetch(), TodoTool())

@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8072,
+    "loc": 8259,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 5986,
+        "loc": 6051,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 1958,
+            "loc": 1997,
             "status": "built",
             "children": [
               {
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 143,
+                "loc": 148,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 163,
+                "loc": 169,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 297,
+                "loc": 303,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -116,7 +116,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 341,
+                "loc": 356,
                 "summary": "Slash commands [CLI-14, CLI-22, CLI-25, CLI-27, CLI-28].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -128,7 +128,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 153,
+                "loc": 160,
                 "summary": "The status line, rebuilt from events alone [CLI-5, CLI-6, CLI-8].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -185,7 +185,7 @@ window.EDGAR_MAP = {
             "id": "core/context",
             "name": "context/",
             "kind": "package",
-            "loc": 243,
+            "loc": 248,
             "status": "built",
             "children": [
               {
@@ -194,7 +194,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 57,
+                "loc": 59,
                 "summary": "Prompt assembly, most stable first [CTX-1].",
                 "stop": "index.html#s15",
                 "status": "built",
@@ -206,7 +206,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 136,
+                "loc": 139,
                 "summary": "Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].",
                 "stop": "index.html#s16",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 753,
+            "loc": 758,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 187,
+                "loc": 190,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "index.html#s3",
                 "status": "built",
@@ -323,7 +323,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 81,
+                "loc": 83,
                 "summary": "Session state: the conversation as the prompt shows it, and the record behind it.",
                 "stop": "index.html#s17",
                 "status": "built",
@@ -587,7 +587,7 @@ window.EDGAR_MAP = {
             "id": "core/storage",
             "name": "storage/",
             "kind": "package",
-            "loc": 270,
+            "loc": 282,
             "status": "built",
             "children": [
               {
@@ -608,7 +608,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "storage",
-                "loc": 188,
+                "loc": 200,
                 "summary": "The session record: `.edgar/sessions/<id>.jsonl`, append-only [CTX-14, ADR-0010].",
                 "stop": "memory.html#m4",
                 "status": "built",
@@ -620,7 +620,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 502,
+            "loc": 505,
             "status": "built",
             "children": [
               {
@@ -629,7 +629,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 73,
+                "loc": 76,
                 "summary": "The tool contract, MCP-shaped so MCP is a translation layer, not a second system [TOOL-1].",
                 "stop": "index.html#s5",
                 "status": "built",
@@ -689,7 +689,7 @@ window.EDGAR_MAP = {
             "id": "core/tools/builtin",
             "name": "tools/builtin/",
             "kind": "package",
-            "loc": 311,
+            "loc": 312,
             "status": "built",
             "children": [
               {
@@ -698,7 +698,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools/builtin",
-                "loc": 177,
+                "loc": 178,
                 "summary": "File system built-ins: `read` `ls` `glob` `grep` `write` `edit` [TOOL-5].",
                 "stop": "index.html#s9",
                 "status": "built",
@@ -1175,7 +1175,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 48,
+        "loc": 170,
         "status": "built",
         "children": [
           {
@@ -1203,7 +1203,7 @@ window.EDGAR_MAP = {
             "id": "v2/context",
             "name": "context/",
             "kind": "package",
-            "loc": 48,
+            "loc": 129,
             "status": "built",
             "children": [
               {
@@ -1224,10 +1224,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "context",
-                "loc": 0,
-                "summary": "",
+                "loc": 81,
+                "summary": "The plan and the todo list: what the session is working on [CTX-18, ADR-0025].",
                 "stop": "working.html#w2",
-                "status": "planned",
+                "status": "built",
                 "port": false
               }
             ]
@@ -1236,8 +1236,8 @@ window.EDGAR_MAP = {
             "id": "v2/tools/builtin",
             "name": "tools/builtin/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 41,
+            "status": "built",
             "children": [
               {
                 "path": "src/edgar/tools/builtin/todo.py",
@@ -1245,10 +1245,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "tools/builtin",
-                "loc": 0,
-                "summary": "",
+                "loc": 41,
+                "summary": "`todo`: the model's one way to write working state [TOOL-14, CTX-18, ADR-0025].",
                 "stop": "working.html#w3",
-                "status": "planned",
+                "status": "built",
                 "port": false
               }
             ]

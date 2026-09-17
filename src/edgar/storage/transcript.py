@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, get_args
 
 from edgar.context.compact import apply
+from edgar.context.working import Todo
 from edgar.core import events as ev
 from edgar.core.errors import UsageError
 from edgar.core.message import ContentBlock, ErrorRecord, Message, TextBlock, ToolResultBlock
@@ -35,7 +36,14 @@ from edgar.memory.redact import redact
 from edgar.providers.base import plus
 
 BLOCKS = {cls.__name__: cls for cls in get_args(ContentBlock)}
-RECORDED = (ev.PermissionResolved, ev.TurnFinished, ev.AsideStarted, ev.AsideFinished, ev.Compacted)
+RECORDED = (
+    ev.PermissionResolved,
+    ev.TurnFinished,
+    ev.AsideStarted,
+    ev.AsideFinished,
+    ev.Compacted,
+    ev.TodoUpdated,  # the record *is* the event, so --resume rebuilds the list [CTX-18]
+)
 
 
 def sessions_dir(root: Path) -> Path:
@@ -111,8 +119,12 @@ def replay(path: Path) -> tuple[Session, int]:
             session.model = entry["model"]
         elif kind == "event":
             turns += entry["event"] == "TurnFinished"
+            if entry["event"] == "TodoUpdated":  # working state comes back too [CTX-18]
+                session.working.todos = tuple(Todo(**i) for i in entry["items"])
             if "cost" in entry:
                 session.cost = plus(session.cost, entry["cost"])
+        elif kind == "plan":
+            session.working.plan = entry["text"]
         else:
             session.transcript = apply(session.transcript, entry)
     return start(session), turns

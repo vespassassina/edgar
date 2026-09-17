@@ -89,23 +89,52 @@ flowchart TD
   still a security boundary. The interesting code is the refusals.</p>
 </article>
 
-<article class="stop planned" id="w2" data-files="src/edgar/context/working.py">
+<article class="stop" id="w2" data-files="src/edgar/context/working.py">
   <h4><span class="n">2</span>The pinned block</h4>
-  <p class="files"><code>context/working.py</code></p>
-  <p class="look">Look for: the plan and the todo list, rendered once and placed just
-  above the current turn</p>
-  <p>Planned. Working state is not part of the transcript, so compaction never sees
-  it and the pairing invariant is safe by construction.</p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/working.py"><code>context/working.py</code></a></p>
+  <p class="look">Look for: <code>Working</code> <code>render</code> <code>place</code>
+  <code>enter</code> <code>leave</code></p>
+  <p>Working state is the plan and the todo list: fast, unconfirmed, gone at the end of
+  the session. Memory is the opposite of all three, which is why they are different
+  things in different files. The whole design is in where <code>Working</code> lives:
+  on the <code>Session</code>, never in <code>session.transcript</code>. Compaction only
+  ever rebuilds the transcript, so it cannot reach this, and the pairing invariant
+  (CTX-4) holds here by construction rather than by care. There was a version of this
+  that put a pinned message in the transcript and taught every stage to step over it.
+  Every stage is where bugs of that kind live.</p>
+  <p><code>render</code> makes one message; <code>place</code> puts it just above the
+  current turn, below the cache breakpoint because it changes. It is the same bytes in
+  every request until the state itself changes, which is what makes a sixty-turn session
+  with a dozen compactions send an identical list every time.</p>
+  <p>Then read <code>enter</code> and <code>leave</code>, which are plan mode entire.
+  <code>enter</code> sets the session's existing mode to <code>read-only</code> and
+  remembers what it was; <code>leave</code> puts that back. There is no second
+  permission engine and no plan-mode branch in <code>decide()</code>: a write in plan
+  mode is denied by the ordinary read-only rules. And because <code>leave</code> can
+  only restore a mode the session already had, and only a typed <code>/go</code> calls
+  it, nothing automated can widen policy through this file (invariant 2).</p>
+  <p class="take"><strong>Take with you:</strong> the cheapest way to survive a
+  transformation is to live outside what it transforms.</p>
 </article>
 
 <h3 class="stage" id="stage-2">Stage 2. What the model is working on <small>about 20 minutes</small></h3>
 
-<article class="stop planned" id="w3" data-files="src/edgar/tools/builtin/todo.py">
+<article class="stop" id="w3" data-files="src/edgar/tools/builtin/todo.py">
   <h4><span class="n">3</span>The todo tool</h4>
-  <p class="files"><code>tools/builtin/todo.py</code></p>
-  <p class="look">Look for: the whole list replaced in one call, and the event the
-  status bar draws</p>
-  <p>Planned.</p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/todo.py"><code>tools/builtin/todo.py</code></a></p>
+  <p class="look">Look for: <code>ITEM</code> <code>TodoTool</code> <code>run</code></p>
+  <p>Forty lines, one call, no verbs. There is no add, no complete, no reorder: the
+  model sends the whole list as it should read now, and that replaces what was there.
+  A diff against a list the model cannot see is how todo tools drift out of step with
+  the conversation; a whole list cannot drift.</p>
+  <p>Two details are worth a minute. The tool's category is <code>read</code>, because
+  it touches no file the user owns: that keeps it out of the verify gate, and keeps it
+  callable in plan mode, where writing the list <em>is</em> the work. And the update
+  leaves by the event bus as <code>TodoUpdated</code>, which the status bar draws and
+  the session log records, so <code>--resume</code> brings the list back with no
+  separate save path. The event is the record.</p>
+  <p class="take"><strong>Take with you:</strong> a tool with one verb has no state
+  machine to get wrong.</p>
 </article>
 
 <article class="stop planned" id="w4" data-files="src/edgar/cli/inspect.py">
@@ -130,6 +159,8 @@ a fact, and where in the code is it enforced?</p>
   <thead><tr><th>File</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
   <tbody>
     <tr data-file="src/edgar/context/attach.py"><td><code>context/attach.py</code></td><td class="loc">~48</td><td>@path: find, refuse, read, spill</td></tr>
+    <tr data-file="src/edgar/context/working.py"><td><code>context/working.py</code></td><td class="loc">~81</td><td>the plan, the todo list, plan mode</td></tr>
+    <tr data-file="src/edgar/tools/builtin/todo.py"><td><code>tools/builtin/todo.py</code></td><td class="loc">~41</td><td>the model's one way to write the list</td></tr>
   </tbody>
 </table>
 </div>

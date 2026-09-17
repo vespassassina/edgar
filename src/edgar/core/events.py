@@ -266,6 +266,13 @@ class Compacted(Event):
     cost: float | None  # the S2 summary call; 0 without one
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TodoUpdated(Event):
+    # tools/builtin/todo.py, when the model replaces the todo list [TOOL-14].
+    # Plain dicts, not a Todo type: core/events.py stays below context/ [CTX-18].
+    items: tuple[dict[str, str], ...]  # {"text": …, "status": pending|in_progress|done}
+
+
 # input during a turn [CLI-13]
 
 

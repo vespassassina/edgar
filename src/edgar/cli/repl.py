@@ -35,6 +35,7 @@ from edgar.cli.setup import (
 )
 from edgar.cli.statusbar import Status
 from edgar.context.attach import attach
+from edgar.context.working import enter, save_plan
 from edgar.core import aside
 from edgar.core.errors import EdgarError
 from edgar.core.events import Event, EventBus, FactProposed, FactSaved, InputQueued
@@ -185,6 +186,8 @@ class Shell:
         await authorise_verify(rt, self.session)
         rt = daily(self.setup, rt)
         result = await run_turn(self.session, text, rt, attached=[*attached, *bodies(hits)])
+        if self.session.working.plan_mode:  # in plan mode the answer is the plan [CLI-20]
+            save_plan(self.session, result.text)
         if result.reason == "verification_failed":  # [VER-5]
             self.say(
                 f"⚠ the check `{self.rt.verify.command if self.rt.verify else ''}` "
@@ -247,6 +250,7 @@ async def interact(
     verify: str | None = None,
     project_exec: bool = True,
     resume: str | None = None,
+    plan: bool = False,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -305,6 +309,8 @@ async def interact(
         shell_ref.append(shell)
         if resume is not None:  # the conversation as it was left [CLI-11]
             renderer.show(session.transcript)
+        if plan:  # --plan is the human choosing read-only up front [CLI-20]
+            enter(session)
         printer.block(f"edgar {__version__} · {rt.name} · {session.mode} · /help", dim=True)
         await _read(shell, prompt.prompt_async)
     return 0

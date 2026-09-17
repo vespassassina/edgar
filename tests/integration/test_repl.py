@@ -289,7 +289,7 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/reset", "conversation emptied"),
         ("/history", "nothing yet"),
         ("/fork", "none found"),
-        ("/plan", "/plan arrives in v2"),
+        ("/go", "not in plan mode"),
         ("/sessions", "no sessions yet"),
         ("/load NOPE", "none found"),
         ("/compact", "nothing to compact"),
@@ -404,6 +404,47 @@ def test_compact_summarises_the_old_turns(tmp_project: Path) -> None:
     assert transcript[1].meta.get("via") == "summary" and "Goal: parse" in transcript[1].text
     assert "Focus on: the parser" in r.provider.requests[-1][-1].text  # [CTX-7]
     assert "compacted " in r.text
+
+
+def test_plan_writes_a_plan_and_go_gives_back_the_mode_it_had(tmp_project: Path) -> None:
+    """[CLI-20] `/plan` tightens to read-only; the answer is the plan; `/go` puts the
+    mode back and the plan stays pinned."""
+
+    async def scenario(r: Rig) -> None:
+        r.shell.session.mode = "auto"
+        await r.type("/plan how should we do it")
+        await r.settle()
+        assert r.shell.session.mode == "read-only"  # while the plan is being written
+        await r.type("/go")
+
+    r = play(tmp_project, scenario, [ScriptedResponse(text="1. read it\n2. write it")])
+    session = r.shell.session
+    assert "auto → read-only" in r.text and "the plan stays pinned" in r.text
+    assert session.mode == "auto" and not session.working.plan_mode
+    assert session.working.plan == "1. read it\n2. write it"
+    assert (session.dir / "plan.md").read_text(encoding="utf-8").startswith("1. read it")
+    resumed, _ = replay(find(tmp_project, session.id))
+    assert resumed.working.plan == session.working.plan  # --resume brings it back
+    assert resumed.mode != "read-only"  # but never a mode a human did not re-choose
+
+
+def test_the_todo_tool_updates_the_status_bar(tmp_project: Path) -> None:
+    """[TOOL-14] The list the model writes shows up where the user can see it."""
+    items = [{"text": "one", "status": "done"}, {"text": "two", "status": "pending"}]
+    steps = [
+        ScriptedResponse(tool_calls=[tool_use("todo", {"items": items})]),
+        ScriptedResponse(text="on it"),
+    ]
+
+    async def scenario(r: Rig) -> None:
+        await r.type("do two things")
+        await r.settle()
+
+    r = play(tmp_project, scenario, steps)
+    assert "todo 1/2" in r.shell.status.line()
+    assert [t.text for t in r.shell.session.working.todos] == ["one", "two"]
+    resumed, _ = replay(find(tmp_project, r.shell.session.id))
+    assert resumed.working.todos == r.shell.session.working.todos  # [CTX-18]
 
 
 def test_a_permission_question_is_answered_by_the_next_line(tmp_project: Path) -> None:
