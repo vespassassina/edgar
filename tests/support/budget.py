@@ -22,9 +22,11 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parents[2] / "src" / "edgar"
 
 # The tier being built. Moved to "v1" when M7 started, to "v2" when M19 started
-# (M18 wrote no code); moves to "v3" at M12 and "v4" at M17. The numbers themselves
-# never move (ADR-0015, ADR-0057).
-TARGET_TIER = "v2"
+# (M18 wrote no code), to "v3" at M12; moves to "v4" at M17. The numbers themselves
+# never move (ADR-0015, ADR-0057). From "v3" on, a second limit appears: everything
+# outside the removable packages must still fit the tier below, which is what makes
+# "the suite is green with learning/ deleted" a budget fact and not a hope (NFR-12).
+TARGET_TIER = "v3"
 TIER_BUDGETS = {"core": 5_000, "v1": 8_000, "v2": 9_500, "v3": 12_000, "v4": 13_000}
 
 # Where the removable tiers live: v3 is learning, controller and escalation, v4 is
