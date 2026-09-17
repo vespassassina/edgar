@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8342,
+    "loc": 8372,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6059,
+        "loc": 6063,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2005,
+            "loc": 2009,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 216,
+                "loc": 219,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 149,
+                "loc": 150,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -1175,14 +1175,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M18 to M22",
         "summary": "Liveable. Not removable.",
-        "loc": 245,
+        "loc": 271,
         "status": "built",
         "children": [
           {
             "id": "v2/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 75,
+            "loc": 101,
             "status": "built",
             "children": [
               {
@@ -1191,7 +1191,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v2",
                 "package": "cli",
-                "loc": 75,
+                "loc": 101,
                 "summary": "The commands that print or shrink what a session holds [CTX-2, CTX-10].",
                 "stop": "working.html#w4",
                 "status": "built",

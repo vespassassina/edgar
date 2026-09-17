@@ -152,6 +152,14 @@ flowchart TD
   totals of that same join. The rows therefore add up to the message, and the message
   adds up to the prompt, whatever the separator between sections happens to be. The
   test asserts exactly that: the printed rows sum to the builder's own total.</p>
+  <p>The other two commands are the same idea pointed elsewhere.
+  <code>edgar sessions compact ID</code> calls the loop's own
+  <code>compact(force=True)</code> against a session replayed from disk, and because
+  <code>compact()</code> appends one line per stage to that record, the history is
+  added to rather than rewritten and <code>--resume</code> replays into the compacted
+  view. <code>edgar config show --resolved</code> prints every effective key beside
+  the layer it came from, with a credential shown as <code>***</code>: a key is never
+  in the config in the first place, only the name of the variable holding it.</p>
   <p class="take"><strong>Take with you:</strong> an inspection command should read the
   code it inspects, never a second copy of it.</p>
 </article>
@@ -171,7 +179,7 @@ a fact, and where in the code is it enforced?</p>
     <tr data-file="src/edgar/context/attach.py"><td><code>context/attach.py</code></td><td class="loc">~48</td><td>@path: find, refuse, read, spill</td></tr>
     <tr data-file="src/edgar/context/working.py"><td><code>context/working.py</code></td><td class="loc">~81</td><td>the plan, the todo list, plan mode</td></tr>
     <tr data-file="src/edgar/tools/builtin/todo.py"><td><code>tools/builtin/todo.py</code></td><td class="loc">~41</td><td>the model's one way to write the list</td></tr>
-    <tr data-file="src/edgar/cli/inspect.py"><td><code>cli/inspect.py</code></td><td class="loc">~52</td><td>the commands that print what is there</td></tr>
+    <tr data-file="src/edgar/cli/inspect.py"><td><code>cli/inspect.py</code></td><td class="loc">~101</td><td>context show, sessions compact, config show</td></tr>
   </tbody>
 </table>
 </div>

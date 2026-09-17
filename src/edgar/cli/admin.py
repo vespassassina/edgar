@@ -39,7 +39,7 @@ USAGE = """usage: edgar init | edgar doctor
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
        edgar mcp list | test NAME | login NAME | logout NAME
        edgar ext list | edgar login PROVIDER | edgar logout PROVIDER
-       edgar context show [SESSION]"""
+       edgar context show [SESSION] | edgar config show --resolved"""
 
 
 def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
@@ -52,6 +52,10 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         from edgar.cli.doctor import command as doctor_command
 
         return doctor_command(cwd, home)
+    if argv[0] == "config":
+        from edgar.cli.inspect import config_show  # the layered config and its origins
+
+        return config_show(argv[1:], cwd, home)
     if argv[0] == "context":
         from edgar.cli.inspect import context_show  # the builder and a session record
 

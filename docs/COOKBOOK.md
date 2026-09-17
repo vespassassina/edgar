@@ -146,6 +146,18 @@ session's record rather than rewriting it, so nothing is lost and `--resume`
 replays to the compacted view. Folding costs one model call, and it says what
 it did.
 
+## Find out which config file won
+
+```bash
+edgar config show --resolved
+```
+
+Every effective key, its value, and the layer it resolved from: `default`, the
+path of the user or project config that set it, or the environment variable that
+overrode both. Nothing in a config file is ever a key — only the name of the
+variable holding one — so a provider's key shows as `***` with the variable it
+came from, never the key itself.
+
 ## Give the agent a CLI
 
 A command tool is an argv template. edgar starts the program directly, never

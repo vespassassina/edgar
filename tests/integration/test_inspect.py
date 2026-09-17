@@ -83,6 +83,39 @@ def test_sessions_compact_appends_to_the_record_and_keeps_the_pairing(
     assert now[len(before)]["type"] == "compaction"
 
 
+def test_config_show_resolved_names_the_layer_and_never_prints_a_key(
+    tmp_project: Path,
+    home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """[CFG-2, CFG-6]"""
+    (tmp_project / ".edgar").mkdir(exist_ok=True)
+    project = tmp_project / ".edgar" / "config.toml"
+    project.write_text(
+        '[model]\ndefault = "fake/test"\n\n[permissions]\nmode = "ask"\n\n'
+        '[providers.acme]\nkind = "openai-compatible"\nbase_url = "https://acme.test"\n'
+        'api_key_env = "ACME_KEY"\n'
+    )
+    monkeypatch.setenv("ACME_KEY", "sk-do-not-print-me")
+    monkeypatch.setenv("EDGAR_PERMISSIONS_MODE", "read-only")
+    capsys.readouterr()
+
+    assert admin.command(["config", "show", "--resolved"], tmp_project, home) == 0
+    out = capsys.readouterr().out
+    rows = {line.split()[0]: line for line in out.splitlines()}
+    # The env var wins over the file, and the row says which layer it came from.
+    assert "read-only" in rows["permissions.mode"]
+    assert "env EDGAR_PERMISSIONS_MODE" in rows["permissions.mode"]
+    assert str(project) in rows["model.default"] and "fake/test" in rows["model.default"]
+    assert "default" in rows["context.keep_last_turns"]
+    # The key is in the environment, never in the config, and never on screen.
+    assert "sk-do-not-print-me" not in out
+    assert "***" in rows["providers.acme.api_key"]
+    assert "ACME_KEY" in rows["providers.acme.api_key_env"]
+    assert admin.command(["config", "show"], tmp_project, home) == 0
+
+
 def test_context_show_says_how_to_use_it_and_never_guesses_a_session(
     tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:

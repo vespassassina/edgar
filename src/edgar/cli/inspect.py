@@ -28,9 +28,11 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from edgar.cli.setup import setup
 from edgar.config.load import load
+from edgar.config.schema import Config
 from edgar.context.builder import Section, build, system_text
 from edgar.context.prompts import load_prompt, profile_prompt
 from edgar.context.tokens import approx_message_tokens, approx_tokens, message_text
@@ -111,3 +113,41 @@ def sessions_compact(which: str, cwd: Path, home: Path) -> int:
         return 0
     print(f"{session.id}: {before} messages → {len(session.transcript)}, appended to the record")
     return 0
+
+
+SECRET = ("api_key", "token", "secret", "password")
+
+
+def config_show(argv: list[str], cwd: Path, home: Path) -> int:
+    # Every effective key, its value and the layer it came from: "default", a config
+    # file's path, "env EDGAR_…" or a flag [CFG-2]. A key itself is never in the
+    # config, only the name of the variable holding it, so the row for a provider's
+    # key says that it is set and nothing more [CFG-6].
+    import os
+
+    if argv[:1] != ["show"] or set(argv[1:]) - {"--resolved"}:
+        print("usage: edgar config show --resolved", file=sys.stderr)
+        return 2
+    config = load(cwd, home=home)
+    for key in sorted(config.origins):
+        print(f"{key:<38} {_render(key, _value(config, key)):<28} {config.origins[key]}")
+    for name, block in sorted(config.providers.items()):
+        if block.api_key_env and os.environ.get(block.api_key_env):
+            print(f"{f'providers.{name}.api_key':<38} {'***':<28} env {block.api_key_env}")
+    return 0
+
+
+def _value(config: Config, key: str) -> Any:
+    section, _, rest = key.partition(".")
+    holder = getattr(config, section, None)
+    if isinstance(holder, dict):  # a [providers.NAME] block, keyed by name
+        name, _, rest = rest.rpartition(".")
+        holder = holder.get(name)
+    return getattr(holder, rest, None) if holder is not None else None
+
+
+def _render(key: str, value: Any) -> str:
+    # A value that holds a credential is never printed, whatever layer set it.
+    if value and key.rsplit(".", 1)[-1] in SECRET:
+        return "***"
+    return "" if value is None else str(value)
