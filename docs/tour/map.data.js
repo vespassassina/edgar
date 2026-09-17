@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 8867,
+    "loc": 8924,
     "status": "built",
     "children": [
       {
@@ -738,7 +738,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2058,
+        "loc": 2115,
         "status": "built",
         "children": [
           {
@@ -847,7 +847,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 164,
+            "loc": 221,
             "status": "built",
             "children": [
               {
@@ -856,8 +856,8 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 40,
-                "summary": "`edgar doctor`: credentials, connectivity, and a cloud-synced-folder warning",
+                "loc": 97,
+                "summary": "`edgar doctor`: what this machine and this project would do to a session",
                 "stop": "isolation.html#w2",
                 "status": "built",
                 "port": false

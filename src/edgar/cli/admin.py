@@ -33,7 +33,7 @@ from edgar.tools.builtin.task import TaskTool
 from edgar.tools.mcp.client import FAILURES, Server, close
 from edgar.tools.mcp.schema import hints
 
-USAGE = """usage: edgar init | edgar doctor
+USAGE = """usage: edgar init | edgar doctor [--network]
        edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID | compact ID
        edgar tools list | describe NAME | edgar skills list | validate | edgar cost
@@ -48,10 +48,10 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         from edgar.cli.init import command as init_command
 
         return init_command(cwd, home)
-    if argv == ["doctor"]:
+    if argv[0] == "doctor" and set(argv[1:]) <= {"--network"}:
         from edgar.cli.doctor import command as doctor_command
 
-        return doctor_command(cwd, home)
+        return doctor_command(cwd, home, network="--network" in argv)
     if argv[0] == "config":
         from edgar.cli.inspect import config_show  # the layered config and its origins
 

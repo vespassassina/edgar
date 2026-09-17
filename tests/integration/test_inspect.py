@@ -121,3 +121,49 @@ def test_context_show_says_how_to_use_it_and_never_guesses_a_session(
 ) -> None:
     assert admin.command(["context", "frobnicate"], tmp_project, home) == 2
     assert "usage: edgar context show" in capsys.readouterr().err
+
+
+def labelled(out: str) -> dict[str, str]:
+    # doctor prints "<check> <name> …": key each line by its first two words.
+    return {" ".join(line.split()[:2]): line for line in out.splitlines()}
+
+
+def test_doctor_checks_trust_the_db_mcp_and_extensions_without_touching_the_network(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """[CFG-5] The whole run is offline: `no_network` fails the test on a socket."""
+    (tmp_project / ".edgar").mkdir(exist_ok=True)
+    (tmp_project / ".edgar" / "config.toml").write_text(
+        '[model]\ndefault = "fake/test"\n\n'
+        '[mcp.local]\ncommand = "definitely-not-a-real-program"\n\n'
+        '[mcp.remote]\nurl = "https://mcp.example.test/mcp"\n'
+    )
+    bundle = tmp_project / ".edgar" / "extensions" / "demo"
+    bundle.mkdir(parents=True)
+    (bundle / "extension.toml").write_text(
+        'name = "demo"\nversion = "0.1.0"\ndescription = "a demo"\n'
+        '[requires]\ncommands = ["definitely-not-a-real-program"]\n'
+    )
+    capsys.readouterr()
+
+    assert admin.command(["doctor"], tmp_project, home) == 0
+    lines = labelled(capsys.readouterr().out)
+    # An MCP server is executable config, so the project is untrusted until asked.
+    assert "edgar trust" in lines["trust untrusted"]
+    assert "not written yet" in lines["db project"]
+    assert "not on PATH" in lines["mcp local"]
+    assert "edgar mcp test remote" in lines["mcp remote"]
+    assert "not on PATH" in lines["ext demo"]
+    # Nothing was asked of any endpoint; the line says how to ask.
+    assert "--network" in lines["conn (skipped)"]
+
+
+def test_doctor_reports_a_real_database_as_sound(
+    tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from edgar.storage.db import Store
+
+    Store(tmp_project / ".edgar" / "edgar.db").grant("read", "a.txt")  # a session's own file
+    capsys.readouterr()
+    assert admin.command(["doctor"], tmp_project, home) == 0
+    assert "db       project     integrity_check ok" in capsys.readouterr().out
