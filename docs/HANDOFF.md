@@ -55,8 +55,8 @@ list is done. Read it first, then the three documents under "Read".
   found while wiring it, out of scope and left for M13: `tools/execute.py`'s
   `_failed()` returns before emitting `ToolFinished`, so validation,
   permission-denied and unknown-tool-name failures never reach the bus and
-  cannot become error facts. **M13 is done on `feat/m13-controller` and not
-  merged; see Step 7. M14, skill synthesis, is next.**
+  cannot become error facts. **M13 is done and merged; see Step 7. M14, skill
+  synthesis, is next.**
 - **M21 is done and merged** (2026-09-17,
   [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
   sandbox backends. Two of
@@ -385,7 +385,7 @@ What a later milestone needs to know:
   see ADR-0063's "What was cut" section, since this is the one place the build
   agent flagged as a decision the maintainer might make differently.
 
-## Step 7 — M13, the controller · DONE, NOT MERGED 2026-09-18
+## Step 7 — M13, the controller · DONE AND MERGED 2026-09-18
 
 Built in five commits on `feat/m13-controller`: the pure modules
 (`triggers.py`, `proposals.py`, `tighten.py`) with the `[controller]` config
@@ -397,8 +397,16 @@ without the removable packages) and 10,558 of 12,000 (v3 total); `just check`
 green with 1,037 tests. The decisions are in
 [ADR-0064](adr/0064-m13-controller-as-built.md).
 
-**It is left for review and merge by the calling session.** Nothing was pushed,
-merged or tagged; `AGENTS.md` and `config.toml` are untouched.
+Independently re-verified before merge: every claim above read against the
+real source, not the build agent's self-report; `just check` and `just loc`
+rerun in the worktree; the NFR-12 deletion test rerun by hand (`controller/`
+and its own test files removed, 917 passed and 11 failures, all in
+`test_tour.py`/`test_tour_map.py`); all eight whitelist actions, a
+policy-loosening attempt and an arbitrary `switch_model` target exercised
+directly against `apply()`/`parse()` outside the test suite, confirming the
+rejections are logged and no `AGENTS.md` file is ever created. Merged
+`--no-ff` onto `main`, re-verified green there, and the branch and worktree
+are cleaned up.
 
 What a later milestone needs to know:
 
@@ -486,13 +494,7 @@ Proposed, under the existing `[shell]` block:
 
 ## Resume commands
 
-M13 is waiting for review on its own branch:
-
-```bash
-git switch feat/m13-controller
-```
-
-Anything else starts from the default branch:
+M13 is merged; M14, skill synthesis, is next, from the default branch:
 
 ```bash
 git switch main
