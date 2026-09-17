@@ -9,6 +9,30 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **edgar learns from what you type and from what breaks (v3, M12).** A line that
+  starts with `remember that`, `note that` or `keep in mind` becomes a fact, in
+  that session, with no `/remember` — and it is printed when it is saved, because
+  nothing enters memory quietly. A tool failure that happens three times in a
+  project becomes a fact too, built from a template rather than from the error's
+  text. Nothing else can: a fetched page, a piped file, an `@path` attachment, a
+  tool's output, a subagent's prompt and the model's own words all travel roads
+  that never reach a learner, and that is enforced by what each function accepts
+  [MEM-8, MEM-9, MEM-22, ADR-0017, ADR-0063].
+- **`edgar stats`** prints what this project's runs add up to: how many, how they
+  ended, how often a check passed, what they cost, which tools they used and the
+  shapes they took (`read+edit+shell`, and so on) [MEM-18, MEM-19].
+- **`.edgar/history.md`**, a readable log of every run — what you asked, what it
+  said, what it did, which files, how it ended. Redacted on write, condensed when
+  a prompt is long, rotated to `history.1.md` before it can grow without bound,
+  and **gitignored by default** (OQ-1). `edgar history show` prints it;
+  `--no-history` or `[memory] history = false` turns it off [MEM-12..17].
+- **`edgar history distill`** proposes facts from recurring patterns in that file.
+  They are always **pending**: `history.md` holds model-written text, so nothing
+  derived from it is active until you confirm it with `edgar memory review`
+  [MEM-17].
+- All of it is removable. `edgar.learning` is v3: nothing in Core, v1 or v2
+  imports it, it attaches by name through the event bus, and CI deletes the
+  package and runs the suite without it [NFR-12].
 - **`edgar doctor` finished, and it no longer reaches the network unasked.** It
   now also reports whether this project is trusted, runs `PRAGMA integrity_check`
   on the project and user databases, says whether each stdio MCP server's command

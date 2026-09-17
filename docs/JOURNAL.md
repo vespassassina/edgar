@@ -32,9 +32,14 @@ In order:
    ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)). **The 2.0 release
    itself is not started** and needs the maintainer's authorisation, as every
    push, tag and release here does.
-4. **PRD §11's two human-verification criteria** stay open until an actual
+4. ~~**M12, learning foundations.**~~ Done 2026-09-17
+   ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)); it flipped
+   `TARGET_TIER` to `"v3"`. **M13, the controller, is next**, and it has 141
+   lines of code outside the removable packages to spend, so read ADR-0063's
+   consequences before planning it.
+5. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
-5. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
+6. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
    yet: a short doc covering every slash command, tool and skill, install and
    upgrade steps for the CLI and MCP servers, and edgar's idiosyncrasies; and
    `/help`/`/h` itself must list every slash command, tool and skill with a
@@ -47,6 +52,63 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-17 · M12 — learning foundations
+
+**Asked.** Build M12, the first milestone of v3: telemetry, autolearn, error
+facts, `history.md`, the property test on the learning boundary, the tier flip
+and the tour page. One commit per roadmap item, `just check` green on each, and a
+conservative budget.
+
+**Done.** Five commits on `feat/m12-learning-foundations`.
+
+- `79513b3` events: `ToolFinished` gained `error: ErrorRecord | None`, and two new
+  events, `PromptTyped` and `SkillsActivated`.
+- `d12a8e7` `tests/support/budget.py`'s `TARGET_TIER` moved from `"v2"` to `"v3"`.
+- `5dd7f77` the `learning/` package — `experience.py`, `learner.py`,
+  `error_facts.py`, `history.py`, `cli.py`, `__init__.py` — with
+  `docs/tour/learning.html` and the planned stop s31 turned into a link, in the
+  same commit as the code it describes.
+- `28d6b05` the tests, including the property test over generated trajectories.
+- the trace: ADR-0063, this entry, `CHANGELOG.md`, the roadmap.
+
+**Decided.**
+
+- The boundary is a subscription, not a filter. `Learner` reads `PromptTyped` at
+  depth 0 and nothing else; `PromptTyped` is built at two call sites from the bare
+  typed line, both before `attach()` runs. ADR-0017's option A stays rejected.
+- **MEM-14's out-of-band model call to condense was cut.** `condense()` keeps the
+  first 40 words; the verbatim prompt stays in `learning.db`. A page whose value
+  is that a human can read it does not need a model to write it, and this project
+  should be slow to add a hidden call to a per-turn background writer.
+- **OQ-1 resolved: gitignored by default**, documented opt-in. `.edgar/history.md`,
+  `.edgar/history.1.md` and `.edgar/learning.db` went into
+  `templates/gitignore.fragment`.
+- `edgar stats` and `edgar history` live in `learning/cli.py`, not under `cli/`,
+  because `test_architecture.py`'s import graph catches function-level imports too.
+- The tour page landed in the same commit as the package rather than last, because
+  `test_tour.py` is repo-wide: the package cannot be green without its stops.
+
+**Found while building.**
+
+- **The property test caught a real bug.** `Learner` had no depth check, so a
+  subagent's `PromptTyped` — the `task` tool's argument, which the model wrote —
+  became an active fact. Fixed in `28d6b05`, with a unit test and a paragraph on
+  the tour page.
+- `ErrorRecord.program` is the one model-influenced field a templated fact quotes.
+  It is safe only because `UNSAFE` strips it to `[A-Za-z0-9._-]`, so the property
+  test now generates programs full of shell metacharacters.
+
+**Still open.**
+
+- `tools/execute.py`'s `_failed()` returns before emitting `ToolFinished`, so
+  validation, permission-denied and unknown-tool failures never reach the bus and
+  cannot be learned from. Pre-existing, out of M12's scope, noted in ADR-0063 for
+  M13 to decide on.
+- `just loc` reads **9,359 of 9,500** for `src/` without the removable packages.
+  141 lines of code outside v3's own folders for all of M13, M14 and M15.
+- Not pushed, not merged, not tagged. `AGENTS.md` and `config.toml` untouched, as
+  are the version strings; 3.0 is nowhere near and needs the maintainer anyway.
 
 ## 2026-09-17 · fix: the main turn's routing context was always bare
 
