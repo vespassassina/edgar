@@ -55,7 +55,8 @@ list is done. Read it first, then the three documents under "Read".
   found while wiring it, out of scope and left for M13: `tools/execute.py`'s
   `_failed()` returns before emitting `ToolFinished`, so validation,
   permission-denied and unknown-tool-name failures never reach the bus and
-  cannot become error facts. **M13, the controller, is next.**
+  cannot become error facts. **M13 is done on `feat/m13-controller` and not
+  merged; see Step 7. M14, skill synthesis, is next.**
 - **M21 is done and merged** (2026-09-17,
   [ADR-0061](adr/0061-m21-isolation-as-built.md)): worktree subagents and the
   sandbox backends. Two of
@@ -384,6 +385,63 @@ What a later milestone needs to know:
   see ADR-0063's "What was cut" section, since this is the one place the build
   agent flagged as a decision the maintainer might make differently.
 
+## Step 7 — M13, the controller · DONE, NOT MERGED 2026-09-18
+
+Built in five commits on `feat/m13-controller`: the pure modules
+(`triggers.py`, `proposals.py`, `tighten.py`) with the `[controller]` config
+section and the tour page; the log and apply (`store.py`, `apply.py`); the gate
+and the seam (`gate.py`, `__init__.py`) with Core's four small edits;
+`controller/cli.py`; and the trace. New package: `src/edgar/controller/`, 745
+lines of code, plus 47 outside it. `just loc` reads 9,406 of 9,500 (`src/`
+without the removable packages) and 10,558 of 12,000 (v3 total); `just check`
+green with 1,037 tests. The decisions are in
+[ADR-0064](adr/0064-m13-controller-as-built.md).
+
+**It is left for review and merge by the calling session.** Nothing was pushed,
+merged or tagged; `AGENTS.md` and `config.toml` are untouched.
+
+What a later milestone needs to know:
+
+- **The gate is where M14 hangs its synthesis trigger.** `controller/gate.py`
+  already assembles the five `Signals`, counts tool failures in-session and
+  holds the verify result for the turn. `propose_skill` exists as a whitelisted
+  action that writes a Markdown proposal into `.edgar/proposals/` and stops —
+  there is no `skills.synthesis` setting in `config/schema.py` yet, so M14 owns
+  `off | propose | auto`, `learned/` and the disclaimer [SKL-10, SKL-11].
+- **`targets()` in `proposals.py` is where M15 adds the escalation chain.**
+  Today it is exactly the models the project already names: every `[[route]]`
+  rule's model plus each role's `[model]` binding. ROUTE-8 also allows the
+  chain; it does not exist yet, and the function is the one place to widen.
+- **The controller's model call passes no tools at all**, and a test asserts the
+  provider saw an empty list. If a later milestone wants to give it one, that is
+  an ADR, not a patch: ADR-0064 §1 is the argument it has to beat.
+- **Nothing in the package may reach `edgar.memory.store`, `.recall` or
+  `.markdown`, and no string literal in it may be `AGENTS.md`, `CLAUDE.md` or
+  `config.toml`.** Both are asserted in
+  `tests/unit/test_controller_boundary.py`, the first by walking the import
+  graph, the second out of the syntax tree. A new controller module is covered
+  automatically; a new hand-authored file that needs protecting is one line.
+- **There is no table of current settings.** `store.py`'s `overrides()` derives
+  what edgar runs under from the log: the newest `applied` row per action. If
+  you add a persisted action, add it to `PERSISTED` and teach
+  `cli/setup.py`'s `runtime()` to read it — do not add a settings table, for the
+  reason in ADR-0064 §5.
+- **Core's side is four edits and no more**, all reached by name: `_controller()`
+  and `_overrides()` in `cli/setup.py`, `ControllerActed` in `core/events.py`,
+  one line in `cli/render.py`'s `_notice()`, one line in `cli/main.py`'s
+  dispatch. `core/loop.py` is still 200 of 200 and does not know the controller
+  exists. **94 lines of code** are left outside the removable packages for all
+  of M14 and M15.
+- **M12's gap is still open and its consequence is now exact.**
+  `tools/execute.py`'s `_failed()` returns before emitting `ToolFinished`, so
+  the controller's `error_streak` counts *executed* tool failures only: a
+  session failing every call on a permission denial trips nothing. Fixing it is
+  a Core change that alters what every existing subscriber sees, and Core has 94
+  lines. Whoever takes it should say so in an ADR.
+- **`docs/ROADMAP.md`'s M13 row said the tour stop was `s26`.** It is `s32`;
+  `s26` is Memory (M7). Fixed on this branch — check the stop id against
+  `docs/tour/index.html` before trusting the roadmap for M14 and M15 too.
+
 ## Proposed diff to `AGENTS.md` (maintainer applies by hand)
 
 `AGENTS.md` is hand-authored (ADR-0007, ADR-0008). Rule 10 and the size table
@@ -427,6 +485,14 @@ Proposed, under the existing `[shell]` block:
 ```
 
 ## Resume commands
+
+M13 is waiting for review on its own branch:
+
+```bash
+git switch feat/m13-controller
+```
+
+Anything else starts from the default branch:
 
 ```bash
 git switch main

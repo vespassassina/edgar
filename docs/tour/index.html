@@ -33,6 +33,7 @@
       <li><a href="media.html">Seeing and searching</a></li>
       <li><a href="isolation.html">Isolation</a></li>
       <li><a href="learning.html">Learning</a></li>
+      <li><a href="controller.html">The controller</a></li>
       <li><a href="map.html">The map</a></li>
     </ul>
   </div>
@@ -86,7 +87,7 @@
   <p class="ak-eyebrow toc-part"><a href="#v2">III. v3 and v4</a><span class="count" data-count="v2"></span></p>
   <ol class="ak-nav">
     <li><a href="#s31"><span class="n">31</span>Learning (M12)</a></li>
-    <li class="planned"><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
+    <li><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
     <li class="planned"><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
     <li class="planned"><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
     <li class="planned"><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
@@ -162,6 +163,7 @@ providers, permissions, verification, sessions, skills. At most 5,000 lines of c
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
     <tr data-package="sandbox"><td><code>sandbox/</code></td><td class="loc">~110</td><td>The Sandbox port and its backends: nothing, bubblewrap, seatbelt (v2)</td></tr>
     <tr data-package="learning"><td><code>learning/</code></td><td class="loc">~410</td><td>Telemetry, autolearn from typed text, error facts, <code>history.md</code> (v3)</td></tr>
+    <tr data-package="controller"><td><code>controller/</code></td><td class="loc">~745</td><td>Deterministic triggers, eight whitelisted actions, policy that only tightens (v3)</td></tr>
     <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
   </tbody>
 </table>
@@ -821,12 +823,17 @@ flowchart LR
   <code>edgar history distill</code> — lands pending and waits for a human.</p>
 </article>
 
-<article class="stop planned" id="s32" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/apply.py">
+<article class="stop" id="s32" data-files="src/edgar/controller/triggers.py src/edgar/controller/proposals.py src/edgar/controller/tighten.py">
   <h4><span class="n">32</span>The controller</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M13 · planned</span> <code>controller/triggers.py</code> <code>controller/proposals.py</code> <code>controller/apply.py</code></p>
-  <p>Self-management that cannot hurt you. The triggers are pure checks, actions come
-  from a whitelist of eight, and every change is dry-run by default, logged and
-  revertible. The controller can only tighten policy. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m13--controller">Roadmap: M13</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/triggers.py"><code>controller/triggers.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/proposals.py"><code>controller/proposals.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/tighten.py"><code>controller/tighten.py</code></a></p>
+  <p class="look">Look for: <code>tripped</code> <code>ACTIONS</code> <code>parse</code> <code>narrow</code> <code>is_narrowing</code></p>
+  <p>M13 has a tour of its own: <a href="controller.html">The controller</a>, three stops
+  on the triggers, the whitelist and the tightening. What to carry from here:
+  self-management that cannot hurt you is made of three refusals. Whether to call a model
+  at all is decided by five comparisons, not by a model. What it may ask for is eight
+  frozen types and there is no ninth, in particular no <code>learn</code>. And policy
+  moves one direction only, through a pure function whose last act is to check its own
+  answer. Everything that persists is dry-run by default, logged and revertible.</p>
 </article>
 
 <article class="stop planned" id="s33" data-files="src/edgar/learning/synthesis.py src/edgar/learning/curator.py">

@@ -15,6 +15,7 @@ from collections.abc import Callable
 from edgar.core.events import (
     AsideFinished,
     Compacted,
+    ControllerActed,
     Event,
     FactSaved,
     ModelSelected,
@@ -151,6 +152,10 @@ def _notice(event: Event) -> str | None:
         return f"model: {event.model} ({event.reason})"
     if isinstance(event, FactSaved) and event.text:
         return f"remembered: {event.text}"
+    if isinstance(event, ControllerActed):
+        # v3's one line on screen. The id is what `edgar controller revert` takes.
+        where = f" [{event.mutation_id}]" if event.mutation_id else ""
+        return f"controller: {event.message}{where}"
     if isinstance(event, Compacted):
         return f"compacted {event.before:,} → {event.after:,} tokens ({event.stages})"
     return None

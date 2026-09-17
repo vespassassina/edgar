@@ -309,6 +309,15 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
     # empty defaults here rather than being faked.
     ctx = RoutingContext(mode=config.permissions.mode, tools_required=bool(s.tools.names()))
     selection = choice or select_model(ctx, config.model, rules)
+    # What the controller proposed and a person approved, if v3 is here at all. It
+    # is read from its own log, never written to config, and `edgar controller
+    # revert ID` is the whole undo [CTRL-6, CTRL-10]. `/model` outranks it.
+    saved = _overrides(s.root)
+    if choice is None and "switch_model" in saved:
+        selection = Selection(saved["switch_model"], "controller", "approved by you [CTRL-6]")
+    context = config.context
+    if "compact" in saved:
+        context = replace(context, compact_at=float(saved["compact"]))
     provider, provider_model = resolve(selection.model, config, env=s.env)
     # A model with no tool support caught here, not partway through a turn [ROUTE-6].
     check_capabilities(
@@ -335,7 +344,7 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
         name=selection.model,
         guard=s.guard,
         verify=s.check,
-        context=config.context,
+        context=context,
         budget=config.budget,
         compactor=resolve(role, config, env=s.env) if role else None,
         fallback=fallback,
@@ -363,6 +372,7 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
             session.record({"type": "model", "model": rt.name})
         session.mode, session.model = mode, rt.name
     _learning(s, bus, session)
+    _controller(s, bus, rt)
     bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
     return session, rt
 
@@ -384,6 +394,35 @@ def _learning(s: Setup, bus: EventBus, session: Session) -> None:
         autolearn=s.config.memory.autolearn,
         history=s.config.memory.history,
     )
+
+
+def _controller(s: Setup, bus: EventBus, rt: Runtime) -> None:
+    # The second v3 seam, by name for the same reason as the first [ADR-0015]. It
+    # subscribes nothing at all unless [controller] enabled is true, which is the
+    # default: a harness promising no hidden calls does not start making one per
+    # turn because you upgraded [CTRL-2].
+    try:
+        controller = import_module("edgar.controller")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return
+    controller.attach(
+        bus,
+        root=s.root,
+        home=s.home,
+        config=s.config,
+        guard=s.guard,
+        window=rt.provider.capabilities.max_context,
+    )
+
+
+def _overrides(root: Path) -> dict[str, str]:
+    # What an earlier session's approved proposals ask this one to run under. A
+    # deleted v3 means no overrides, which is the same answer as an empty log.
+    try:
+        found: dict[str, str] = import_module("edgar.controller").overrides(root)
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return {}
+    return found
 
 
 def spending(home: Path) -> Store:

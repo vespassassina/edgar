@@ -5,7 +5,7 @@
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 9739,
+    "loc": 10494,
     "status": "built",
     "children": [
       {
@@ -14,14 +14,14 @@
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6608,
+        "loc": 6655,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2083,
+            "loc": 2114,
             "status": "built",
             "children": [
               {
@@ -42,7 +42,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 160,
+                "loc": 161,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -78,7 +78,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 139,
+                "loc": 143,
                 "summary": "What reaches the terminal [CLI-5, CLI-15, CLI-21, CLI-23].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -102,7 +102,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 357,
+                "loc": 383,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -150,7 +150,7 @@
             "id": "core/config",
             "name": "config/",
             "kind": "package",
-            "loc": 392,
+            "loc": 403,
             "status": "built",
             "children": [
               {
@@ -171,7 +171,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "config",
-                "loc": 148,
+                "loc": 159,
                 "summary": "The config model (BLUEPRINT §14). The dataclasses are the schema.",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -240,7 +240,7 @@
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 789,
+            "loc": 794,
             "status": "built",
             "children": [
               {
@@ -285,7 +285,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 201,
+                "loc": 206,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -1361,15 +1361,15 @@
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 382,
+        "loc": 1090,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 708,
+            "status": "built",
             "children": [
               {
                 "path": "src/edgar/controller/apply.py",
@@ -1377,10 +1377,34 @@
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s32",
-                "status": "planned",
+                "loc": 123,
+                "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
+                "stop": "controller.html#c4",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/cli.py",
+                "name": "cli.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 38,
+                "summary": "`edgar controller log|apply|revert` [CTRL-7, CTRL-10].",
+                "stop": "controller.html#c6",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/gate.py",
+                "name": "gate.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 129,
+                "summary": "Five numbers, sometimes one call, never a failed turn [CTRL-1, CTRL-3, CTRL-9, CTRL-11].",
+                "stop": "controller.html#c5",
+                "status": "built",
                 "port": false
               },
               {
@@ -1389,10 +1413,34 @@
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s32",
-                "status": "planned",
+                "loc": 176,
+                "summary": "The eight things the controller may ask for, and nothing else [CTRL-4, CTRL-5].",
+                "stop": "controller.html#c2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/store.py",
+                "name": "store.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 84,
+                "summary": "Everything the controller did, and everything it was refused [CTRL-7, CTRL-10].",
+                "stop": "controller.html#c4",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/controller/tighten.py",
+                "name": "tighten.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "controller",
+                "loc": 118,
+                "summary": "Policy may only tighten, never loosen [CTRL-8, PERM-8, ADR-0021].",
+                "stop": "controller.html#c3",
+                "status": "built",
                 "port": false
               },
               {
@@ -1401,10 +1449,10 @@
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s32",
-                "status": "planned",
+                "loc": 40,
+                "summary": "When is a turn worth a second opinion? Five deterministic checks [CTRL-1].",
+                "stop": "controller.html#c1",
+                "status": "built",
                 "port": false
               }
             ]

@@ -34,9 +34,10 @@ In order:
    push, tag and release here does.
 4. ~~**M12, learning foundations.**~~ Done 2026-09-17
    ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)); it flipped
-   `TARGET_TIER` to `"v3"`. **M13, the controller, is next**, and it has 141
-   lines of code outside the removable packages to spend, so read ADR-0063's
-   consequences before planning it.
+   `TARGET_TIER` to `"v3"`. ~~**M13, the controller.**~~ Done 2026-09-18
+   ([ADR-0064](adr/0064-m13-controller-as-built.md)). **M14, skill synthesis, is
+   next**, and it has 94 lines of code outside the removable packages to spend
+   for itself *and* M15, so read ADR-0064's consequences before planning it.
 5. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 6. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
@@ -52,6 +53,87 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-18 · M13 — the controller
+
+**Asked.** Build M13, self-management that cannot hurt you: deterministic
+triggers, a limited tool set, the eight-action whitelist, dry-run apply with a
+mutation log and revert, tighten-only enforcement property-tested with
+Hypothesis, `switch_model` constrained to routing targets, `propose_instruction`
+as a diff only, never failing the turn, `edgar controller log|revert|apply`, the
+tour page, and the trace. Follow M12's process. Do not build
+`learning/synthesis.py`. Do not push, merge or tag.
+
+**Done.** Five commits on `feat/m13-controller`.
+
+- `08cc825` `triggers.py`, `proposals.py`, `tighten.py`, the `[controller]` config
+  section, their tests and the property test, with `docs/tour/controller.html` and
+  the planned stop turned into a link.
+- `39bc4af` `store.py` and `apply.py`: the mutation log, dry run, revert, approve.
+- `f702886` `gate.py` and the real `attach()`/`overrides()`, plus Core's side —
+  `ControllerActed`, one renderer line, `_controller()` beside `_learning()` in
+  `cli/setup.py`, and the two overrides `runtime()` reads.
+- `91abc6f` `controller/cli.py` and `cli/main.py`'s one-line dispatch.
+- the trace: ADR-0064, this entry, `CHANGELOG.md`, the roadmap.
+
+`just check` green on every one; the suite is **1037 passed**. `just loc` reads
+**10,558 / 12,000** for v3 and **9,406 / 9,500** without the removable packages.
+`core/loop.py` is untouched at 200 of 200.
+
+**Decided.** The four the roadmap asked for, all in ADR-0064.
+
+- **The controller's call passes no tools at all.** ADR-0008 asked for a
+  "hard-limited tool set"; zero is the only limit with no next entry.
+- **`abort` narrows the live policy to read-only** for the rest of the session,
+  in memory. The gate runs after a turn, so there is nothing left to abort — but
+  the failure it exists for continues into the next one.
+- **`switch_model` and `compact` persist as derived overrides** in
+  `.edgar/controller.db`, dry-run by default, read back at the next session
+  through the same `importlib` seam that reaches `attach()`. There is no table of
+  current settings: the newest `applied` row per action *is* the setting.
+- **`propose_instruction` writes Markdown and never spells the instructions
+  file's name.** A deviation from ADR-0008's "unified diff against `AGENTS.md`",
+  recorded rather than quiet: a diff has to name a target, and a path this code
+  never spells is a path it can never open.
+
+And two more worth the line: `tighten_policy` is *not* dry-run, because CTRL-8
+already guarantees it can only make things stricter and a tightening that waits
+is one that does not happen; and there is deliberately no `edgar controller run`.
+
+**Found while building.**
+
+- **The tests found two real parser bugs**, both the same shape: the builder let
+  something through and left the refusal to apply time. `{"rules": {"shell":
+  "allow"}}` parsed into a valid `TightenPolicy`, and `{"mode": "god-mode"}`
+  parsed at all. Both are refused in the builder now, because neither depends on
+  the current policy. `narrow()` still checks again.
+- A circular import between `proposals.py` and `tighten.py`; `Malformed` moved
+  into `tighten.py` so the dependency runs one way.
+- The boundary test was written as "no controller module may reach
+  `edgar.memory`" and failed: `edgar.memory.redact` is reachable through
+  `storage/transcript.py`. It is a pure secret scrubber, so the test now names the
+  three modules that actually read or write a fact and says why redact is exempt.
+
+**Verified.** NFR-12 by hand: `src/edgar/controller/` deleted and the package's
+own six test files excluded gives **917 passed, 11 failed**, and all eleven are
+`test_tour.py`/`test_tour_map.py` complaining that documented files are gone. No
+functional test failed. The package was restored and the working tree was clean
+afterwards.
+
+**Still open.**
+
+- **M12's gap is left open on purpose**, with its consequence now written down:
+  `tools/execute.py`'s `_failed()` never emits `ToolFinished`, so the
+  controller's `error_streak` counts executed tool failures only — a session
+  failing every call on a permission denial trips nothing. Fixing it is a Core
+  change and Core has 94 lines of code left.
+- **`docs/ROADMAP.md` said the controller's tour stop was `s26`. It is `s32`**;
+  `s26` is Memory (M7). Fixed in this commit.
+- `propose_skill` writes a proposal file and stops: there is no
+  `skills.synthesis` setting to honour until M14.
+- `just loc` leaves **94 lines of code** outside the removable packages for all
+  of M14 and M15.
+- Not pushed, not merged, not tagged. `AGENTS.md` and `config.toml` untouched.
 
 ## 2026-09-17 · M12 — learning foundations
 

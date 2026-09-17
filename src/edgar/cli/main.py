@@ -84,12 +84,14 @@ def main(argv: list[str] | None = None) -> int:
             return _prompt_command(argv[1:])
         if argv[:1] == ["models"]:
             return _models_command(argv[1:])
-        if argv[:1] in (["stats"], ["history"]):
+        if argv[:1] in (["stats"], ["history"], ["controller"]):
             # v3's own commands, reached by name: a module under cli/ that imported
-            # edgar.learning would break tier isolation [NFR-12, ADR-0015].
+            # edgar.learning or edgar.controller would break tier isolation
+            # [NFR-12, ADR-0015].
             from importlib import import_module
 
-            return int(import_module("edgar.learning.cli").command(argv, Path.cwd()))
+            v3 = "edgar.controller" if argv[0] == "controller" else "edgar.learning"
+            return int(import_module(f"{v3}.cli").command(argv, Path.cwd()))
         if argv[:1] == ["memory"]:
             from edgar.cli.memory import command as memory
 
