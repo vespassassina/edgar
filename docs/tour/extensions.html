@@ -72,42 +72,57 @@ flowchart TD
   <h4><span class="n">1</span>The manifest</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/manifest.py"><code>extensions/manifest.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/discovery.py"><code>extensions/discovery.py</code></a></p>
   <p class="look">Look for: <code>Manifest</code> <code>read</code> <code>_NAME</code> <code>Found</code> <code>discover</code> <code>_one</code> <code>disabled_from_config</code></p>
-  <p>An extension is a directory with an <code>edgar.toml</code> in it and the rest is
-  ordinary files. <code>Manifest</code> is forty lines because it is a description,
-  not a program: a name, a version, and lists of what the folder contributes.
-  <code>_NAME</code> is the character rule, and it is strict on purpose — a name
-  becomes part of a tool name, which the model sees and a permission rule may match.</p>
-  <p><code>discover</code> is the same layering as skills and agents: built in, then
-  user, then project, with the later one winning by name and every find remembering
-  its path. <code>Found</code> carrying that path is what lets an error say
-  <em>which</em> of two files called <code>git</code> it means.</p>
-  <p><code>disabled_from_config</code> is the half worth dwelling on. Turning an
-  extension off is a config edit a human makes; nothing in the running system can
-  enable one. That is the same rule as permissions, applied to code loading.</p>
+  <p>An extension is just a directory with an <code>edgar.toml</code> in it — the
+  rest is ordinary files. <code>Manifest</code> is forty lines because it's a
+  description, not a program: a name, a version, and lists of what the folder
+  contributes. <code>_NAME</code> is the character rule for that name, and it's
+  strict on purpose — the name becomes part of a tool name, which the model sees and
+  a permission rule might match against.</p>
+  <p><code>discover</code> uses the same layering as skills and agents:</p>
+  <ul class="points">
+    <li>built-in extensions load first,</li>
+    <li>then the user's own,</li>
+    <li>then the project's — the later one wins when two share a name.</li>
+    <li>Every extension found remembers its own path in <code>Found</code>, which is
+    how an error can say <em>which</em> of two files called <code>git</code> it
+    means.</li>
+  </ul>
+  <p><code>disabled_from_config</code> is the half worth dwelling on: turning an
+  extension off is a config edit a human makes. Nothing in the running system can
+  turn one back on by itself — the same rule permissions follow, applied here to
+  loading code instead of running a tool.</p>
 </article>
 
 <article class="stop" id="x2" data-files="src/edgar/extensions/hooks.py">
   <h4><span class="n">2</span>Hooks that veto</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/hooks.py"><code>extensions/hooks.py</code></a></p>
   <p class="look">Look for: <code>EVENTS</code> <code>Hook</code> <code>from_config</code> <code>from_extension</code> <code>_matches</code> <code>_run</code> <code>veto</code> <code>listener</code> <code>_fire</code></p>
-  <p>A hook is a command line attached to a named event. Read <code>EVENTS</code>
-  first: the list is short and closed, so there is no way to attach to an internal
-  detail that might move. <code>_matches</code> is the filter — a hook usually cares
-  about one tool, or one path pattern — and it runs before the command is spawned, so
-  the common case costs nothing.</p>
-  <p>The important asymmetry is in <code>veto</code>: a hook may <em>refuse</em>, and
-  it may <em>observe</em>, and it can never approve something the permission engine
-  denied (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>).
-  A veto is not an exception either — it becomes an error tool result with a reason,
-  and goes back to the model like any other tool failure, so the model can adapt
-  instead of the run dying.</p>
-  <p><code>_run</code> is where the care is: a timeout, a captured output cap, no
-  shell, and a hook that crashes or times out is treated as a hook that said nothing
-  rather than one that said no. Decide for yourself whether that default is the right
-  one; it is a real trade-off and the comment says so.</p>
+  <p>A hook is one command line attached to a named event. Read <code>EVENTS</code>
+  first: the list is short and closed, so there's no way to attach a hook to some
+  internal detail that might move later. <code>_matches</code> is the filter — a hook
+  usually cares about one tool, or one path pattern — and it runs before the command
+  is even spawned, so the common case (nothing matches) costs nothing.</p>
+  <p>The important asymmetry lives in <code>veto</code>:</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+    event["an event fires"] --> hooks["every matching hook runs"]
+    hooks -->|"refuse"| deny["blocked — an error tool result,<br/>with a reason, back to the model"]
+    hooks -->|"observe"| log["logged, nothing changes"]
+    hooks -.->|"approve a denial?"| never["never — not a thing a hook can do"]
+</pre></div>
+  <p>A hook can <em>refuse</em> something, and it can <em>observe</em> something. It
+  can never approve something the permission engine already denied
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>).
+  A veto isn't a crash either — it comes back as an ordinary error tool result with a
+  reason, exactly like any other tool failure, so the model can adapt instead of the
+  whole run dying.</p>
+  <p><code>_run</code> is where the care shows: a timeout, a cap on captured output,
+  no shell — and a hook that crashes or times out is treated as a hook that said
+  nothing, not one that said no. Whether that's the right default is a real
+  trade-off; the code comment says so, and you can decide for yourself.</p>
   <p class="take"><strong>Take with you:</strong> <code>listener</code> and
-  <code>_fire</code> keep observe-only hooks off the critical path. Only vetoing
-  events are waited for.</p>
+  <code>_fire</code> keep observe-only hooks off the critical path. Only a
+  vetoing event is actually waited for.</p>
 </article>
 
 <h3 class="stage" id="stage-2">Stage 2. The Python surfaces <small>about 10 minutes</small></h3>
@@ -116,82 +131,103 @@ flowchart TD
   <h4><span class="n">3</span>Provider plugins</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/registry.py"><code>providers/registry.py</code></a></p>
   <p class="look">Look for: <code>BUILTIN</code> <code>KINDS</code> <code>split</code> <code>resolve</code> <code>_plugin</code></p>
-  <p>Eighty lines that do three things. <code>split</code> parses
-  <code>provider:model</code>. <code>resolve</code> maps a name to an adapter through
-  <code>BUILTIN</code>, importing the module only at that moment — no
-  <code>edgar.providers.*</code> at startup, which is invariant 3
-  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0012-startup-budget.md">ADR-0012</a>).
-  <code>_plugin</code> is the third-party door: an entry point group, looked in only
-  after the built-ins, and a failure there names the distribution that registered the
-  broken adapter rather than raising somewhere in the loop.</p>
+  <p>Eighty lines, three jobs:</p>
+  <ul class="points">
+    <li><code>split</code> — parses a string like <code>provider:model</code> into
+    its two parts.</li>
+    <li><code>resolve</code> — maps a provider name to its adapter through
+    <code>BUILTIN</code>, importing that module only at the moment it's actually
+    needed. No <code>edgar.providers.*</code> import at startup — that's invariant 3
+    (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0012-startup-budget.md">ADR-0012</a>).</li>
+    <li><code>_plugin</code> — the third-party door: an entry point group, checked
+    only after the built-ins. A broken plugin fails by naming the distribution that
+    registered it, rather than raising some confusing error later inside the loop.</li>
+  </ul>
   <p>This is one of the six ports
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0022-ports-and-adapters.md">ADR-0022</a>).
-  The test worth reading alongside it is the one asserting the core imports no
-  adapter: the seam is enforced, not merely intended.</p>
+  Worth reading alongside it: the test asserting core imports no adapter at all. The
+  seam is enforced by a test, not just intended by convention.</p>
 </article>
 
 <article class="stop" id="x4" data-files="src/edgar/skills/discovery.py src/edgar/skills/activate.py">
   <h4><span class="n">4</span>Skill activation</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/discovery.py"><code>skills/discovery.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/activate.py"><code>skills/activate.py</code></a></p>
   <p class="look">Look for: <code>Skill</code> <code>lint</code> <code>matching</code> <code>activate</code> <code>bodies</code></p>
-  <p>A skill is a markdown file, or a folder with a <code>SKILL.md</code> and whatever
-  else it needs (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0041-skills-as-built.md">ADR-0041</a>).
-  Only the <em>name and description</em> of each skill sit in the prompt; the body is
-  read when the model calls the <code>skill</code> tool. That is the same deferral as
-  <a href="mcp.html#p2">MCP's deferred schemas</a>, and for the same reason.</p>
-  <p><code>matching</code> is the cheap pre-filter and <code>activate</code> the
-  actual load; <code>bodies</code> is what gets handed back. <code>lint</code> is the
-  one that will save someone an afternoon: it is what <code>edgar doctor</code> uses
-  to say a skill's front matter is wrong, in the file, before a session ever sees it.
-  This module is a port too — a skill source, per ADR-0022 — which is why discovery
-  and activation are separable at all.</p>
+  <p>A skill is a markdown file, or a folder with a <code>SKILL.md</code> plus
+  whatever else it needs
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0041-skills-as-built.md">ADR-0041</a>).
+  Only its <em>name and description</em> sit in the prompt. The body is read only
+  when the model calls the <code>skill</code> tool — the same deferral trick as
+  <a href="mcp.html#p2">MCP's deferred schemas</a>, and for the same reason: don't
+  pay for what nobody asked for.</p>
+  <ul class="points">
+    <li><code>matching</code> — the cheap pre-filter that decides which skills even
+    look relevant.</li>
+    <li><code>activate</code> — the actual load, once the model asks for one by
+    name.</li>
+    <li><code>bodies</code> — what gets handed back to the model.</li>
+    <li><code>lint</code> — the one that saves someone an afternoon: it's what
+    <code>edgar doctor</code> uses to say a skill's front matter is wrong, right in
+    the file, before a session ever tries to use it.</li>
+  </ul>
+  <p>This module is a port too — a skill source, per ADR-0022 — which is exactly why
+  discovery and activation can live as two separate steps.</p>
 </article>
 
 <article class="stop" id="x5" data-files="src/edgar/__init__.py">
   <h4><span class="n">5</span><code>edgar.run()</code></h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__init__.py"><code>edgar/__init__.py</code></a></p>
   <p class="look">Look for: <code>run</code> <code>__version__</code></p>
-  <p>The embedding API is one function, and its shape is the argument. It takes a
-  prompt and returns a result; everything else — config, provider, tools, permissions
-  — comes from the same layered resolution a CLI run uses, so a program embedding
-  edgar cannot accidentally get a different harness than the one its user configured.</p>
-  <p>Two details. The imports are inside the function, because
-  <code>import edgar</code> must stay as cheap as <code>import edgar.cli.main</code>.
-  And there is no callback parameter: streaming and progress come off the event bus,
-  which is the same decision as everywhere else
-  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0011-events-not-callbacks.md">ADR-0011</a>).
-  <code>__version__</code> lives here and is bumped together with
-  <code>pyproject.toml</code> at release.</p>
+  <p>The whole embedding API is one function, and its plainness is the point. It
+  takes a prompt and returns a result. Everything else — config, provider, tools,
+  permissions — comes from the exact same layered resolution a normal CLI run uses.
+  A program embedding edgar can never accidentally get a different harness than the
+  one its user actually configured.</p>
+  <ul class="points">
+    <li>Its imports live inside the function, because <code>import edgar</code> has
+    to stay as cheap as <code>import edgar.cli.main</code>.</li>
+    <li>There's no callback parameter. Streaming and progress come off the event bus
+    instead, the same decision made everywhere else in edgar
+    (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0011-events-not-callbacks.md">ADR-0011</a>).</li>
+    <li><code>__version__</code> lives here too, bumped together with
+    <code>pyproject.toml</code> at release time.</li>
+  </ul>
 </article>
 
 <article class="stop" id="x6" data-files="src/edgar/skills/audit.py src/edgar/extensions/validate.py">
   <h4><span class="n">6</span>The gate before a copy</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/skills/audit.py"><code>skills/audit.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/extensions/validate.py"><code>extensions/validate.py</code></a></p>
   <p class="look">Look for: <code>DANGERS</code> <code>audit</code> <code>render</code> <code>diff</code> <code>validate</code> <code>_agreed</code></p>
-  <p>Extensions are copied in from a path, never installed from an index, so the copy
-  is the only moment anyone checks what is arriving
+  <p>Extensions are copied in from a path, never installed from an index — which
+  means the copy is the only moment anyone actually checks what's arriving
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0042-skill-audit.md">ADR-0042</a>).
-  <code>audit</code> answers two separate questions and keeps them apart: conformance
-  (does it load, does the description say when to use it, do its paths stay inside the
-  folder) and dangers (a download piped into a shell, <code>sudo</code>, a recursive
-  delete, text telling a session not to ask or not to tell, hidden characters, hosts,
-  credential locations, and every bundled script with the programs it calls).
-  <code>DANGERS</code> is a table, one row per rule, so a new pattern is a row and a
-  test rather than a branch. No model is asked anything: the text under review may be
-  hostile, and a verdict a model decides is a verdict an injection can argue with.</p>
+  <code>audit</code> keeps two separate questions apart:</p>
+  <ul class="points">
+    <li><strong>Conformance.</strong> Does it load? Does the description say when to
+    use it? Do its own paths stay inside its own folder?</li>
+    <li><strong>Danger.</strong> A download piped into a shell, <code>sudo</code>, a
+    recursive delete, text that tells a session not to ask or not to tell, hidden
+    characters, unfamiliar hosts, places credentials might leak to, and every bundled
+    script together with the programs it calls.</li>
+  </ul>
+  <p><code>DANGERS</code> is a table, one row per rule, so adding a new pattern means
+  adding a row and a test — not another branch in an if-chain. Notice no model is
+  asked anything here: the text under review might be hostile, and a verdict a model
+  hands down is a verdict a prompt injection can argue its way around.</p>
   <p><code>diff</code> prints the fixes it would make and never applies them, so the
-  audit writes nothing. In <code>validate.py</code>, <code>_agreed</code> is the
-  "humans widen, machines tighten" line in one function: a clean audit asks
-  <code>[Y/n]</code>, a danger finding asks <code>[y/N]</code>, and with no terminal a
-  danger finding is refused unless a human passed <code>--yes</code>. The copy itself
-  goes to a staging folder and then one <code>rename</code>, so a session sees the
-  whole extension or none of it — never half of one.</p>
+  audit itself never writes anything. In <code>validate.py</code>, <code>_agreed</code>
+  is "humans widen, machines tighten" packed into one function:</p>
+  <ul class="points">
+    <li>a clean audit asks <code>[Y/n]</code> — the safe default is yes;</li>
+    <li>a danger finding asks <code>[y/N]</code> — the safe default is no;</li>
+    <li>with no terminal to ask, a danger finding is refused outright unless a human
+    already passed <code>--yes</code>.</li>
+  </ul>
+  <p>The copy itself lands in a staging folder first, then one <code>rename</code>
+  moves it into place. A session sees the whole extension, or none of it — never half
+  of one.</p>
 </article>
 
-<p class="check"><strong>Before you go:</strong> an extension ships a hook on
-<code>pre_tool</code> and an agent that uses a tool the extension also ships. Trace the
-order in which those two are discovered, and name the point at which a permission
-decision is made.</p>
 
 <h3 class="stage">Sizes</h3>
 <p>Lines of code: blank lines and comments do not count, docstrings do.

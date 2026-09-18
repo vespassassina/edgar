@@ -1,12 +1,11 @@
 // The tour pages' own script, shared by index.html and every feature page.
 // Lifted out of index.html in M18, and made to tolerate a page that has only
-// some of the pieces: the feature pages have stops but no clock and no stepper.
+// some of the pieces: the feature pages have stops but no stepper.
 //
 // What it does, in order:
 //   1. put a "read" box on every built stop, remembered in this browser
 //   2. refresh the contents ticks, each part's count, and the stages done
-//   3. run the clock, if the page has one
-//   4. colour the Mermaid diagrams from the artifactkit theme, and draw them
+//   3. colour the Mermaid diagrams from the artifactkit theme, and draw them
 //
 // It is loaded after the Mermaid script tag, so `window.mermaid` is already there.
 
@@ -66,45 +65,14 @@
   }
   refresh();
 
-  // 3. The clock: the start time is stored, so it survives closing the tab.
-  //    Only index.html has one; every other page skips this block.
-  var out = document.getElementById("clock-time");
-  var start = document.getElementById("clock-start");
-  var reset = document.getElementById("clock-reset");
-  if (out && start && reset) {
-    var show = function () {
-      var began = Number(store.get("clock:start"));
-      var ended = Number(store.get("clock:end")) || Date.now();
-      var s = began ? Math.floor((ended - began) / 1000) : 0;
-      var pad = function (n) { return String(n).padStart(2, "0"); };
-      out.textContent = Math.floor(s / 3600) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
-      var running = began && !store.get("clock:end");
-      start.textContent = running ? "Stop" : began ? "Finished" : "Start the clock";
-      start.disabled = Boolean(began && !running);
-      reset.hidden = !began;
-    };
-    start.addEventListener("click", function () {
-      if (!store.get("clock:start")) store.set("clock:start", String(Date.now()));
-      else store.set("clock:end", String(Date.now()));
-      show();
-    });
-    reset.addEventListener("click", function () {
-      store.set("clock:start", null);
-      store.set("clock:end", null);
-      show();
-    });
-    show();
-    setInterval(show, 1000);
-  }
-
-  // 4. Colour the diagrams from the artifactkit theme, so they follow its tokens.
+  // 3. Colour the diagrams from the artifactkit theme, so they follow its tokens.
   if (!window.mermaid) return;
-  // 4a. Read the theme's three base colours.
+  // 3a. Read the theme's three base colours.
   var css = getComputedStyle(document.documentElement);
   var bg = css.getPropertyValue("--t-bg").trim();
   var ink = css.getPropertyValue("--t-ink").trim();
   var accent = css.getPropertyValue("--t-accent").trim();
-  // 4b. Mix them the way the theme does: a share of one colour over another.
+  // 3b. Mix them the way the theme does: a share of one colour over another.
   function mix(top, share, ground) {
     var a = parseInt(top.slice(1), 16), b = parseInt(ground.slice(1), 16);
     var out = [16, 8, 0].map(function (shift) {
@@ -113,7 +81,7 @@
     });
     return "#" + out.join("");
   }
-  // 4c. Draw.
+  // 3c. Draw.
   window.mermaid.initialize({
     startOnLoad: true,
     theme: "base",

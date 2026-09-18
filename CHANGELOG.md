@@ -192,6 +192,13 @@ extension formats freeze.
   stop anywhere now fails the test suite (M18,
   [ADR-0058](docs/adr/0058-m18-the-tour-pages-and-the-map-as-built.md)). No
   change to `src/`.
+- Every tour stop rewritten for clarity: dense paragraphs are now bullet lists
+  where they were really a list of facts or rules, small pseudocode boxes and
+  per-stop diagrams replace one big diagram per page, and vocabulary is
+  simpler throughout. No change to `src/`.
+- Removed the "Start the clock" self-timer widget from `index.html` and the
+  `.check` "Before you go" comprehension-question boxes at the end of every
+  tour page, with their now-dead CSS and JS. No change to `src/`.
 
 ## 1.0.0 — 2026-09-16
 

@@ -54,6 +54,43 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
 
+## 2026-09-18 · Tour stops rewritten for clarity
+
+**Asked.** The tour's stops were "just a blob of text, very hard for humans."
+Make them clear to a 14-year-old: bullet points, more diagrams, pseudocode
+directly in the boxes.
+
+**Done.** Piloted the new shape on `controller.html` first — bullet lists
+(`.stop ul.points`), a new `pre.pseudo` pseudocode box (kept distinct from
+`pre.mermaid` so mermaid's `startOnLoad` auto-scan never tries to parse it),
+and small per-stop diagrams — and got a sign-off before touching the other 10
+pages. Rolled out to `agents.html`, `isolation.html`, `working.html`,
+`mcp.html`, `memory.html`, `extensions.html`, `learning.html`, `media.html`
+and `index.html` via four parallel background agents, one per page group,
+each independently re-verified against real source and `test_tour.py` rather
+than trusted on self-report. `index.html`'s sidebar TOC (`.ak-toc`) is
+untouched, as the maintainer asked mid-session for any page that has one.
+
+Found two pre-existing bugs while in the pages: `controller.html`'s and
+`index.html`'s overview diagrams used `call` as a bare mermaid node id, which
+collides with mermaid's `click ... call` callback grammar and silently
+rendered a "Syntax error" bomb icon instead of the diagram; and `index.html`
+had two stale cross-references (stop 22 for what is now stop 28, stop 12 for
+what is now stop 4). Both fixed.
+
+`just check` green: 1037 tests, ruff, mypy. `docs/tour/*.html` and
+`tour.css`, on `docs/tour-clarity`.
+
+Maintainer then asked to drop two elements the redesign kept: the "Start the
+clock" self-timer widget on `index.html` (an `ak-exhibit` box with its
+`localStorage`-backed timer in `tour.js`) and the `.check` "Before you go"
+comprehension-question boxes that closed every page (8 of them, across
+`agents.html`, `extensions.html`, `index.html` ×3, `mcp.html`, `media.html`,
+`memory.html`, `working.html`). Removed both, and their now-dead CSS
+(`.clock`, `.check`) and JS (the clock's whole step 3 in `tour.js`,
+renumbering the steps after it). `just check` green again: 1037 tests, ruff,
+mypy. Merged to `main` and pushed, per the maintainer's explicit go-ahead.
+
 ## 2026-09-18 · M13 — the controller
 
 **Asked.** Build M13, self-management that cannot hurt you: deterministic

@@ -79,54 +79,66 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/learner.py"><code>learning/learner.py</code></a>,
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/__init__.py"><code>learning/__init__.py</code></a></p>
   <p class="look">Look for: <code>Learner</code> <code>extract</code> <code>DIRECTIVE</code> <code>attach</code></p>
-  <p>Read <code>Learner.__call__</code> first, and read its opening line as the whole
-  security argument: it returns immediately unless the event is a
-  <code>PromptTyped</code> at depth zero. That is the entire filter, and it is not a
-  filter — it is a type check. There is no branch below it that could be reached by
-  anything else, because nothing else is ever passed in.</p>
-  <p>The depth half of that line was not in the first draft. The property test on the
-  next page of this repository generated a subagent emitting a prompt and put an active
-  fact in the store with it, which is correct behaviour for a <em>typed</em> line and
-  wrong here: a subagent's prompt is the <code>task</code> tool's argument, and the
-  model wrote it. It is the same class of mistake the whole milestone is about, found
-  by a generator rather than by reading, which is the argument for writing the property
-  test at all.</p>
-  <p>So the question moves one step back: who constructs a <code>PromptTyped</code>?
-  Two places, and you can read both in a minute. <code>cli/repl.py</code>'s
-  <code>submit()</code> emits one with the input line, before <code>attach()</code> has
-  run. <code>cli/oneshot.py</code>'s <code>run_prompt()</code> emits one with the
-  <code>-p</code> argument, on the line after <code>begin()</code>. Both carry a bare
-  <code>str</code> that came from a keyboard or an argv slot and had nothing appended to
-  it. Everything else in a turn travels a different road and arrives in a different
-  shape: piped stdin is <code>run_prompt(attached=...)</code>, an <code>@path</code>
-  body is <code>Attached.bodies</code>, a tool's output is a
-  <code>ToolResultBlock</code>, the model's own text is a <code>TextDelta</code>. None
-  of them is a <code>PromptTyped</code>, and none of them can become one, because the
-  two constructors take the typed line and nothing else.</p>
-  <p>This is worth contrasting with the option that was not taken. Design A was to give
-  the learner everything and have it reject what looks unsafe. It is rejected in
+  <p>Read <code>Learner.__call__</code> first. Its opening line is the whole security
+  argument: it returns straight away unless the event is a <code>PromptTyped</code> at
+  depth zero. That's the entire filter — and it isn't really a filter, it's a type
+  check. Nothing below that line can be reached by anything else, because nothing else
+  is ever handed to it.</p>
+  <p>The depth check wasn't in the first draft. A property test generated a subagent
+  emitting a prompt, and the first version happily turned it into an active fact. That's
+  correct for a line <em>you</em> typed and wrong here: a subagent's prompt is an
+  argument to the <code>task</code> tool, and the model wrote it, not you. Same mistake
+  this whole milestone exists to prevent — caught by a generator, not by reading the
+  code.</p>
+  <p>So the question moves one step back: who is allowed to build a
+  <code>PromptTyped</code> in the first place? Only two places:</p>
+  <ul class="points">
+    <li><code>cli/repl.py</code>'s <code>submit()</code> — one per line you type in
+    the REPL, before anything else has run.</li>
+    <li><code>cli/oneshot.py</code>'s <code>run_prompt()</code> — one for the
+    <code>-p</code> argument, right after the turn begins.</li>
+  </ul>
+  <p>Both carry a bare string straight from your keyboard or the command line, with
+  nothing appended to it. Everything else takes a different road and arrives in a
+  different shape, so it can never become a <code>PromptTyped</code>:</p>
+  <ul class="points">
+    <li>piped stdin — <code>run_prompt(attached=...)</code></li>
+    <li>an <code>@path</code> file — <code>Attached.bodies</code></li>
+    <li>a tool's output — <code>ToolResultBlock</code></li>
+    <li>the model's own words — <code>TextDelta</code></li>
+  </ul>
+  <p>Compare that with the road not taken. One design gave the learner everything and
+  trusted it to reject what looked unsafe.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0017-learning-boundary.md">ADR-0017</a>
-  for the reason every content filter is eventually rejected: it is a guess, and the
-  thing it guesses about is written by someone who can try again. A signature is not a
-  guess. If you want to attack this learner you have to change
-  <code>cli/repl.py</code>, at which point you were already inside.</p>
-  <p><code>extract()</code> is the boring half and is pure: a directive
-  (<code>always</code>, <code>never</code>, <code>remember that</code>, and friends,
-  matched by <code>DIRECTIVE</code>), of a sane length between <code>SHORTEST</code>
-  and <code>LONGEST</code>, becomes a fact; anything else becomes <code>None</code>. It
-  can be property-tested over any string in the world precisely because it does no I/O
-  and holds no state. The fact it produces is saved with provenance
-  <code>user-prompt</code>, one of exactly four provenances
-  <code>memory/store.py</code>'s <code>ACTIVE_FROM</code> allows to become active.</p>
-  <p>The other file here is twenty-five lines, and its job is to exist at the seam.
-  <code>attach(bus, ...)</code> subscribes the three subscribers to one session's bus,
-  and <code>cli/setup.py</code> calls it through
-  <code>importlib.import_module("edgar.learning")</code> rather than an import
-  statement. That indirection is not style. <code>tests/unit/test_architecture.py</code>
-  builds a static import graph that sees imports inside function bodies too, so a lazy
-  <code>import edgar.learning</code> in a v2 module would fail it exactly like a
-  top-level one. Attaching by name is what lets CI delete this package and still run the
-  whole suite (NFR-12).</p>
+  turned that down for the reason every content filter eventually gets turned down: it's
+  a guess, and the text it's guessing about was written by someone who gets to keep
+  trying. A signature — which function can even call this one — isn't a guess. To attack
+  this learner you'd have to rewrite <code>cli/repl.py</code> itself, and by then you're
+  already inside the house.</p>
+  <p><code>extract()</code> is the boring, safe half, and it's pure: no I/O, no state.
+  A line starting with a directive word (<code>always</code>, <code>never</code>,
+  <code>remember that</code>, matched by <code>DIRECTIVE</code>) and of a sane length
+  between <code>SHORTEST</code> and <code>LONGEST</code> becomes a fact. Anything else
+  becomes <code>None</code>. Being pure means it can be tested against every string in
+  the world, not just a handful of examples. What it produces is saved with provenance
+  <code>user-prompt</code> — one of exactly four provenances that
+  <code>memory/store.py</code>'s <code>ACTIVE_FROM</code> lets become an active fact.</p>
+  <pre class="pseudo">def learner(event):
+    if event is not PromptTyped or event.depth != 0:
+        return                      # not typed by a human, ignore
+
+    fact = extract(event.text)      # pure: matches a directive word, checks length
+    if fact:
+        save(fact, provenance="user-prompt")</pre>
+  <p>The other file here is twenty-five lines, and its whole job is to sit at the seam.
+  <code>attach(bus, ...)</code> wires the three subscribers onto one session's event
+  bus. <code>cli/setup.py</code> reaches it through
+  <code>importlib.import_module("edgar.learning")</code> instead of a normal import —
+  and that's deliberate, not style. <code>tests/unit/test_architecture.py</code> builds
+  a static import graph that also sees imports hidden inside function bodies, so even a
+  sneaky <code>import edgar.learning</code> buried in a v2 module would fail the same
+  test a top-level one would. Attaching by name is what lets CI delete this whole
+  package and still run the rest of the suite (NFR-12).</p>
   <p class="take"><strong>Take with you:</strong> when you need a rule about what code
   may see, make it a rule about what the function accepts. A signature is checked by the
   compiler, the reader and the test suite; a filter is checked by whoever is attacking
@@ -139,36 +151,41 @@ flowchart TD
   <h4><span class="n">2</span>Telemetry that is just another subscriber</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/experience.py"><code>learning/experience.py</code></a></p>
   <p class="look">Look for: <code>Experience</code> <code>Recorder</code> <code>Run</code> <code>Stats</code> <code>shape</code> <code>seen</code></p>
-  <p>The payoff of
+  <p>This stop shows the payoff of
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0011-events-not-callbacks.md">ADR-0011</a>
-  is visible here and nowhere better. Recording what every turn did needs no hook in the
-  loop, no parameter threaded through <code>run_turn</code>, and no line of Core that
-  knows telemetry exists. <code>Recorder</code> is a callable that takes an
-  <code>Event</code>. It opens a <code>Run</code> on <code>PromptTyped</code>, fills it
-  in as <code>SkillsActivated</code>, <code>ToolProposed</code>,
-  <code>ToolFinished</code> and <code>VerifyFinished</code> go past, and writes it on
-  <code>TurnFinished</code>. <code>Run</code> is a mutable dataclass for exactly the
-  reason <code>_Turn</code> in the loop is one: it is shared state between steps, and
-  hiding that behind six setters would not make it less shared.</p>
-  <p>Two details are the design. First, it skips any event with a non-zero
-  <code>depth</code>, so a subagent's turns do not each land as a run of their own — the
-  parent's row is the unit a human thinks in. Second, <code>said</code> keeps at most
-  400 characters of the model's answer, and the <code>Stats</code> that
-  <code>edgar stats</code> prints are counts, durations and costs. This table is for
-  answering "what does this project actually do all day"; it is deliberately not a
-  corpus, and nothing reads it back into a prompt.</p>
-  <p><code>shape</code> is the one clever line and earns it: a run's tools, sorted,
-  deduplicated, joined with <code>+</code>, or <code>"answer"</code> when there were
-  none. <code>read+edit+shell</code> is a recognisable kind of work. Grouping by it turns
-  a log into the sentence "sixty per cent of what happens here is read-then-edit, and
-  those runs cost four cents each".</p>
-  <p><code>seen()</code> and <code>mark_saved()</code> belong to the next stop rather
-  than this one: they are the counter the error learner leans on, kept here because this
-  is where the SQLite lives. The store is an ordinary <code>storage/db.py</code>
-  subclass — its own <code>SCHEMA</code>, WAL, a busy timeout — which is the third time
-  that base class has paid for itself.</p>
-  <p class="take"><strong>Take with you:</strong> if adding telemetry to a system
-  requires editing the thing being measured, the design was wrong before the telemetry
+  better than anywhere else in the codebase. Recording what every turn did needs no hook
+  in the loop, no extra parameter threaded through <code>run_turn</code>, and no line of
+  Core that even knows telemetry exists. <code>Recorder</code> is just a callable that
+  takes an <code>Event</code>:</p>
+  <ul class="points">
+    <li>opens a <code>Run</code> when it sees <code>PromptTyped</code></li>
+    <li>fills it in as <code>SkillsActivated</code>, <code>ToolProposed</code>,
+    <code>ToolFinished</code> and <code>VerifyFinished</code> go past</li>
+    <li>writes it to the database on <code>TurnFinished</code></li>
+  </ul>
+  <p><code>Run</code> is a mutable dataclass for the same reason <code>_Turn</code> in
+  the loop is one: it's shared state that gets built up step by step, and hiding that
+  behind six setter methods wouldn't make it any less shared.</p>
+  <p>Two details carry the design. First, it skips any event with a non-zero
+  <code>depth</code> — a subagent's turns don't each get their own row, they roll up
+  into the parent's, because that's the unit a person actually thinks in. Second,
+  <code>said</code> keeps at most 400 characters of what the model answered, and the
+  <code>Stats</code> that <code>edgar stats</code> prints are just counts, durations and
+  costs. This table answers "what does this project actually do all day" — it is
+  deliberately not a corpus, and nothing ever reads it back into a prompt.</p>
+  <p><code>shape</code> is the one clever line, and it earns its keep: take a run's
+  tools, sort them, drop duplicates, join with <code>+</code> — or say
+  <code>"answer"</code> when no tool ran at all. <code>read+edit+shell</code> is a
+  recognisable kind of work. Group runs by that string and a raw log turns into a
+  sentence: "sixty per cent of what happens here is read-then-edit, and those runs cost
+  four cents each."</p>
+  <p><code>seen()</code> and <code>mark_saved()</code> really belong to the next stop —
+  they're the counter the error learner leans on — but they live here because this is
+  where the SQLite connection already is. The store is an ordinary
+  <code>storage/db.py</code> subclass, with its own <code>SCHEMA</code>, WAL mode and a
+  busy timeout: the third time that base class has paid for itself.</p>
+  <p class="take"><strong>Take with you:</strong> if adding telemetry to a system means
+  editing the thing being measured, the design was wrong before the telemetry ever
   arrived.</p>
 </article>
 
@@ -178,32 +195,44 @@ flowchart TD
   <h4><span class="n">3</span>Four fields, a template, and three strikes</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/error_facts.py"><code>learning/error_facts.py</code></a></p>
   <p class="look">Look for: <code>ErrorFacts</code> <code>TEMPLATES</code> <code>REPEATS</code> <code>key</code> <code>template</code> <code>UNSAFE</code></p>
-  <p>The other half of the boundary. A failure is the second thing worth learning from,
-  and it is also the most obviously attacker-controlled text in the whole system: a
-  command's stderr is written by the command. So the learner never sees it. What crosses
-  the bus is <code>ToolFinished.error</code>, an <code>ErrorRecord</code> with four
-  fields the harness computed about itself — <code>tool</code>, <code>kind</code>,
-  <code>exit_code</code>, <code>program</code>. The message stays in the
-  <code>ToolResultBlock</code>, where it goes back to the model and is never durable.</p>
-  <p>The fact is then <em>built</em>, not extracted: <code>template()</code> picks a
-  sentence from <code>TEMPLATES</code> by <code>kind</code> and fills the blanks. Read
-  it and notice there is no path by which a character the harness did not choose ends up
-  in a fact, except <code>program</code>, which is a basename and is put through
-  <code>UNSAFE</code> anyway. That is the difference between summarising an error and
-  templating one, and it is the whole reason this file can write active facts at all.</p>
-  <p>Two kinds are missing from the table on purpose. <code>validation</code> is the
-  model getting a schema wrong, which says nothing about your project;
-  <code>cancelled</code> is you pressing Ctrl-C, which says even less.
-  <code>provider_http</code> is about the provider. What is left is the set of failures
-  that are facts about this repository.</p>
-  <p><code>REPEATS</code> is 3, and the number is an opinion worth arguing with. Twice is
-  a model retrying the same command inside one turn, which happens constantly. Three
-  times, across sessions, is the project telling you something. <code>key()</code>
-  defines what "the same failure" means and <code>mark_saved()</code> guarantees one
-  fact per key forever, so a permanently broken command does not file a fact a week.</p>
-  <p class="take"><strong>Take with you:</strong> you can learn from hostile input safely
-  if what you learn is a shape rather than a string. Count the occurrence, discard the
-  text, fill a sentence you wrote yourself.</p>
+  <p>This is the other half of the boundary. A failure is the second thing worth
+  learning from — and it's also the most obviously dangerous text in the system, because
+  a command's stderr is written by the command itself, and the command could be hostile.
+  So the learner never sees it at all. What crosses the bus is
+  <code>ToolFinished.error</code>: an <code>ErrorRecord</code> with four fields the
+  harness computed itself — <code>tool</code>, <code>kind</code>, <code>exit_code</code>,
+  <code>program</code>. The actual error message stays inside the
+  <code>ToolResultBlock</code>, goes back to the model, and is never saved anywhere.</p>
+  <p>The fact is then <em>built</em>, not extracted, from those four safe fields:</p>
+  <pre class="pseudo">def error_fact(record):
+    # record.tool, .kind, .exit_code, .program — all computed by the harness,
+    # never text the failing command wrote itself
+    sentence = TEMPLATES[record.kind]           # a sentence edgar wrote, blanks only
+    program = UNSAFE.sub("_", record.program)    # even a basename gets scrubbed
+    return sentence.format(tool=record.tool, program=program, code=record.exit_code)</pre>
+  <p>Notice there's no path by which a character the harness didn't choose ends up in a
+  fact — even <code>program</code>, which is just a file's basename, gets run through
+  <code>UNSAFE</code> anyway, just in case. That's the difference between
+  <em>summarising</em> an error and <em>templating</em> one, and it's the whole reason
+  this file is allowed to write active facts at all.</p>
+  <p>Two kinds of failure are left off the template table on purpose:</p>
+  <ul class="points">
+    <li><code>validation</code> — the model got a schema wrong. Says nothing about
+    your project.</li>
+    <li><code>cancelled</code> — you pressed Ctrl-C. Says even less.</li>
+  </ul>
+  <p><code>provider_http</code> is left off too — that's about the provider, not your
+  repository. What's left in <code>TEMPLATES</code> is only the failures that really are
+  facts about this project.</p>
+  <p><code>REPEATS</code> is 3, and it's worth arguing with. Twice is just a model
+  retrying the same command inside one turn — that happens constantly and means
+  nothing. Three times, spread across separate sessions, is the project actually telling
+  you something. <code>key()</code> defines what counts as "the same failure", and
+  <code>mark_saved()</code> guarantees exactly one fact per key, forever — so a
+  permanently broken command doesn't file a new fact every week.</p>
+  <p class="take"><strong>Take with you:</strong> you can learn from hostile input
+  safely if what you learn is a shape, not a string. Count how often it happened,
+  throw the actual text away, and fill in a sentence you wrote yourself.</p>
 </article>
 
 <h3 class="stage" id="stage-4">Stage 4. The file you can read <small>about 5 minutes</small></h3>
@@ -213,38 +242,46 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/history.py"><code>learning/history.py</code></a>,
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/cli.py"><code>learning/cli.py</code></a></p>
   <p class="look">Look for: <code>History</code> <code>condense</code> <code>entry</code> <code>distill</code> <code>command</code> <code>CAP</code></p>
-  <p>SQLite is for the harness; <code>.edgar/history.md</code> is for you. Six lines per
-  run — when, what you asked, what it said, what it did, which files, how it ended — in
-  Markdown, appended, and rotated to <code>history.1.md</code> at <code>CAP</code>. It is
-  gitignored by default, because a project's history is a record of one person's
-  sessions and not a shared artefact; <code>--no-history</code> turns it off entirely
-  and <code>memory.history</code> in config does the same thing permanently.</p>
-  <p>Every line goes through <code>memory/redact.py</code>'s <code>redact()</code> on the
-  way in. That is not optional care, it is the rule for anything durable (MEM-15): a
-  prompt containing a token that lands in a file you might later paste into an issue is
-  the failure mode, and the same function that protects the transcript protects this.</p>
-  <p><code>condense()</code> is the honest part of this file. It keeps the first
-  <code>WORDS</code> words of what was said and stops. The specification asked for an
-  out-of-band model call to summarise; that was dropped from M12 and the reason is in
-  the ADR — a page whose value is that you can read it does not need a language model to
-  produce it, and a harness whose selling point is "no hidden calls" should think hard
-  before adding one to a background writer. The verbatim prompt is in SQLite either way,
-  so nothing is lost that a later milestone cannot pick up.</p>
-  <p><code>distill</code> is the one to look at with ADR-0017 in your hand. It reads the
-  file, counts repeated <code>did:</code> and <code>files:</code> lines, and proposes
-  facts — and every one of them is saved with provenance <code>distilled</code>, which
-  is deliberately <em>not</em> in <code>ACTIVE_FROM</code>. So they land pending, they
-  are never in a prompt, and <code>edgar memory review</code> is the only way they ever
-  become active. The file is derived from tool output, so what it produces is a
-  suggestion to a human, never a decision.</p>
-  <p>Finally, notice where <code>cli.py</code> lives. <code>edgar stats</code> and
-  <code>edgar history show|distill</code> are dispatched from
-  <code>cli/main.py</code> by <code>import_module</code>, and the code behind them sits
-  in this package rather than under <code>cli/</code>. A module under <code>cli/</code>
-  that imported <code>edgar.learning</code> — at the top or inside a function — would
-  fail the import-graph test. The commands are v3's, so they live in v3.</p>
+  <p>SQLite is for the harness. <code>.edgar/history.md</code> is for you. One entry per
+  run, six lines: when, what you asked, what it said, what it did, which files, how it
+  ended. Plain Markdown, appended to the file, rotated to <code>history.1.md</code> once
+  it passes <code>CAP</code>. It's gitignored by default, because a project's history is
+  a record of one person's sessions, not something the whole team shares.
+  <code>--no-history</code> turns it off for one run; <code>memory.history</code> in
+  config turns it off for good.</p>
+  <p>Every line runs through <code>memory/redact.py</code>'s <code>redact()</code> on
+  the way in. That's not extra caution, it's the rule for anything durable (MEM-15): if
+  a prompt has a secret token in it, that token must not end up in a file you might
+  later paste into a GitHub issue. The same function that protects the live transcript
+  protects this file too.</p>
+  <p><code>condense()</code> is the honest part of this file: it keeps the first
+  <code>WORDS</code> words of what the model said and stops there. The original spec
+  asked for a separate model call to summarise each entry. That got dropped, and the
+  reason is worth knowing: a page whose whole value is that <em>you</em> can read it
+  doesn't need a language model to write it, and a harness that promises "no hidden
+  calls" should think twice before adding one to a background writer. Nothing is lost —
+  the full prompt is still in SQLite for a later milestone to use if it wants to.</p>
+  <p><code>distill</code> is the stop to read with ADR-0017 open beside it. It reads the
+  history file, counts how often the same <code>did:</code> and <code>files:</code>
+  lines repeat, and proposes facts from that. Every one of those facts is saved with
+  provenance <code>distilled</code> — deliberately left out of <code>ACTIVE_FROM</code>.
+  That means:</p>
+  <ul class="points">
+    <li>they land <strong>pending</strong>, never active</li>
+    <li>they never appear in a prompt on their own</li>
+    <li><code>edgar memory review</code> is the only door from pending to active, and
+    a human has to open it</li>
+  </ul>
+  <p>The history file is built from tool output, so anything distilled from it can only
+  ever be a suggestion to a person — never a decision the harness makes on its own.</p>
+  <p>Last, notice where <code>cli.py</code> lives. <code>edgar stats</code> and
+  <code>edgar history show|distill</code> are dispatched from <code>cli/main.py</code>
+  through <code>import_module</code>, but the code behind them sits in this package,
+  not under <code>cli/</code>. A module under <code>cli/</code> that imported
+  <code>edgar.learning</code> directly — even inside a function — would fail the
+  import-graph test. These commands belong to v3, so they live in v3.</p>
   <p class="take"><strong>Take with you:</strong> the difference between a fact and a
-  proposal is not how confident you are. It is where the text came from.</p>
+  proposal isn't how confident you are in it. It's where the text came from.</p>
 </article>
 
 <h3 class="stage" id="stage-5">Sizes</h3>

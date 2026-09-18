@@ -72,47 +72,59 @@ flowchart TD
   <h4><span class="n">1</span>One new block</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/message.py"><code>core/message.py</code></a></p>
   <p class="look">Look for: <code>ImageBlock</code> <code>images</code></p>
-  <p>Four fields: <code>ref</code>, <code>media_type</code>, <code>width</code>,
-  <code>height</code>. Frozen and slotted like every other block, and deliberately
-  nothing else. The test for whether a field belongs here was narrow on purpose — does
-  serialisation or token counting read it? <code>ref</code> and <code>media_type</code>
-  are what an adapter needs to build a request; <code>width</code> and
-  <code>height</code> are what <code>image_tokens</code> needs to price it. A filename,
-  a caption, a checksum, a source URL all had plausible cases and none of them had a
-  caller, so none of them is here. This file is the frozen vocabulary the whole harness
-  shares: a field added on spec has to be carried by every adapter, every test and every
-  stored session forever, and taking one away later is a migration.</p>
-  <p>Notice what is <em>not</em> a field: the bytes. An <code>ImageBlock</code> is a
-  reference to a file under <code>sessions/&lt;id&gt;/blobs/</code>. The JSONL record of
-  a session therefore never contains base64, which keeps a transcript greppable and
-  keeps a session with twenty screenshots in it a small file.</p>
-  <p>The second half of the change is <code>Message.images</code>, a convenience that
-  reaches into both a message's own blocks and its tool results. Everything downstream —
-  counting, eliding, serialising — reads that one property instead of walking blocks
-  itself.</p>
-  <p class="take"><strong>Take with you:</strong> in a vocabulary everything depends on,
-  the fields you leave out are the design.</p>
+  <p><code>ImageBlock</code> has exactly four fields: <code>ref</code>,
+  <code>media_type</code>, <code>width</code>, <code>height</code>. Frozen and slotted,
+  like every other block in the vocabulary, and deliberately nothing more than that.</p>
+  <ul class="points">
+    <li><code>ref</code>, <code>media_type</code> — what an adapter needs to build a
+    request to a provider</li>
+    <li><code>width</code>, <code>height</code> — what <code>image_tokens</code> needs
+    to price the picture</li>
+  </ul>
+  <p>The test for whether a field belongs here was narrow on purpose: does
+  serialisation or token counting actually read it? A filename, a caption, a checksum, a
+  source URL — all sounded useful, none of them had a real caller, so none of them made
+  the cut. This file is the frozen vocabulary the whole harness shares. A field added
+  "just in case" has to be carried by every adapter, every test and every stored session
+  forever after, and taking one away later means a migration.</p>
+  <p>Notice what's <em>missing</em> most of all: the bytes. An <code>ImageBlock</code>
+  is only a reference to a file under <code>sessions/&lt;id&gt;/blobs/</code>. So the
+  JSONL record of a session never contains base64 — which keeps a transcript
+  grep-able, and keeps a session with twenty screenshots in it a small file.</p>
+  <p>The second half of the change is <code>Message.images</code>, a convenience
+  property that reaches into both a message's own blocks and its tool results.
+  Everything downstream — counting, eliding, serialising — reads that one property
+  instead of walking the blocks itself.</p>
+  <p class="take"><strong>Take with you:</strong> in a vocabulary everything else
+  depends on, the fields you leave out are the design.</p>
 </article>
 
 <article class="stop" id="m2" data-files="src/edgar/tools/spill.py">
   <h4><span class="n">2</span>Where the bytes go</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/spill.py"><code>tools/spill.py</code></a></p>
   <p class="look">Look for: <code>spill</code> <code>spill_image</code> <code>SIGNATURES</code></p>
-  <p>Read <code>spill</code> first, which M5 wrote for oversized tool output: it writes a
-  file under the session's blobs and hands back a path. <code>spill_image</code> sits
-  beside it and shares the writing, not the policy. The distinction is the one judgement
-  worth arguing about on this page. Text spills <em>conditionally</em>, when it is too
-  big, and keeps a head and a tail so the model still sees something. An image spills
-  <em>always</em>, whole, because half a PNG is not a smaller PNG. Two different rules
-  with one line of shared file-writing between them: making the existing function take a
-  flag would have put both rules in one body, and the flag would have had to reach every
-  existing caller.</p>
-  <p>Then read <code>SIGNATURES</code>, which is how a file becomes a picture. There is
-  no image library in edgar and no new dependency: PNG, JPEG, GIF and WebP each announce
-  themselves in their first bytes, and each carries its dimensions a fixed distance in.
-  Fifteen lines of header reading against a dependency that would have doubled the
-  install size. A file whose header cannot be read is still an image; it just has
-  <code>width</code> and <code>height</code> of zero, which stop 5 has to price.</p>
+  <p>Read <code>spill</code> first — M5 wrote it for oversized tool output. It writes a
+  file under the session's blobs folder and hands back a path. <code>spill_image</code>
+  sits right beside it and shares the file-writing, but not the rule for <em>when</em>
+  to write:</p>
+  <ul class="points">
+    <li><strong>Text</strong> spills <em>conditionally</em>, only when it's too big,
+    and keeps a head and a tail so the model still sees something useful.</li>
+    <li><strong>An image</strong> spills <em>always</em>, whole — because half a PNG
+    isn't a smaller PNG, it's a broken one.</li>
+  </ul>
+  <p>That split is the one judgement call worth arguing about on this page. Making the
+  existing <code>spill</code> function take a flag would have crammed both rules into
+  one function body, and the flag would have had to be threaded through every caller
+  that already existed.</p>
+  <p>Then read <code>SIGNATURES</code>, which is how a file of bytes becomes a picture
+  with known dimensions. There's no image library in edgar, and no new dependency was
+  added for this: PNG, JPEG, GIF and WebP each announce themselves in their first few
+  bytes, and each one carries its width and height a fixed distance into the file.
+  Fifteen lines of header-reading, against a dependency that would have doubled the
+  install size. A file whose header can't be read is still treated as an image — it
+  just gets <code>width</code> and <code>height</code> of zero, and stop 5 explains what
+  that costs.</p>
   <p class="take"><strong>Take with you:</strong> "reuse it" and "extract the shared
   part" are different answers. Share the mechanism, not the policy.</p>
 </article>
@@ -122,23 +134,34 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/quirks.py"><code>providers/quirks.py</code></a>
   · <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/routing.py"><code>providers/routing.py</code></a></p>
   <p class="look">Look for: <code>images</code> <code>check_images</code> <code>check_capabilities</code></p>
-  <p><code>images</code> is one more column in a table that already had several. That is
-  the whole point of quirks-as-data: a capability is a row, never a branch in the loop.
-  Read the table and you can say which model sees, without reading any code.</p>
-  <p><code>check_images</code> is deliberately built to the shape of
-  <code>check_capabilities</code>, which M9 wrote for ROUTE-6, and it refuses in the same
-  place: where the model is
-  chosen, before a request is built and before a cent is spent. The alternative — send
-  it and let the provider 400 — costs a round trip and produces an error in the
-  provider's words rather than edgar's. Follow its caller into
-  <code>cli/oneshot.py</code> and <code>cli/repl.py</code> and notice it fires on the
-  attachment, not on the turn.</p>
-  <p>There is a second path for the same problem, because there are two ways an image
-  arrives. An attachment is refused up front; a picture a <em>tool</em> produces
-  mid-turn cannot be, since the model is already chosen. So <code>ToolContext</code>
-  carries an <code>images</code> flag, and <code>read</code> on a picture answers a blind
-  model with a sentence saying what the file is and that it cannot look. That is not an
-  error result: the call worked, and the model gets to decide what to do next.</p>
+  <p><code>images</code> is just one more column in a table that already had several.
+  That's the whole point of quirks-as-data: a capability is a row, never a branch of
+  <code>if</code> statements buried in the loop. Read the table and you can say which
+  model can see pictures, without reading a line of code.</p>
+  <p><code>check_images</code> is deliberately built the same shape as
+  <code>check_capabilities</code>, which M9 wrote for ROUTE-6, and it refuses at the
+  same moment: where the model is chosen, before a request is even built and before a
+  cent is spent. The alternative — send the image anyway and let the provider reject it
+  with a 400 — costs a round trip and hands you an error in the provider's words instead
+  of edgar's.</p>
+  <p>There are two different ways a picture can arrive, so there are two refusals:</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart TD
+    a["you attach @photo.png"] --> b{"can this model see?"}
+    b -- "no" --> c["refused up front<br/>before the turn starts"]
+    b -- "yes" --> d["turn proceeds normally"]
+    t["a tool produces a picture<br/>mid-turn"] --> e{"can this model see?"}
+    e -- "no" --> f["read answers with a sentence:<br/>what the file is, that it can't look"]
+    e -- "yes" --> g["ImageBlock reaches the model"]
+</pre></div>
+  <p>An attachment is checked before the turn even starts — follow the caller into
+  <code>cli/oneshot.py</code> and <code>cli/repl.py</code> and you'll see it fires on
+  the attachment, not on the whole turn. But a picture a <em>tool</em> produces
+  mid-turn can't be refused that way, because the model is already chosen by then. So
+  <code>ToolContext</code> carries an <code>images</code> flag instead, and
+  <code>read</code> on a picture answers a blind model with a plain sentence: here's
+  what the file is, and I can't look at it. That's not an error — the tool call still
+  worked, and the model gets to decide what to do next.</p>
   <p class="take"><strong>Take with you:</strong> when a new capability needs a refusal,
   find the refusal the last one used and copy its shape and its timing.</p>
 </article>
@@ -149,78 +172,106 @@ flowchart TD
   · <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/anthropic.py"><code>providers/anthropic.py</code></a>
   · <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/fake.py"><code>providers/fake.py</code></a></p>
   <p class="look">Look for: <code>_parts</code> <code>_image</code> <code>encoded</code></p>
-  <p>This is where the bytes come back. <code>encoded</code> lives in
+  <p>This is where the bytes finally come back off disk. <code>encoded</code> lives in
   <code>providers/http.py</code> because both real adapters need it and neither should
-  own it: it reads the blob and base64s it, and raises a <code>ProviderError</code> when
-  the file is gone rather than sending an empty image. The base64 exists for the length
-  of one request and is never stored.</p>
-  <p>Then read the two shapes side by side. Chat Completions wants a content array with
-  an <code>image_url</code> part holding a <code>data:</code> URL; Anthropic wants a
-  block with a <code>source</code> table naming the media type and the data separately.
-  Both adapters translate and neither decides anything — the same difference as every
-  other line in these files.</p>
-  <p>The interesting case is a picture a tool produced. Anthropic can put an image
-  directly inside a <code>tool_result</code>; the OpenAI shape cannot, so
-  <code>openai_compat</code> follows the tool results with one extra user message
-  carrying them. Different bytes on the wire, same conversation.</p>
-  <p>Finish on the fake provider, which is the leverage the whole suite runs on. It
-  cannot look at anything, so it says what arrived: media type, dimensions and reference.
-  That one line is what lets a test assert an image survived a turn and a
-  <code>--resume</code> without any provider being reachable.</p>
-  <p class="take"><strong>Take with you:</strong> a fake that reports what it received is
-  worth more than a fake that pretends to understand it.</p>
+  own it. It reads the blob, base64-encodes it, and raises a <code>ProviderError</code>
+  if the file is gone — rather than quietly sending an empty image. The base64 exists
+  only for the length of one HTTP request; it's never written to disk or stored.</p>
+  <p>Read the two provider shapes side by side and they turn out to want almost the same
+  thing, said differently:</p>
+  <ul class="points">
+    <li><strong>Chat Completions</strong> wants a content array with an
+    <code>image_url</code> part holding a <code>data:</code> URL.</li>
+    <li><strong>Anthropic</strong> wants a block with a <code>source</code> table that
+    names the media type and the data separately.</li>
+  </ul>
+  <p>Both adapters just translate. Neither one decides anything — the same rule as
+  every other line in these files.</p>
+  <p>The interesting case is a picture a <em>tool</em> produced. Anthropic can put an
+  image straight inside a <code>tool_result</code> block. The OpenAI shape has no room
+  for that, so <code>openai_compat</code> follows the tool results with one extra user
+  message carrying the pictures instead. Different bytes go out on the wire, but it's
+  the same conversation either way.</p>
+  <p>Finish on the fake provider — the one the whole test suite leans on. It can't
+  actually look at anything, so it just says what arrived: media type, dimensions and
+  reference. That one honest line is what lets a test assert an image survived a whole
+  turn, and a <code>--resume</code>, without any real provider ever being reachable.</p>
+  <p class="take"><strong>Take with you:</strong> a fake that reports what it received
+  is worth more than a fake that pretends to understand it.</p>
 </article>
 
 <article class="stop" id="m5" data-files="src/edgar/context/tokens.py">
   <h4><span class="n">5</span>What a picture costs</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/tokens.py"><code>context/tokens.py</code></a></p>
   <p class="look">Look for: <code>image_tokens</code> <code>_fit</code> <code>approx_message_tokens</code> <code>PIXELS_PER_TOKEN</code></p>
-  <p>Forty lines, no I/O, no clock, no config: pure arithmetic over four integers, which
-  is the only reason a number this load-bearing can be trusted. Compaction decides when
-  to run from it, and a budget that undercounts images silently sends requests that get
-  rejected for length.</p>
-  <p>A picture costs by its <em>geometry</em>, never by its bytes. A 4 MB photograph and
-  a 40 KB screenshot of the same size cost the same, because the model resizes before it
-  ever looks. Two rules cover every provider edgar speaks to: Anthropic shrinks to a
-  1568-pixel longest side and charges area over 750, while the Chat Completions family
-  shrinks to fit 2048, then the short side to 768, and charges a base plus one price per
-  512-pixel tile. <code>_fit</code> is the shrinking both share, and it never enlarges.</p>
-  <p>Read the first two lines of <code>image_tokens</code>. A header that could not be
-  parsed left the size at zero, and rather than guessing at a picture nobody measured, it
-  charges one tile's worth. Wrong, certainly, but wrong by a bounded amount in a known
-  direction — which is what you want from an estimate that gates compaction.</p>
+  <p>Forty lines. No I/O, no clock, no config — just pure arithmetic over four integers.
+  That purity is the only reason a number this load-bearing can be trusted: compaction
+  decides when to run based on it, and a budget that undercounts images will silently
+  send requests that then get rejected for being too long.</p>
+  <p>The key idea: a picture costs by its <em>geometry</em>, never by its file size. A
+  4 MB photograph and a 40 KB screenshot of the same pixel dimensions cost exactly the
+  same, because the model resizes the image before it ever looks at it. Two rules cover
+  every provider edgar talks to:</p>
+  <ul class="points">
+    <li><strong>Anthropic</strong> — shrink to a 1568-pixel longest side, then charge
+    for the area over 750.</li>
+    <li><strong>The Chat Completions family</strong> — shrink to fit inside 2048, then
+    shrink the short side to 768, then charge a base price plus one price per
+    512-pixel tile.</li>
+  </ul>
+  <p><code>_fit</code> is the shrinking step both rules share, and it only ever shrinks
+  — it never enlarges a small image to make it cost more.</p>
+  <p>Read the first two lines of <code>image_tokens</code> closely. If a file's header
+  couldn't be parsed, its size was already recorded as zero back in stop 2. Rather than
+  guess at a picture nobody ever actually measured, the function charges for one tile's
+  worth. That's wrong, certainly — but wrong by a bounded amount, in a known direction.
+  That's exactly what you want from an estimate that gates something as important as
+  compaction.</p>
   <p class="take"><strong>Take with you:</strong> when the input might be unmeasurable,
-  decide what you charge for "unknown" before you need it.</p>
+  decide what you charge for "unknown" before you actually need the answer.</p>
 </article>
 
 <article class="stop" id="m6" data-files="src/edgar/context/compact.py">
   <h4><span class="n">6</span>Eliding an old picture</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/compact.py"><code>context/compact.py</code></a></p>
   <p class="look">Look for: <code>elide</code> <code>_stub</code> <code>ELIDED</code></p>
-  <p>The most dangerous file in the milestone, because of invariant 1: every assistant
-  message with tool calls is followed by exactly one tool message whose result ids match,
-  and every provider returns 400 if you break it. Compaction holds that invariant by
-  only ever removing, stubbing or summarising whole units, and by never trimming inside
-  one.</p>
-  <p>So the change is inside <code>_stub</code>, the per-block helper <code>elide</code>
-  already mapped over everything before the cut, rather than a second pass of its own.
-  That was the judgement call. A separate <code>_elide_images</code> would have been
-  easier to read in isolation and would have been a second function that knows where a
-  turn may be cut — and the value of the invariant is that exactly one function knows
-  that. An old picture becomes a line naming it: media type, dimensions, and the
-  reference, so a human can attach it again and the model stops paying for it on every
-  request. The bytes were never in the transcript anyway, only in the blobs, so nothing
-  is lost that was not already on disk.</p>
-  <p>Two details make it safe. A tool result that carried images is stubbed
-  <em>with</em> them — text and pictures replaced together, one unit elided whole, never
-  a stub still dragging its screenshots along. And the operation is idempotent: an
-  <code>ImageBlock</code> becomes a <code>TextBlock</code> that stays itself on a second
-  pass, and an already-stubbed result returns early. The property suite runs elision
-  twice over transcripts with an image on every other tool result and asserts the
-  pairing survives both.</p>
+  <p>This is the most dangerous file in the milestone, because of invariant 1: every
+  assistant message with tool calls must be followed by exactly one tool message whose
+  result ids match. Break that and every provider answers with an HTTP 400. Compaction
+  keeps that promise by only ever removing, stubbing or summarising a <em>whole</em>
+  unit — never trimming inside one.</p>
+  <p>So the change for images lives inside <code>_stub</code>, the same per-block
+  helper <code>elide</code> already runs over everything before the cut — not in a
+  second pass built just for pictures. That was the real judgement call. A separate
+  <code>_elide_images</code> function would have been easier to read on its own, but it
+  would also have been a second function that knows where a turn is allowed to be cut.
+  The whole value of the invariant is that exactly one function knows that.</p>
+  <pre class="pseudo">def elide(block):
+    if block is old enough to cut:
+        if block is ImageBlock:
+            return TextBlock("[elided image: {media_type}, {width}x{height}, {ref}]")
+        if block is already a stub:
+            return block                    # idempotent: no-op on a second pass
+        return _stub(block)                 # text: summarised the usual way
+    return block                            # too recent, leave alone</pre>
+  <p>An old picture becomes one line naming it — media type, dimensions and the
+  reference — so a human can re-attach it later, and the model stops paying to see it on
+  every single request. Nothing is actually lost: the bytes were never in the transcript
+  in the first place, only in the blobs folder, which elision never touches.</p>
+  <p>Two details keep this safe:</p>
+  <ul class="points">
+    <li>A tool result carrying images is stubbed <em>together</em> with its text — the
+    whole unit is elided at once, never a stub still dragging its screenshots along
+    behind it.</li>
+    <li>The operation is idempotent. An <code>ImageBlock</code> that becomes a
+    <code>TextBlock</code> stays that way on a second pass, and a result that's already
+    a stub returns early instead of stubbing again.</li>
+  </ul>
+  <p>The property suite runs elision twice over transcripts with an image on every other
+  tool result, and checks the pairing invariant still holds after both passes.</p>
   <p class="take"><strong>Take with you:</strong> when one function is the only thing
-  that knows an invariant, the cost of extending it is almost always lower than the cost
-  of a second function that also knows.</p>
+  that knows an invariant, extending it is almost always cheaper than writing a second
+  function that has to know it too.</p>
 </article>
 
 <article class="stop" id="m7" data-files="src/edgar/context/attach.py src/edgar/tools/builtin/fs.py src/edgar/core/events.py">
@@ -228,23 +279,24 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/attach.py"><code>context/attach.py</code></a>
   · <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/fs.py"><code>tools/builtin/fs.py</code></a></p>
   <p class="look">Look for: <code>attach</code> <code>_refuse</code> <code>Read</code> <code>ToolFinished</code></p>
-  <p>A human attaches a picture, or a tool produces one, and both end at the same block.</p>
-  <p><code>@photo.png</code> extends M19's path rather than growing a second one: the
-  same token scan, the same refusals in the same words — missing, a directory, a
-  credential file, outside the working directory — and then exactly one fork. Bytes that
-  begin with a known image signature spill and come back as an
-  <code>ImageBlock</code>; anything else is decoded as text as before. Compare
-  <code>_refuse</code> with the version on the
-  <a href="working.html#w1">working state page</a>: it is unchanged. A file that is
-  neither text nor an image is still refused by name.</p>
-  <p>On the tool side, <code>Read</code> answers a picture with the picture instead of
-  "looks binary; not shown". And <code>ToolFinished</code> gained one optional field
-  carrying the reference, so a watcher on <code>--events</code> can find the file on
-  disk while the bytes never pass through the event stream at all — the same reason
-  <code>blob</code> is on that event already.</p>
+  <p>A picture can arrive two ways — a human attaches it, or a tool produces it — and
+  both end up at the exact same <code>ImageBlock</code>.</p>
+  <p><code>@photo.png</code> extends M19's existing path instead of growing a second
+  one. Same token scan, same refusals in the same words (missing, a directory, a
+  credential file, outside the working directory) — and then exactly one new fork at
+  the end. Bytes that begin with a known image signature spill to disk and come back as
+  an <code>ImageBlock</code>; anything else is decoded as text, same as before. Compare
+  <code>_refuse</code> here with the version on the
+  <a href="working.html#w1">working state page</a> — it's unchanged. A file that's
+  neither text nor a recognised image is still refused, by name.</p>
+  <p>On the tool side, <code>Read</code> now answers a picture with the picture itself,
+  instead of the old "looks binary; not shown". And <code>ToolFinished</code> gained one
+  optional field carrying the reference, so something watching <code>--events</code> can
+  find the file on disk — while the actual bytes never pass through the event stream at
+  all. Same reason <code>blob</code> is already on that event for spilled text.</p>
   <p class="take"><strong>Take with you:</strong> a second way in should join the first
-  one as early as possible. Here that is one <code>if</code>, and everything downstream
-  never learns there were two.</p>
+  one as early as possible. Here that's one <code>if</code>, and everything downstream
+  never even learns there were two roads in.</p>
 </article>
 
 <h3 class="stage" id="stage-2">Stage 2. The half that cost nothing <small>about 20 minutes</small></h3>
@@ -259,23 +311,26 @@ had to grow if the formats were not there.</p>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/examples/tools/web_search.toml"><code>examples/tools/web_search.toml</code></a>
   · <a href="https://github.com/vespassassina/edgar/blob/main/examples/skills/web-research/SKILL.md"><code>examples/skills/web-research/SKILL.md</code></a></p>
   <p class="look">Look for: the three commented variants, and the host that is not there.</p>
-  <p>Searching the web is an HTTP call with a key in a header, which M3's HTTP-tool
-  format already describes: a request template with the host fixed, arguments filling
-  only path and query, and <code>${env:NAME}</code> filling headers at call time and
-  scrubbed from whatever comes back. So web search is a TOML file.</p>
-  <p>The file ships three variants — Brave active, Tavily and a self-hosted SearXNG
-  commented beside it — and no default host, which is PRV-15 doing its job. Who sees
-  your queries is exactly the kind of choice a harness must not make quietly, and the
-  answer is in a file you can read in ten seconds.</p>
-  <p>The skill is the half that matters. A search tool alone produces a model that
-  answers from snippets, and a snippet is an advertisement for a page, not evidence. The
-  skill says: search, <code>fetch</code> the best two or three, answer with the URLs. It
-  also restates what the harness already enforces — the response is untrusted output, so
-  in <code>auto</code> mode the shell and network calls after it ask before they run.</p>
-  <p>This page's claim is testable, and it was tested: a subagent with none of this
-  milestone's context, given only the Cookbook and the extension guide and forbidden from
-  opening <code>src/</code>, produced the same host, header and environment variable
-  unaided.</p>
+  <p>Searching the web is really just an HTTP call with a key in a header — and M3's
+  HTTP-tool format already describes exactly that: a request template with the host
+  fixed, arguments filling only the path and query, and <code>${env:NAME}</code> filling
+  headers at call time (then scrubbed from whatever comes back). So web search doesn't
+  need any new code at all. It's a TOML file.</p>
+  <p>The file ships three variants: Brave is active, Tavily and a self-hosted SearXNG
+  sit commented out right beside it. There's no default host — that's PRV-15 doing its
+  job. Who sees your search queries is exactly the kind of choice a harness must never
+  make quietly for you, and here the whole answer is in a file you can read in ten
+  seconds.</p>
+  <p>The skill is the half that actually matters. A search tool on its own just produces
+  a model that answers from snippets — and a snippet is an advertisement for a page, not
+  real evidence. The skill tells the model: search, then <code>fetch</code> the best two
+  or three pages, then answer citing the URLs. It also restates a rule the harness
+  already enforces elsewhere: a search result is untrusted output, so in
+  <code>auto</code> mode any shell or network call that follows it has to ask first.</p>
+  <p>This page's claim was actually tested, not just asserted: a subagent with none of
+  this milestone's context, given only the Cookbook and the extension guide and
+  forbidden from opening <code>src/</code>, produced the same host, header and
+  environment variable completely unaided.</p>
   <p class="take"><strong>Take with you:</strong> the tool is the easy half. The
   instructions for using it well are the part that makes it worth having.</p>
 </article>
@@ -286,33 +341,36 @@ had to grow if the formats were not there.</p>
   · <a href="https://github.com/vespassassina/edgar/blob/main/examples/skills/git/SKILL.md"><code>examples/skills/git/SKILL.md</code></a>
   · <a href="https://github.com/vespassassina/edgar/blob/main/examples/extensions/git-trail/hooks.toml"><code>examples/extensions/git-trail/hooks.toml</code></a></p>
   <p class="look">Look for: the message as one argument, and the two verbs that are missing.</p>
-  <p>git is a CLI, and M3's command-tool format is an argv template started directly,
-  never through a shell. Four verbs, one file each: look at the tree, read the diff, read
-  the log, commit what is staged. Three are <code>read_only</code>; the fourth writes and
-  goes through the guard like any other write.</p>
-  <p>Open <code>git-commit.toml</code> and look at one line. The whole message is a
-  single argv element, so a message containing newlines, semicolons and backticks is
-  message text, because no shell ever sees it. Every agent harness that shells out to
-  <code>git commit -m "..."</code> has this bug latent in it.</p>
-  <p>Then notice the absences, which are the design. There is no <code>git-add</code>:
-  staging is where a human decides what goes in. There is no push, merge or tag: those
-  are the user's calls. And <code>git-log</code> takes a <em>required</em> count, because
-  an argv element naming an absent argument is dropped whole — an optional
-  <code>--max-count</code> would have silently meant the entire history, which is the
-  opposite of a sensible default.</p>
-  <p>The extension is the <code>post_tool</code> example. It is observation only: fired
-  and forgotten, its output never reaching the model, matched to the one tool worth
-  recording. Read what its script has to do — the event carries the call's outcome, never
-  the tool's output, so it reads the commit back out of git itself. That is the shape of
-  every hook that is not a <code>pre_tool</code>.</p>
+  <p>git is just a CLI, and M3's command-tool format runs an argv template directly,
+  never through a shell. Four verbs, one file each: look at the tree, read the diff,
+  read the log, commit what's staged. Three are <code>read_only</code>; the fourth
+  writes, and goes through the permission guard like any other write.</p>
+  <p>Open <code>git-commit.toml</code> and look at one line: the whole commit message
+  is a single argv element. That matters because no shell ever sees it — so a message
+  containing newlines, semicolons and backticks is just message text, nothing more.
+  Every agent harness that shells out to <code>git commit -m "..."</code> the naive way
+  has this bug sitting latent inside it.</p>
+  <p>Then notice what's <em>missing</em>, because the absences are the design:</p>
+  <ul class="points">
+    <li>No <code>git-add</code>. Staging is where a human decides what actually goes
+    into the commit.</li>
+    <li>No push, merge or tag. Those are calls only the user gets to make.</li>
+    <li><code>git-log</code> takes a <em>required</em> count, not an optional one. An
+    argv element naming an absent argument gets dropped entirely — so an optional
+    <code>--max-count</code> would silently mean "the entire history", which is the
+    opposite of a sensible default.</li>
+  </ul>
+  <p>The extension is the <code>post_tool</code> example, and it's observation only:
+  fired and forgotten, its output never reaching the model, matched to the one tool
+  worth recording. Its script has an interesting constraint — the event carries the
+  call's outcome, never the tool's actual output, so it has to read the finished commit
+  back out of git itself. That's the shape of every hook that isn't a
+  <code>pre_tool</code> hook.</p>
   <p class="take"><strong>Take with you:</strong> the argument for declarative extension
-  formats is not that they are elegant. It is that this whole stop is a diff with no code
+  formats isn't that they're elegant. It's that this whole stop is a diff with no code
   in it.</p>
 </article>
 
-<p class="check"><strong>Before you go:</strong> a session attaches a screenshot, runs
-forty turns, and compaction elides it. The user then asks a question about that
-screenshot. What does the model see, what did it cost, and where on disk is the picture?</p>
 
 <h3 class="stage">Sizes</h3>
 <p>Lines of code: blank lines and comments do not count, docstrings do.

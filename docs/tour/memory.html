@@ -76,33 +76,45 @@ flowchart TD
   <h4><span class="n">1</span>What becomes a fact</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/store.py"><code>memory/store.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/redact.py"><code>memory/redact.py</code></a></p>
   <p class="look">Look for: <code>add</code> <code>confirm</code> <code>_Op</code> <code>pinned</code> <code>overlap</code> <code>NEAR</code> <code>redact</code> <code>ASSIGNED</code></p>
-  <p>The whole boundary is one line inside <code>add</code>: a fact is active only when
-  its <code>provenance</code> is <code>"user"</code> <em>and</em> nothing already active
-  says nearly the same thing. <code>overlap</code> is the word-level Jaccard measure and
-  <code>NEAR</code> the threshold, so even a human's near-duplicate lands pending,
-  carrying the id of the fact it would supersede — because a contradiction is for a
-  person to settle, not for the newest writer to win (MEM-10).</p>
-  <p>Read <code>_Op</code> next, and notice what it does not do. It never rewrites a
-  fact's text: an edit is a new fact plus a <code>supersedes</code> link, and every
-  confirm, forget and replace is a status change logged under one operation number,
-  which is the only reason <code>edgar memory undo</code> can always put things back.
-  The index invariant is worth finding for yourself: the same function drops the fact
-  from both FTS5 tables and re-inserts it only when the new status is exactly
-  <code>"active"</code>, so "a pending fact can never be recalled" is true by
-  construction rather than by a check somewhere downstream.</p>
-  <p><code>pinned</code> is the one read that writes: it bumps each returned fact's use
-  count. The set it returns is chosen once at session start and sits above the cache
-  breakpoint (MEM-6, CTX-17), which is why a fact you add now first shows up in the
-  <em>next</em> session — a surprise worth understanding rather than fixing.</p>
-  <p><code>redact.py</code> is twenty-five lines and runs on the way in and on the way
-  out. Whole-secret shapes go first and vanish entirely; <code>ASSIGNED</code> then
-  handles <code>token = …</code>, keeping the name and dropping only the value, so the
-  fact still reads. The docstring is honest that this is best-effort: the real
-  guarantee is that secrets come from the environment (CFG-6), not that a regex
-  catches them.</p>
+  <p>The whole boundary comes down to one line inside <code>add</code>: a fact becomes
+  active only when its <code>provenance</code> is <code>"user"</code> — someone typed it
+  — <em>and</em> nothing already active says nearly the same thing. <code>overlap</code>
+  measures "nearly the same" (word-level Jaccard); <code>NEAR</code> is the threshold.
+  Even a human's near-duplicate lands pending, carrying the id of the fact it would
+  replace, because a contradiction is for a person to settle, not for whoever wrote
+  last (MEM-10).</p>
+  <pre class="pseudo">add(text, provenance):
+    if provenance != "user":
+        status = "pending"                      # model-proposed, always pending
+    elif text is near-duplicate of an active fact (overlap > NEAR):
+        status = "pending"                      # a human resolves the conflict
+    else:
+        status = "active"
+    store the fact with that status</pre>
+  <p>Read <code>_Op</code> next, and notice what it never does: it never rewrites a
+  fact's text. An edit is a new fact plus a <code>supersedes</code> link. Every confirm,
+  forget and replace is just a status change, logged under one operation number — which
+  is the only reason <code>edgar memory undo</code> can always put things back.</p>
+  <ul class="points">
+    <li>The index invariant is worth finding yourself: the same function removes a fact
+    from both FTS5 tables and only re-inserts it when the new status is exactly
+    <code>"active"</code>. "A pending fact can never be recalled" is true by
+    construction, not by a check bolted on somewhere downstream.</li>
+    <li><code>pinned</code> is the one read that also writes: it bumps each returned
+    fact's use count. The set it returns is fixed once, at session start, and sits above
+    the cache breakpoint (MEM-6, CTX-17) — which is why a fact you add now only shows up
+    starting <em>next</em> session. That's a surprise worth understanding, not a bug to
+    fix.</li>
+  </ul>
+  <p><code>redact.py</code> is twenty-five lines that run both on the way in and on the
+  way out. Whole-secret shapes are stripped first and vanish entirely. Then
+  <code>ASSIGNED</code> catches patterns like <code>token = …</code>, keeping the name
+  and dropping only the value, so the fact still reads sensibly. It's honestly
+  best-effort — the real guarantee is that secrets come from the environment (CFG-6),
+  not that a regex always catches them.</p>
   <p class="take"><strong>Take with you:</strong> the boundary is a type signature, not a
-  filter. Nothing on this path accepts tool output, error text, fetched content or an
-  attached file in the first place.</p>
+  filter. Nothing on this path even accepts tool output, error text, fetched content, or
+  an attached file in the first place — there's no filter to forget to call.</p>
 </article>
 
 <h3 class="stage" id="stage-2">Stage 2. Getting it back <small>about 10 minutes</small></h3>
@@ -114,42 +126,48 @@ flowchart TD
   <p><code>retriever.py</code> is one of the six ports
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0022-ports-and-adapters.md">ADR-0022</a>):
   a <code>Protocol</code> with a single method, so a vector or graph plugin never has to
-  import anything from edgar. The factory resolves the built-in name inside the
+  import anything from edgar at all. The factory resolves a built-in name inside the
   function — the startup budget again — and otherwise looks in an entry point group,
-  failing with a message that lists what is actually installed.</p>
-  <p>Core carries no embedding model on purpose
+  failing with a message that lists what's actually installed.</p>
+  <p>Core carries no embedding model, on purpose
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0024-lexical-memory.md">ADR-0024</a>).
-  <code>Fts5Retriever</code> runs the same query twice, once over a porter-stemmed
-  index and once over a trigram one, and merges them so a porter hit always beats the
-  trigram hit for the same item. That is what lets a fragment like
-  <code>config/lo</code> find a path, which stemming alone never would.</p>
-  <p><code>index</code> is where the care is. It seeks to a stored byte offset, reads
-  the rest of the session file, and then throws away everything after the last
-  newline, because the file is append-only and a line may still be half-written. It
-  indexes only text blocks that are not <code>attached</code>, so tool results and
-  attached files stay out of the index exactly as they stay out of the facts.</p>
+  Instead, <code>Fts5Retriever</code> runs every query twice — once over a
+  porter-stemmed index, once over a trigram one — and merges the two, so a porter hit
+  always outranks a trigram hit on the same item. That's what lets a fragment like
+  <code>config/lo</code> still find a path, which stemming alone never would.</p>
+  <p><code>index</code> is where the care lives:</p>
+  <ul class="points">
+    <li>It seeks to a stored byte offset, reads the rest of the session file, then
+    throws away everything after the last newline — the file is append-only, and the
+    very last line might still be half-written.</li>
+    <li>It only indexes text blocks that aren't <code>attached</code>. Tool results
+    and attached files stay out of the search index for the same reason they stay out
+    of the facts: nobody chose to type them.</li>
+  </ul>
 </article>
 
 <article class="stop" id="m3" data-files="src/edgar/memory/markdown.py src/edgar/cli/memory.py">
   <h4><span class="n">3</span>The markdown round trip</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/memory/markdown.py"><code>memory/markdown.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/memory.py"><code>cli/memory.py</code></a></p>
   <p class="look">Look for: <code>render</code> <code>parse</code> <code>edit</code> <code>HEADER</code> <code>command</code> <code>said</code> <code>_review</code></p>
-  <p>Facts are rendered to markdown, opened in your editor, and read back: what you
-  save <em>is</em> the new active set, so deleting a section means everything in it is
-  gone rather than unchanged. <code>parse</code> strips HTML comments before it reads
-  anything, which is how <code>HEADER</code> can explain the contract in the buffer
-  without becoming a fact.</p>
-  <p>Two details in <code>edit</code> are worth the detour. The editor setting is split
-  with <code>shlex</code> so <code>code --wait</code> works, and it is still never run
-  through a shell; and the program is resolved with <code>which</code> first, which is
-  what makes <code>code.cmd</code> work on Windows. A non-zero exit from the editor
-  changes nothing at all.</p>
-  <p>In <code>cli/memory.py</code>, <code>said</code> exists so that
-  <code>edgar memory add</code> and <code>/remember</code> word the same outcome
-  identically, including the pending case. <code>_review</code> is the human
-  confirmation gate, and its default is the safe one: the prompt is
-  <code>[y/N]</code>, and no terminal to ask means the facts stay pending rather than
-  being guessed either way.</p>
+  <p>Facts are rendered to markdown, opened in your editor, and read back. What you
+  save <em>is</em> the new active set — delete a section, and everything in it is
+  gone, not just left unchanged. <code>parse</code> strips HTML comments before it
+  reads anything else, which is how <code>HEADER</code> can explain the rules right
+  there in the buffer without itself turning into a fact.</p>
+  <ul class="points">
+    <li>The editor command is split with <code>shlex</code>, so something like
+    <code>code --wait</code> works — but it's still never run through a shell.</li>
+    <li>The program is resolved with <code>which</code> first, which is what makes
+    <code>code.cmd</code> work on Windows.</li>
+    <li>A non-zero exit from the editor changes nothing at all — no half-applied
+    edit.</li>
+  </ul>
+  <p>In <code>cli/memory.py</code>, <code>said</code> exists so <code>edgar memory
+  add</code> and <code>/remember</code> report the exact same outcome in the exact
+  same words, pending case included. <code>_review</code> is the human confirmation
+  gate, and its default is the safe one: the prompt is <code>[y/N]</code>, and with
+  no terminal to ask, facts just stay pending — never guessed either way.</p>
 </article>
 
 <h3 class="stage" id="stage-3">Stage 3. Branching a session <small>about 10 minutes</small></h3>
@@ -158,13 +176,13 @@ flowchart TD
   <h4><span class="n">4</span>Forks and saves</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/storage/transcript.py"><code>storage/transcript.py</code></a></p>
   <p class="look">Look for: <code>fork</code> <code>chain</code> <code>_upto</code> <code>save</code> <code>_inline</code> <code>_scrub</code> <code>forks</code> <code>adopt</code></p>
-  <p>M7 added three moves to sessions and broke none of Core's append-only rule
+  <p>M7 added three moves to sessions without breaking Core's append-only rule
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0046-forks-saves-and-the-daily-cap.md">ADR-0046</a>).
   A fork costs exactly one line: a new file whose second line names its parent and a
-  turn. The parent is never copied and never touched. <code>chain</code> walks up
-  while the second line is a fork record, then reassembles downwards with a loop, not
-  recursion, and <code>_upto</code> finds the cut by looking for the turn's own
-  finish record.</p>
+  turn to branch from. The parent file is never copied and never touched.
+  <code>chain</code> walks up while that second line is a fork record, then
+  reassembles everything downwards with a loop, not recursion. <code>_upto</code>
+  finds where to cut by looking for that turn's own finish record.</p>
   <div class="diagram"><pre class="mermaid">
 flowchart LR
     p[("parent.jsonl<br/>head · turns 1-9")] -->|"read up to turn 4"| c
@@ -172,22 +190,24 @@ flowchart LR
     v -->|"save: inline blobs, then redact"| out[("one portable file")]
     out -->|adopt| new[("a new session of this project,<br/>with a new id")]
 </pre></div>
-  <p><code>save</code> is the opposite move: the chain flattened into one file that
-  travels. <code>_inline</code> reads spilled tool output back off disk so the file is
-  self-contained, and <code>_scrub</code> then walks the whole JSON structure — with
-  an explicit stack, not recursion — redacting string by string, deliberately, so a
-  pattern can never match across JSON syntax and corrupt the shape. Notice that the
-  original session file is never rewritten by any of this.</p>
-  <p><code>forks</code> is the reverse lookup and shows what the layout buys: it reads
-  exactly two lines of each sibling file to find the children of one session.
-  <code>adopt</code> deliberately makes a loaded file a <em>new</em> session of this
-  project rather than a fork, so a file someone sent you can never claim a parent you
-  do not have.</p>
+  <p><code>save</code> is the opposite move: it flattens the whole chain into one
+  file that can travel anywhere.</p>
+  <ul class="points">
+    <li><code>_inline</code> reads spilled tool output back off disk, so the saved
+    file is self-contained — no dangling references to blobs that live only on your
+    machine.</li>
+    <li><code>_scrub</code> then walks the whole JSON structure — with an explicit
+    stack, not recursion — redacting string by string. That's deliberate: a pattern
+    matched across JSON syntax could corrupt the structure, not just the text.</li>
+    <li>None of this ever rewrites the original session file.</li>
+  </ul>
+  <p><code>forks</code> is the reverse lookup, and it shows what the layout buys you:
+  it reads exactly two lines of each sibling file to find the children of one
+  session. <code>adopt</code> deliberately turns a loaded file into a <em>new</em>
+  session of this project, not a fork — so a file someone sent you can never claim a
+  parent you don't actually have.</p>
 </article>
 
-<p class="check"><strong>Before you go:</strong> trace one path by hand. The model calls
-<code>remember</code> mid-turn — where does that text end up, what can retrieve it, and
-what exactly has to happen before it is ever in a prompt?</p>
 
 <h3 class="stage">Sizes</h3>
 <p>Lines of code: blank lines and comments do not count, docstrings do.

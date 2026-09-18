@@ -45,26 +45,30 @@
 
 <main class="tour-main">
 
-<p>An agent that can adjust its own settings is the feature everyone wants and the one
-nobody can make safe. The reason is not subtle: the component deciding what to change
-is a language model, the thing it is changing is the sandbox that language model runs
-in, and the text it is reasoning over came out of a session that may already have gone
-wrong. Give it a free hand and you have built a machine that argues itself out of its
-own restraints.</p>
+<p>An agent that can change its own settings is a great feature and a dangerous one.
+The model deciding what to change is the same model whose sandbox it is changing,
+reasoning over a session that may already have gone wrong. Give it a free hand and
+it can argue itself out of its own restraints.</p>
 
-<p>So the whole of <code>controller/</code> is arranged around removing the free hand.
-Whether a call happens at all is decided by arithmetic, not by a model. What the model
-may ask for is a closed list of eight, checked by a parser, not by a prompt. Policy
-changes go one direction only, through a pure function a generated test hammers. And
-everything that persists is dry-run by default, logged, and revertible by id.</p>
+<p><code>controller/</code> exists to remove that free hand. Four guardrails do it:</p>
+<ul class="points">
+  <li><strong>Arithmetic decides, not the model.</strong> A call happens only when
+  five numbers cross a threshold — never on every turn.</li>
+  <li><strong>A closed list of eight actions.</strong> Anything else is rejected
+  by a parser before it can run.</li>
+  <li><strong>One direction only.</strong> Every policy change must make the
+  session stricter, checked by a pure function.</li>
+  <li><strong>Nothing sticks without a trail.</strong> What persists is dry-run
+  by default, logged, and revertible by id.</li>
+</ul>
 
 <div class="diagram"><pre class="mermaid">
 flowchart TD
     turn["a turn ends<br/>TurnFinished"] --> sig["Signals: five numbers"]
     sig --> trip{"tripped()?"}
     trip -->|"no"| done["nothing happens<br/>no call, no cost"]
-    trip -->|"yes"| call["one model call<br/>no tools at all"]
-    call --> parse["parse(): one of eight, or Rejected"]
+    trip -->|"yes"| mcall["one model call<br/>no tools at all"]
+    mcall --> parse["parse(): one of eight, or Rejected"]
     parse --> rej["Rejected<br/>logged, discarded"]
     parse --> act["a typed proposal"]
     act --> narrow["narrow(): tighten only"]
@@ -78,29 +82,45 @@ flowchart TD
   <h4><span class="n">1</span>Five numbers and a threshold each</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/triggers.py"><code>controller/triggers.py</code></a></p>
   <p class="look">Look for: <code>Signals</code> <code>CHECKS</code> <code>tripped</code> <code>summary</code></p>
-  <p>The first decision in this milestone is the one that costs nothing and is easiest
-  to get wrong: who decides whether to call the controller. If the answer is "a model",
-  then every turn pays for a call whose only job is to say "no call needed", and the
-  harness has acquired exactly the hidden cost its positioning says it does not have.</p>
-  <p>So the answer is arithmetic. <code>Signals</code> holds five numbers about the turn
-  that just ended — how full the context got, how many turns in a row ended with a
-  failing tool call, how much of today's cost cap is gone, how much the model wrote, how
-  long it took. <code>CHECKS</code> is a table of five one-line comparisons against the
-  thresholds in <code>[controller]</code>, and <code>tripped()</code> returns the names
-  that fired. Nothing here does I/O, holds state, or knows what a provider is, which is
-  the same shape as <code>permissions.decide()</code> and
-  <code>routing.select_model()</code> and for the same reason.</p>
-  <p>Two details in the table are worth stopping on. A threshold of zero for
-  <code>error_streak</code> turns that check off rather than firing it on every turn,
-  which is the reading a person setting a config value to zero actually means. And
-  <code>burn_rate</code> is computed by the caller as today's spend over the daily cap,
-  so a project with no cap has a rate of zero and never trips it: there is no sensible
-  fraction of a limit that does not exist.</p>
-  <p><code>summary()</code> exists because a name is not enough. "errors" does not tell
-  the controller whether two things failed or twenty, and the number is most of the
-  signal. The line it builds is both what goes into the outline the controller reads and
-  what <code>edgar controller log</code> prints back to you, which keeps the two from
-  drifting apart.</p>
+  <p>The first question is the cheap one to get wrong: who decides whether to even
+  <em>call</em> the controller? Ask a model, and every turn pays for a call whose only
+  job is to say "no call needed" — a hidden cost the harness promises not to have.</p>
+  <p>So the answer is plain arithmetic, not a model:</p>
+  <ul class="points">
+    <li><code>Signals</code> — five numbers about the turn that just ended: context
+    fullness, consecutive tool failures, share of today's cost cap spent, tokens
+    written, seconds taken.</li>
+    <li><code>CHECKS</code> — one comparison per number, against thresholds set in
+    <code>[controller]</code>.</li>
+    <li><code>tripped()</code> — returns the names of the checks that fired, or
+    nothing.</li>
+  </ul>
+  <pre class="pseudo">Signals = { context_full, error_streak, cost_used_pct, tokens_written, turn_seconds }
+
+CHECKS = [
+  (context_full   over threshold.context,  "context almost full"),
+  (error_streak   over threshold.errors,   "too many failed tools in a row"),
+  (cost_used_pct  over threshold.cost,     "near the daily cap"),
+  (tokens_written over threshold.tokens,   "wrote a lot this turn"),
+  (turn_seconds   over threshold.time,     "turn ran long"),
+]
+
+def tripped(signals):
+    return [name for check, name in CHECKS if check(signals)]</pre>
+  <p>This is pure: no I/O, no state, no idea what a provider is — the same shape as
+  <code>permissions.decide()</code> and <code>routing.select_model()</code>, for the
+  same reason.</p>
+  <ul class="points">
+    <li>A threshold of <strong>zero</strong> for <code>error_streak</code> turns that
+    check <em>off</em>, not "fire every turn" — the reading a person actually means
+    when they set a config value to zero.</li>
+    <li><code>burn_rate</code> is spend over the daily cap. No cap means a rate of
+    zero, so it never trips: there's no sensible fraction of a limit that isn't
+    there.</li>
+    <li><code>summary()</code> turns a bare name like "errors" into a line with the
+    actual count. It feeds both the controller's own prompt and
+    <code>edgar controller log</code>, so the two never drift apart.</li>
+  </ul>
   <p class="take"><strong>Take with you:</strong> before you let a model decide
   something, check whether a comparison would do. The comparison is cheaper, it is
   testable, and you can read it.</p>
@@ -112,48 +132,45 @@ flowchart TD
   <h4><span class="n">2</span>Eight actions, and no ninth</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/proposals.py"><code>controller/proposals.py</code></a></p>
   <p class="look">Look for: <code>ACTIONS</code> <code>Proposal</code> <code>parse</code> <code>BUILDERS</code> <code>targets</code> <code>Outline</code> <code>Rejected</code></p>
-  <p>The controller answers with one JSON object and this file turns it into one of
-  eight frozen types, or into a <code>Rejected</code> saying why it could not. The shape
-  is deliberately the same as <code>permissions/policy.py</code>'s
-  <code>Allow | Deny | Ask</code>: a tagged union of small dataclasses, matched with
-  <code>isinstance</code> by whoever acts on it. A union is a whitelist that the type
-  checker enforces, which is a better place for it than a prompt.</p>
-  <p>Read <code>parse()</code> as three steps, and notice that step two is the entire
-  security property. An action name that is not in <code>ACTIONS</code> never reaches a
-  builder, so a model that invents <code>run_shell</code> or <code>disable_checks</code>
-  gets a logged rejection rather than a surprise. The eight are
-  <code>compact</code>, <code>switch_model</code>, <code>tighten_policy</code>,
-  <code>warn_user</code>, <code>abort</code>, <code>propose_instruction</code>,
-  <code>propose_skill</code> and <code>noop</code>.</p>
-  <p>There is deliberately no <code>learn</code> action, and
+  <p>The controller answers with one JSON object. This file turns it into one of eight
+  frozen types — or a <code>Rejected</code> that says why not. Same shape as
+  <code>permissions/policy.py</code>'s <code>Allow | Deny | Ask</code>: a tagged union
+  the type checker enforces, which is a better place for a whitelist than a prompt.</p>
+  <pre class="pseudo">def parse(json_from_model):
+    # 1. is it valid JSON with an "action" field?
+    # 2. is that action in ACTIONS?  <- the whole security property
+    #        not in the list -> Rejected, logged, done
+    # 3. build the typed Proposal for that action, or Rejected if the fields don't fit
+    ...</pre>
+  <p>Step 2 is the whole security property: an action not in <code>ACTIONS</code> never
+  reaches a builder. The eight:</p>
+  <ul class="points">
+    <li><code>compact</code>, <code>switch_model</code> — change something lasting,
+    dry-run first</li>
+    <li><code>tighten_policy</code>, <code>abort</code>, <code>warn_user</code>,
+    <code>noop</code> — act now, gone when the process ends</li>
+    <li><code>propose_instruction</code>, <code>propose_skill</code> — write a file
+    for a human to read, never applied by the controller itself</li>
+  </ul>
+  <p>Notice what's <em>not</em> on the list: no <code>learn</code> action.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0017-learning-boundary.md">ADR-0017</a>
-  is why. That document closed four roads by which text the harness did not choose could
-  become an active fact; a controller that could write one would be the fifth, and the
-  widest, because it reads a summary of a session that may already be compromised.
-  <code>warn_user</code> can suggest that you type <code>/remember</code>. A human types
-  it.</p>
-  <p><code>targets()</code> is ROUTE-8 in five lines and is worth contrasting with the
-  obvious alternative. A <code>switch_model</code> proposal could be checked at apply
-  time against whatever the provider registry happens to accept; instead the target set
-  is computed here from what the project already named — every <code>[[route]]</code>
-  rule's model, plus each role's binding in <code>[model]</code> — and a string outside
-  it never becomes a proposal at all. A model that asks for a host you never configured
-  is refused by the parser, not trusted and then audited (PRV-15).</p>
-  <p>The two rejections worth trying yourself are in
-  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_controller_proposals.py"><code>tests/unit/test_controller_proposals.py</code></a>:
-  a <code>tighten_policy</code> that says <code>allow</code>, and a
-  <code>switch_model</code> naming a plausible model that this project does not use.
-  Both are fabricated by hand. No test in M13 calls a model.</p>
-  <p>Last, <code>Outline</code>, which is what the controller is <em>given</em>. It is
-  counts and names: which checks tripped, which tools ran, how many calls failed, what
-  the declared check said, which models are switchable. No tool output, no error text,
-  no prompt body. That is the same discipline the learner works under
-  (<a href="learning.html">Learning</a>, stop 1) for the same reason — the controller's
-  answer changes how edgar behaves, so what it reads has to be text edgar wrote about
-  itself.</p>
-  <p class="take"><strong>Take with you:</strong> a whitelist enforced by a parser is
-  worth more than the same whitelist written in a system prompt, because one of them is
-  a rule and the other is a request.</p>
+  closed four roads by which text the harness didn't choose could become an active
+  fact. A controller that could write one would be a fifth — and the widest, since it
+  reads a summary of a session that may already be compromised. It can suggest you type
+  <code>/remember</code>; only a human actually types it.</p>
+  <p><code>targets()</code> (ROUTE-8) picks which models <code>switch_model</code> may
+  name. Not "whatever the provider registry accepts" — only models the project already
+  named itself, in a <code>[[route]]</code> rule or a <code>[model]</code> binding. A
+  host you never configured is refused by the parser, not trusted and audited later
+  (PRV-15).</p>
+  <p><code>Outline</code>, last, is all the controller is <em>given</em>: counts and
+  names — which checks tripped, which tools ran, how many failed, what the check said.
+  No tool output, no error text, no prompt body. The same discipline the learner works
+  under (<a href="learning.html">Learning</a>, stop 1): the controller's answer changes
+  how edgar behaves, so it only ever reads text edgar wrote about itself.</p>
+  <p class="take"><strong>Take with you:</strong> a whitelist enforced by a parser beats
+  the same whitelist written in a system prompt. One is a rule; the other is a
+  request.</p>
 </article>
 
 <h3 class="stage" id="stage-3">Stage 3. One direction only <small>about 15 minutes</small></h3>
@@ -162,50 +179,60 @@ flowchart TD
   <h4><span class="n">3</span>Humans widen, machines tighten</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/tighten.py"><code>controller/tighten.py</code></a></p>
   <p class="look">Look for: <code>Narrowing</code> <code>narrow</code> <code>is_narrowing</code> <code>MODES</code> <code>VERDICTS</code> <code>Malformed</code></p>
-  <p>This is the file the whole milestone leans on. "No automated component may widen
-  policy" is one of edgar's standing constraints (PERM-8,
-  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>),
-  and <code>narrow()</code> is the controller's half of it: a pure function over the
-  current <code>Policy</code> and a proposed <code>Narrowing</code>, returning either a
-  stricter policy or one line naming the field that tried to loosen.</p>
-  <p>Four fields may move, and each has its own meaning for "stricter".
-  <code>mode</code> travels one road only, <code>yolo → auto → ask → read-only</code>,
-  never back. <code>shell_deny</code> is added to and never taken from.
-  <code>write_paths</code> may shrink, and only to patterns already in the list.
-  Per-tool verdicts may go <code>allow → ask → deny</code> and never the other way.</p>
-  <p>Two of those rules are blunter than they look, on purpose. A narrowing may not
-  introduce a <em>new</em> <code>write_paths</code> pattern even when it plainly looks
-  tighter, because deciding that <code>./src/**</code> is narrower than <code>./**</code>
-  is a judgement about glob semantics that this function cannot make and a model should
-  not be trusted to make. And an explicit <code>allow</code> is refused outright rather
-  than compared, because an explicit rule overrides the mode's own default in
-  <code>permissions/policy.py</code> — so it can widen even where it looks like a
-  no-op.</p>
-  <p>Notice where each check lives. <code>allow</code>, and a mode that is not a mode,
-  are refused in <code>Narrowing.from_dict</code>, at parse time, because neither answer
-  depends on the current policy. Whether <code>ask</code> is looser than what you already
-  have does depend on it, so that check is in <code>narrow()</code>. Both were found by
-  the property test rather than by reading: the first draft parsed
-  <code>{"rules": {"shell": "allow"}}</code> into a perfectly valid proposal and left the
-  refusal to apply time.</p>
-  <p>Then the last four lines of <code>narrow()</code>, which look redundant and are the
-  point. It rebuilds the policy and asks <code>is_narrowing()</code> whether the answer
-  it just produced is actually stricter than what it started from. The field-by-field
-  rules above are where a mistake would live; this is a second, simpler statement of the
-  same property, written once and used both here and as what
-  <a href="https://github.com/vespassassina/edgar/blob/main/tests/property/test_controller_tightening.py"><code>tests/property/test_controller_tightening.py</code></a>
-  asserts. A bug has to defeat both.</p>
-  <p>That property test is the reason this function is shaped the way it is. It
-  generates policies and narrowings together — looser modes, unknown verdicts, patterns
-  the policy never had — and asserts on every pair that what comes back is at least as
-  strict, or is a refusal. It also asserts the quieter half: an accepted narrowing was
-  actually applied, so a <code>narrow()</code> that gave up and returned the original
-  policy would fail. A function that returns its input is a narrowing too, and it is the
-  wrong one.</p>
-  <p class="take"><strong>Take with you:</strong> when a rule has a direction, write the
-  direction down as an ordered tuple and index into it. <code>MODES.index(a) &lt;
-  MODES.index(b)</code> is a sentence you can check; four nested conditionals about which
-  mode is stricter is a sentence you can only hope about.</p>
+  <p>This is the file the whole milestone leans on. One of edgar's standing rules is
+  "no automated component may widen policy" (PERM-8,
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>).
+  <code>narrow()</code> is the controller's half of it: a pure function that takes the
+  current <code>Policy</code> plus a proposed <code>Narrowing</code>, and returns
+  either a stricter policy, or one line naming the field that tried to loosen.</p>
+  <p>Four fields may move, each with its own "stricter":</p>
+  <ul class="points">
+    <li><code>mode</code> — one road only: <code>yolo → auto → ask → read-only</code>,
+    never back</li>
+    <li><code>shell_deny</code> — added to, never taken from</li>
+    <li><code>write_paths</code> — may shrink, only to patterns already on the list</li>
+    <li>per-tool verdicts — <code>allow → ask → deny</code>, never the other way</li>
+  </ul>
+  <p>Two rules are blunter than they look, on purpose:</p>
+  <ul class="points">
+    <li>A narrowing can never introduce a <em>new</em> <code>write_paths</code>
+    pattern — even one that looks tighter. Whether <code>./src/**</code> is narrower
+    than <code>./**</code> is glob-semantics judgement, and neither this function nor a
+    model gets to make that call.</li>
+    <li>An explicit <code>allow</code> is refused outright, not compared. An explicit
+    rule overrides the mode's own default, so it can widen the policy even where it
+    looks like a no-op.</li>
+  </ul>
+  <p>Where each check lives matters too. <code>allow</code>, and a mode that isn't a
+  real mode, are refused in <code>Narrowing.from_dict</code> at parse time — neither
+  answer depends on the current policy. Whether <code>ask</code> is looser than what
+  you already have <em>does</em> depend on it, so that check lives in
+  <code>narrow()</code> instead. The property test found this split, not a read-through:
+  its first draft happily parsed <code>{"rules": {"shell": "allow"}}</code> into a
+  proposal and left the refusal to apply time.</p>
+  <pre class="pseudo">def narrow(policy, proposal):
+    # per-field checks above (mode direction, deny-only-grows, ...)
+    new_policy = apply(policy, proposal)   # build the candidate
+
+    # second, independent check: did we actually get stricter?
+    if not is_narrowing(policy, new_policy):
+        return Rejected("not a narrowing")
+    return new_policy</pre>
+  <p>The last check looks redundant, and that's the point: it rebuilds the policy and
+  asks <code>is_narrowing()</code> whether the result really is stricter than the
+  start. The field rules above are where a mistake would live; this is a second,
+  simpler statement of the same property, used both here and by
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/property/test_controller_tightening.py"><code>tests/property/test_controller_tightening.py</code></a>.
+  A bug has to defeat both.</p>
+  <p>That property test generates policies and narrowings together — looser modes,
+  unknown verdicts, patterns the policy never had — and checks every pair either comes
+  back at least as strict, or gets refused. It also checks the quieter half: an
+  accepted narrowing was actually applied. A <code>narrow()</code> that gives up and
+  hands back the original policy is a narrowing too, and the wrong one.</p>
+  <p class="take"><strong>Take with you:</strong> when a rule has a direction, write
+  the direction down as an ordered tuple and index into it. <code>MODES.index(a) &lt;
+  MODES.index(b)</code> is a sentence you can check; four nested conditionals about
+  which mode is stricter is a sentence you can only hope about.</p>
 </article>
 
 <h3 class="stage" id="stage-4">Stage 4. The log is the state <small>about 10 minutes</small></h3>
@@ -215,48 +242,59 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/store.py"><code>controller/store.py</code></a>,
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/apply.py"><code>controller/apply.py</code></a></p>
   <p class="look">Look for: <code>Controls</code> <code>Mutation</code> <code>overrides</code> <code>apply</code> <code>Site</code> <code>Outcome</code> <code>revert</code> <code>approve</code> <code>PERSISTED</code></p>
-  <p>Read <code>overrides()</code> before anything else on this stop, because the
-  design is in that one query. There is no table of current settings. What edgar is
-  running under is <em>derived</em> from the log: the newest <code>applied</code> row
-  per action wins. So reverting is a single <code>UPDATE</code> on a single row, the
-  log and the live state can never disagree, and there is no second place to look when
-  they seem to (CTRL-10). Compare <code>memory/store.py</code>'s undo, which reached
-  the same shape from the other direction.</p>
-  <p><code>apply()</code> is eight branches with no table, which is the opposite of
-  <code>proposals.py</code> two stops ago and worth the inconsistency: a dict keyed on
-  the class would hand every handler a bare <code>Proposal</code> and need a cast in
-  all eight to get the real type back. Where the type checker can do the work, let
-  it.</p>
-  <p>The eight split three ways, and the split is the whole safety argument.
-  <code>compact</code> and <code>switch_model</code> outlive the session, so they are
-  dry-run by default: the row says what <em>would</em> have changed, and
-  <code>edgar controller apply ID</code> is a person turning it into what did
-  (CTRL-6). <code>tighten_policy</code>, <code>abort</code>, <code>warn_user</code> and
-  <code>noop</code> act now and die with the process. And the two
-  <code>propose_*</code> actions write a file and stop — they are never "applied", in
-  any mode.</p>
-  <p><code>tighten_policy</code> not being dry-run is a decision you could make
-  differently, so it is worth the sentence. CTRL-8 guarantees the change can only make
-  the session stricter; a tightening that waits for approval is a tightening that does
-  not happen while the thing it was reacting to is still going on. It is logged like
-  everything else, and it ends with the session either way.</p>
-  <p>Then <code>abort</code>, which is the one that sounds like it should do more than
-  it does. The gate runs <em>after</em> a turn, so there is no turn left to stop. What
-  abort does instead is take the session's hands away: <code>narrow()</code> to
-  <code>read-only</code> for the rest of it, in memory, never persisted. That is not a
-  consolation prize. The failure it exists for — a model looping, repeating the same
-  edit, burning the budget — is a failure that continues into the next turn, and
-  read-only is exactly the thing that stops it.</p>
-  <p>Last, the rule this file is shaped around: nothing here can write a
+  <p>Start with <code>overrides()</code> — the whole design is in that one query.
+  There is no table of current settings. What edgar is running under is
+  <em>derived</em> from the log: the newest <code>applied</code> row per action wins.</p>
+  <ul class="points">
+    <li>Reverting is a single <code>UPDATE</code> on one row.</li>
+    <li>The log and the live state can never disagree — there's no second place to
+    look when they seem to (CTRL-10).</li>
+    <li>Compare <code>memory/store.py</code>'s undo, which reached the same shape from
+    the other direction.</li>
+  </ul>
+  <p>The eight actions split into three groups, and the split is the whole safety
+  argument:</p>
+  <div class="diagram"><pre class="mermaid">
+flowchart LR
+    subgraph lasting["outlives the session"]
+    direction TB
+    c1["compact"]
+    c2["switch_model"]
+    end
+    subgraph now["dies with the process"]
+    direction TB
+    n1["tighten_policy"]
+    n2["abort"]
+    n3["warn_user"]
+    n4["noop"]
+    end
+    subgraph file["a file, for a human"]
+    direction TB
+    p1["propose_instruction"]
+    p2["propose_skill"]
+    end
+    lasting -->|"dry-run row"| human["edgar controller apply ID"]
+    now -->|"acts immediately"| gone(["logged, then forgotten"])
+    file -->|"writes .edgar/proposals/*.md"| person(["a person reads and adds it"])
+  </pre></div>
+  <p><code>tighten_policy</code> is the one exception — not dry-run, because CTRL-8
+  already guarantees it can only make the session stricter. A tightening that waits
+  for approval doesn't happen while the thing it's reacting to is still going on. It's
+  logged like everything else; it just also takes effect now.</p>
+  <p><code>abort</code> sounds like it should do more than it does. The gate runs
+  <em>after</em> a turn, so there's no turn left to stop — instead it takes the
+  session's hands away: <code>narrow()</code> to <code>read-only</code> for the rest
+  of it, in memory, never persisted. Not a consolation prize: the failure it targets
+  (a model looping, repeating an edit, burning the budget) continues into the
+  <em>next</em> turn, and read-only is exactly what stops that.</p>
+  <p>Last, the rule this whole file is shaped around: nothing here can write a
   hand-authored file. <code>propose_instruction</code> writes Markdown into
-  <code>.edgar/proposals/</code>, named after its own log row, saying what to add; a
-  person adds it. Notice what the code does <em>not</em> contain — the name of the
-  file the instructions live in. edgar genuinely does not know whether that is
-  <code>AGENTS.md</code>, a <code>CLAUDE.md</code> or a prompt profile, and a path this
-  code never spells is a path it can never open. That is also what
-  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_controller_boundary.py"><code>tests/unit/test_controller_boundary.py</code></a>
-  checks, by reading every string literal in the package out of its syntax tree
-  (CTRL-12,
+  <code>.edgar/proposals/</code>, named after its own log row, saying what to add — a
+  person adds it. The code never spells out <em>which</em> file the instructions
+  belong in (<code>AGENTS.md</code>? a <code>CLAUDE.md</code>? a prompt profile?),
+  and a path it never writes is a path it can never open. Enforced by
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_controller_boundary.py"><code>tests/unit/test_controller_boundary.py</code></a>,
+  which reads every string literal in the package out of its syntax tree (CTRL-12,
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0008-controller-guardrails.md">ADR-0008</a>).</p>
   <p class="take"><strong>Take with you:</strong> if you can derive the current state
   from the audit log, do, and delete the copy. Two sources of truth about what a system
@@ -269,41 +307,45 @@ flowchart TD
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/__init__.py"><code>controller/__init__.py</code></a></p>
   <p class="look">Look for: <code>Gate</code> <code>BRIEF</code> <code>attach</code> <code>overrides</code> <code>_running</code> <code>_look</code></p>
   <p>Everything so far has been pure or local. This is the file that watches a real
-  session: it subscribes to one bus, counts failures off <code>ToolFinished</code>,
-  starts a clock on <code>TurnStarted</code>, and when <code>TurnFinished</code>
-  arrives builds the five <code>Signals</code> and asks <code>tripped()</code>. On an
-  ordinary turn that is the end of it — no call, no cost, no latency (CTRL-2).</p>
-  <p>Look at the call itself, and at what it is handed:
-  <code>provider.stream(prompt, [], …)</code>. The second argument is the tool list,
-  and it is empty. <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0008-controller-guardrails.md">ADR-0008</a>
-  asked for a "hard-limited tool set"; the only limit that needs no maintenance is
-  zero. The controller cannot read a file, run a command or call anything at all: its
-  entire power is the shape of its answer, and that answer is one of eight (CTRL-3).
-  The prompt it gets is an <code>Outline</code> — which checks tripped, which tools
-  ran, how many calls failed, what the declared check said. Counts and names. The same
-  discipline the learner works under, for the same reason (MEM-9).</p>
-  <p>The bus is synchronous; a model call is not. So the gate does what
-  <code>extensions/hooks.py</code> already does with a fired hook:
-  <code>asyncio.ensure_future</code>, and a module-level <code>_running</code> set so
-  the task is not collected mid-flight. <code>_ended()</code> returns immediately, and
-  nothing below that line can reach the turn. A <code>-p</code> run that exits at once
-  may drop a call still in flight, and that is CTRL-11 working as written rather than a
-  bug: whatever the controller was about to say, the turn does not wait for it.</p>
-  <p><code>_look()</code> holds the only bare <code>except</code> in the package, on
-  purpose. A housekeeping mechanism that can break your session is worse than no
-  housekeeping at all, so a controller that times out, or answers nonsense, or cannot
-  reach its host, leaves a row in the <code>rejected</code> table and nothing else.</p>
-  <p>Then <code>__init__.py</code>, which is two functions and the whole seam.
-  <code>attach()</code> subscribes the gate; <code>overrides()</code> reads the log.
-  <code>cli/setup.py</code> reaches both by name with <code>importlib</code>, exactly
-  as it reaches <code>edgar.learning</code>, so no Core, v1 or v2 module imports this
-  package and deleting the folder costs one quiet <code>ModuleNotFoundError</code>
-  (NFR-12,
+  session:</p>
+  <pre class="pseudo">on TurnStarted:   start a clock
+on ToolFinished:  if it failed, count it
+on TurnFinished:
+    signals = build the five Signals (context, errors, cost, tokens, time)
+    if not tripped(signals):
+        return                       # no call, no cost, no latency
+    outline = Outline(signals, tools_run, failures, check_result)
+    reply = provider.stream(prompt(outline), tools=[])   # <- no tools at all
+    proposal = parse(reply)          # one of eight, or Rejected
+    act on it, log it</pre>
+  <p>The empty tool list is the whole safety argument in one argument.
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0008-controller-guardrails.md">ADR-0008</a>
+  asked for a "hard-limited tool set"; the limit that needs no maintenance is zero. The
+  controller cannot read a file, run a command, or call anything at all — its entire
+  power is the shape of its answer, one of eight (CTRL-3). What it reads is an
+  <code>Outline</code>: counts and names, nothing more. Same discipline as the
+  learner, same reason (MEM-9).</p>
+  <ul class="points">
+    <li>The bus is synchronous; a model call is not. The gate hands it off with
+    <code>asyncio.ensure_future</code> and a module-level <code>_running</code> set
+    so the task survives, the same trick <code>extensions/hooks.py</code> already
+    uses for a fired hook.</li>
+    <li>A <code>-p</code> run that exits immediately can drop a call still in flight.
+    That's CTRL-11 as designed, not a bug — the turn never waits on the controller.</li>
+    <li><code>_look()</code> holds the package's only bare <code>except</code>, on
+    purpose. Housekeeping that can break your session is worse than no housekeeping:
+    a timeout, nonsense answer, or unreachable host just leaves a row in
+    <code>rejected</code>.</li>
+  </ul>
+  <p><code>__init__.py</code> is two functions and the whole seam: <code>attach()</code>
+  subscribes the gate, <code>overrides()</code> reads the log. <code>cli/setup.py</code>
+  reaches both by name with <code>importlib</code> — same as
+  <code>edgar.learning</code> — so no Core, v1 or v2 module imports this package, and
+  deleting the folder costs one quiet <code>ModuleNotFoundError</code> (NFR-12,
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0015-release-tiers.md">ADR-0015</a>).
-  Note the first line of <code>attach()</code>: with <code>[controller] enabled</code>
-  false, which is the default, it subscribes nothing and returns. A harness whose
-  promise is "no hidden calls" does not start making one a turn because you
-  upgraded.</p>
+  The first line of <code>attach()</code> checks <code>[controller] enabled</code>,
+  false by default: subscribes nothing, returns. A harness that promises "no hidden
+  calls" doesn't start making one the turn you upgrade.</p>
   <p class="take"><strong>Take with you:</strong> the cheapest way to make an
   automated helper safe is to give it nothing to work with. No tools, one answer
   shape, and a wrapper that swallows its failures.</p>
@@ -313,27 +355,27 @@ flowchart TD
   <h4><span class="n">6</span>Three commands, and the one that is missing</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/controller/cli.py"><code>controller/cli.py</code></a></p>
   <p class="look">Look for: <code>command</code> <code>USAGE</code></p>
-  <p><code>edgar controller log</code> prints what it did, what it would have done
-  and what it was refused, newest first, with the id in the first column because the
-  id is what the other two commands take. <code>edgar controller apply ID</code> turns
-  one dry run into the real thing; <code>edgar controller revert ID</code> takes one
-  applied row back out. That is the entire surface.</p>
-  <p>The refusals are printed under the mutations rather than hidden behind a flag,
-  and that is the deliberate part. A controller that gets refused every single turn is
-  a configuration problem — a threshold set too low, a model that cannot follow the
-  brief — and the failure mode worth designing against is the one where nothing says
-  so.</p>
-  <p>Now the missing command. There is no <code>edgar controller run</code>. You
-  cannot ask for a controller call from the outside, because the gate is the only
-  thing that starts one and a crossed threshold is the only thing that asks the gate
-  (CTRL-2). Adding a manual trigger would be one line and would quietly undo the
-  argument the rest of this page makes.</p>
-  <p>The file lives here rather than in <code>cli/</code>, like
-  <code>learning/cli.py</code> before it, and for the same reason: a module under
-  <code>cli/</code> that imported <code>edgar.controller</code> would break tier
-  isolation and fail <code>tests/unit/test_architecture.py</code>.
-  <code>cli/main.py</code> reaches it by name, so deleting the package deletes the
-  commands and nothing else (NFR-12).</p>
+  <ul class="points">
+    <li><code>edgar controller log</code> — everything it did, would have done, and
+    was refused, newest first, id in the first column.</li>
+    <li><code>edgar controller apply ID</code> — turns one dry run into the real
+    thing.</li>
+    <li><code>edgar controller revert ID</code> — takes one applied row back out.</li>
+  </ul>
+  <p>That's the entire surface. Refusals print right under the mutations, not hidden
+  behind a flag — on purpose. A controller refused every single turn is a
+  configuration problem (threshold too low, a model that can't follow the brief), and
+  the failure mode worth designing against is the one where nothing says so.</p>
+  <p>There is no <code>edgar controller run</code>. You cannot ask for a controller
+  call from the outside: the gate is the only thing that starts one, and a crossed
+  threshold is the only thing that asks the gate (CTRL-2). A manual trigger would be
+  one line of code — and would quietly undo the argument the rest of this page
+  makes.</p>
+  <p>The file lives here, not in <code>cli/</code>, like <code>learning/cli.py</code>
+  before it and for the same reason: a module under <code>cli/</code> that imported
+  <code>edgar.controller</code> would break tier isolation and fail
+  <code>tests/unit/test_architecture.py</code>. <code>cli/main.py</code> reaches it by
+  name, so deleting the package deletes the commands and nothing else (NFR-12).</p>
   <p class="take"><strong>Take with you:</strong> the commands you leave out are part
   of the design. Ask what each new verb lets someone bypass.</p>
 </article>
