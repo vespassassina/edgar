@@ -74,31 +74,33 @@ flowchart TD
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/spawn.py"><code>agents/spawn.py</code></a></p>
   <p class="look">Look for: <code>create</code> <code>finish</code> <code>Worktree</code> <code>_closed</code></p>
   <p>The whole mechanism is one line in <code>spawn()</code>:
-  <code>session.cwd = tree.path</code>. Everything else follows from it for free, because
-  <code>ToolContext.cwd</code> comes from <code>Session.cwd</code>, and
+  <code>session.cwd = tree.path</code>. Everything else follows from that for free.
+  <code>ToolContext.cwd</code> reads from <code>Session.cwd</code>, and
   <code>Guard.check</code> rebuilds its <code>Policy</code> around that <code>cwd</code>
-  on every single call. So the hard rule that a path outside the working directory is an
-  Ask now points at the worktree, and the parent's files are outside it. The isolation is
-  not a new rule; it is the old rule aimed somewhere else.</p>
-  <p>A worktree is cut from <code>HEAD</code>, the parent's last <em>commit</em>. A human
-  who is halfway through an edit when a subagent starts is therefore never at risk: the
-  subagent cannot see that edit and cannot touch it. That is worth knowing before you
-  trust it, and it is the reason the test for it is named after the fact rather than
-  after the function.</p>
-  <p>The two refusals are the point of the file. Outside a git repository there is no
-  worktree to make, so <code>create</code> returns a refusal and the agent
-  <em>does not run at all</em> — never a quiet fallback to sharing the tree, because an
-  agent whose author asked for isolation and silently did not get it is worse than one
-  that fails. And <code>finish</code> never passes <code>--force</code>, to git or to
-  anything: if <code>git status --porcelain</code> shows anything at all, the worktree is
-  kept, its path and branch go in the summary, and the line telling a human how to delete
-  it goes there too. The harness will leave a directory lying around before it will throw
-  away work it did not write.</p>
-  <p>Note where that summary goes: appended to the tool result, which is both what the
-  model reads next and what the human sees in the transcript. There is no second channel
-  and no log file to remember to check. If you learn about a kept worktree a week later,
-  it is because you scrolled back to the call, or because <code>git worktree list</code>
-  and <code>git branch</code> still show it.</p>
+  on every single call. So the existing rule — a path outside the working directory is
+  an Ask — now points at the worktree, and the parent's real files sit outside it. This
+  is not a new rule. It is the old rule aimed somewhere else.</p>
+  <p>A worktree is cut from <code>HEAD</code>, the parent's last <em>commit</em>. So a
+  human halfway through an edit when a subagent starts is never at risk: the subagent
+  cannot see that edit and cannot touch it. Worth knowing before you trust this — which
+  is also why the test for it is named after that fact, not after the function.</p>
+  <p>Two refusals do the real work here:</p>
+  <ul class="points">
+    <li>Outside a git repository there is no worktree to make, so <code>create</code>
+    returns a refusal and the agent <em>does not run at all</em>. Never a quiet
+    fallback to sharing the tree — an agent that asked for isolation and silently
+    didn't get it is worse than one that fails outright.</li>
+    <li><code>finish</code> never passes <code>--force</code>, to git or to anything.
+    If <code>git status --porcelain</code> shows anything at all, the worktree is
+    kept: its path and branch go in the summary, along with the line telling a human
+    how to delete it. The harness will leave a stray directory behind before it will
+    throw away work it did not write.</li>
+  </ul>
+  <p>That summary is appended to the tool result — the same text the model reads next
+  and the human sees in the transcript. There is no second channel and no log file to
+  remember to check. If you learn about a kept worktree a week later, it's because you
+  scrolled back to the call, or because <code>git worktree list</code> and
+  <code>git branch</code> still show it.</p>
   <p class="take"><strong>Take with you:</strong> the cheapest isolation is the one that
   reuses a variable the rest of the system already reads. Adding an
   <code>isolated</code> flag to the permission engine would have been a second mechanism
@@ -114,33 +116,38 @@ flowchart TD
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/permissions/policy.py"><code>permissions/policy.py</code></a>,
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/doctor.py"><code>cli/doctor.py</code></a></p>
   <p class="look">Look for: <code>Sandbox</code> <code>wrap</code> <code>available</code> <code>backend</code> <code>best</code> <code>network_allowed</code></p>
-  <p>The port is one pure function. A backend does not <em>run</em> your command; it says
-  what argv <em>would</em> run it confined, and <code>run_argv</code> — the one place in
-  edgar that starts a subprocess, and the one place that knows how to kill a process
-  group on Ctrl-C — starts that instead. The Blueprint's first sketch gave the protocol
-  an <code>async run(...)</code>. Turning it into <code>wrap(...)&nbsp;-&gt;&nbsp;list[str]</code>
-  bought two things: there is still exactly one launcher, and a command line can be
-  asserted on a machine that cannot run it. That second one matters more than it sounds.
-  A sandbox you cannot test is a sandbox you are trusting on faith, and most of what can
-  go wrong with one is a wrong flag.</p>
+  <p>The port is one pure function. A backend does not <em>run</em> your command — it
+  says what argv <em>would</em> run it confined, and <code>run_argv</code> starts that
+  instead. That's the one place in edgar that starts a subprocess, and the one place
+  that knows how to kill a process group on Ctrl-C. The Blueprint's first sketch gave
+  the protocol an <code>async run(...)</code>. Turning it into
+  <code>wrap(...)&nbsp;-&gt;&nbsp;list[str]</code> bought two things: there is still
+  exactly one launcher, and a command line can be checked on a machine that can't even
+  run it. That second one matters more than it sounds — a sandbox you can't test is a
+  sandbox you're trusting on faith, and most of what goes wrong with one is a wrong
+  flag.</p>
   <p><code>none.py</code> is sixteen lines that accept every argument and ignore all of
-  them. It is the default, and naming it in the config is how you say out loud that you
-  are not sandboxed. The alternative — letting <code>sandbox</code> silently mean
-  "whatever is installed" — is the failure mode this whole milestone is written against.</p>
-  <p>Two functions carry the honesty. <code>backend(name)</code> raises if the configured
-  backend is unknown <em>or</em> merely absent, so a machine without <code>bwrap</code>
-  fails to start a session rather than running everything unconfined under a config that
-  says otherwise. <code>best()</code> walks the list backwards and returns the strongest
-  backend that is really here; <code>edgar doctor</code> prints it next to what you have
-  configured, as advice. It never changes the setting. Humans widen, machines tighten,
-  and quietly turning a sandbox on is still a machine changing policy.</p>
-  <p>Then <code>network_allowed(mode, tainted)</code>, which lives in
-  <code>permissions/</code> and not here on purpose. A backend enforces a decision; it
-  must never make one. The answer is computed by the permission engine, fresh for each
-  call because taint can be set by an earlier call in the same turn, carried on
-  <code>ToolContext.network</code>, and handed to the backend as a boolean. There is
-  exactly one direction of travel, and a test asserts the sandbox is never looser than
-  the engine.</p>
+  them. It's the default, and naming it in the config is how you say out loud "I am not
+  sandboxed." The alternative — letting <code>sandbox</code> silently mean "whatever
+  happens to be installed" — is exactly the failure this milestone exists to prevent.</p>
+  <p>Two functions carry the honesty:</p>
+  <ul class="points">
+    <li><code>backend(name)</code> — raises if the configured backend is unknown
+    <em>or</em> just plain missing, so a machine without <code>bwrap</code> fails to
+    start a session instead of quietly running everything unconfined.</li>
+    <li><code>best()</code> — walks the list backwards and returns the strongest
+    backend actually present. <code>edgar doctor</code> prints it next to what you have
+    configured, as a suggestion. It never changes the setting itself — quietly turning
+    a sandbox on would still be a machine widening policy, which nothing automated may
+    do.</li>
+  </ul>
+  <p>Then there's <code>network_allowed(mode, tainted)</code>, which lives in
+  <code>permissions/</code> and not here — on purpose. A backend enforces a decision;
+  it must never make one. The permission engine computes the answer fresh for every
+  call, because an earlier call in the same turn can taint the session, carries it on
+  <code>ToolContext.network</code>, and hands it to the backend as a plain boolean.
+  Decisions flow one way only, and a test checks the sandbox is never looser than the
+  engine that told it what to do.</p>
   <p class="take"><strong>Take with you:</strong> a port that returns data instead of
   performing an effect can be tested everywhere, by everyone, on every platform. Pick
   that shape whenever the effect is the part you cannot reproduce.</p>
@@ -151,30 +158,37 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/sandbox/bwrap.py"><code>sandbox/bwrap.py</code></a>,
   <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/sandbox/seatbelt.py"><code>sandbox/seatbelt.py</code></a></p>
   <p class="look">Look for: <code>Bubblewrap</code> <code>Seatbelt</code> <code>profile</code></p>
-  <p>Fifty lines for both platforms, because neither file implements a sandbox — the
-  kernel and the OS already did. Each one translates the same three facts (the command,
-  the directories the harness says are writable, the network answer) into the local
-  dialect.</p>
-  <p>On Linux that dialect is an argv: bind the whole filesystem read-only, bind the
-  named roots back in writable, give it a fresh <code>/tmp</code>, and add
-  <code>--unshare-net</code> when the answer was no. On macOS it is a small Lisp —
-  <code>(allow default)</code>, then <code>(deny file-write*)</code>, then one
-  <code>(allow file-write* (subpath …))</code> per root, in that order, because later
-  rules win in SBPL. Read the two files side by side and the shape is the same sentence
-  twice.</p>
-  <p>Two details are worth stopping on. The seatbelt profile goes in the argv rather than
-  a temporary file: nothing is left behind, and there is no window in which another
-  process could swap the file between writing it and running it. And the writable set is
-  built by the harness, from <code>cwd</code> and the blob directory — never from
-  anything the model said. A tool argument cannot widen it, because it never reaches it.</p>
-  <p>Now the uncomfortable part, stated plainly because a tour that hides it is worse than
-  no tour. This is a <strong>write and network</strong> boundary, not a read boundary. A
-  confined command can still read your whole filesystem. That is what the Blueprint
-  designed and what these twenty-five lines each do; the roadmap line for this milestone
-  also said "cannot read outside the allowed roots", which these backends do not deliver.
-  The contradiction is recorded in the ADR rather than papered over, because a sandbox
-  that is believed to do more than it does is the exact failure this milestone exists to
-  avoid.</p>
+  <p>Fifty lines for both platforms combined, because neither file actually builds a
+  sandbox — the kernel and the OS already did that. Each one just translates the same
+  three facts (the command, which directories the harness says are writable, and the
+  network answer) into the local dialect.</p>
+  <ul class="points">
+    <li><strong>Linux.</strong> The dialect is an argv: bind the whole filesystem
+    read-only, bind the named roots back in writable, give it a fresh <code>/tmp</code>,
+    and add <code>--unshare-net</code> when the answer was no.</li>
+    <li><strong>macOS.</strong> The dialect is a small Lisp — <code>(allow
+    default)</code>, then <code>(deny file-write*)</code>, then one
+    <code>(allow file-write* (subpath …))</code> per root, in that order, because in
+    SBPL the later rule wins.</li>
+  </ul>
+  <p>Read the two files side by side and it's the same sentence, said twice.</p>
+  <p>Two details are worth stopping on:</p>
+  <ul class="points">
+    <li>The seatbelt profile goes straight into the argv, not into a temporary file.
+    Nothing is left behind, and there's no window where another process could swap the
+    file between it being written and it being run.</li>
+    <li>The writable set is built by the harness itself, from <code>cwd</code> and the
+    blob directory — never from anything the model said. A tool argument cannot widen
+    it, because it never even reaches this code.</li>
+  </ul>
+  <p>Now the uncomfortable part, said plainly, because a tour that hides it is worse
+  than no tour at all. This is a <strong>write and network</strong> boundary, not a
+  read boundary. A confined command can still read your whole filesystem. That is what
+  the Blueprint designed and what these twenty-five lines each do. But the roadmap line
+  for this milestone also promised "cannot read outside the allowed roots" — a promise
+  these backends do not keep. The contradiction is written down in the ADR instead of
+  papered over, because a sandbox people believe does more than it really does is the
+  exact failure this milestone exists to avoid.</p>
   <p class="take"><strong>Take with you:</strong> when the spec and the implementation
   disagree about a security boundary, the honest move is to ship the narrower claim and
   write down the gap. Nobody is hurt by a boundary that is smaller than advertised;

@@ -70,54 +70,76 @@ flowchart TD
   <h4><span class="n">1</span>Lazy start</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/client.py"><code>tools/mcp/client.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/stdio.py"><code>tools/mcp/stdio.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/http.py"><code>tools/mcp/http.py</code></a></p>
   <p class="look">Look for: <code>PROTOCOL</code> <code>McpError</code> <code>Server</code> <code>McpTool</code> <code>servers</code> <code>discover</code> <code>close</code> <code>Stdio</code> <code>Http</code></p>
-  <p>Start in <code>client.py</code> and find the moment the server is actually
-  started. It is not in <code>servers</code>, which only reads config and builds
-  handles; it is inside the tool's own call path. Everything before that point runs
-  with no subprocess, no socket and no <code>httpx</code> import — the startup budget
-  again (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0012-startup-budget.md">ADR-0012</a>),
-  which is also why the transports live in two small modules imported only when one
-  is chosen.</p>
-  <p><code>discover</code> is the handshake: initialize, check the protocol version
-  against <code>PROTOCOL</code>, list the tools, and cache the result under a digest
-  of the server's own configuration, so changing a command or a URL invalidates it
-  and nothing else does. A server that fails is remembered as failed for the rest of
-  the session rather than retried on every call — read that bit and decide for
-  yourself whether you would have written it that way.</p>
-  <p>The two transports are deliberately boring and deliberately different.
-  <code>Stdio</code> spawns a process, writes newline-delimited JSON to it, and
-  drains stderr on a thread so a chatty server cannot fill a pipe and deadlock the
-  harness. <code>Http</code> speaks Streamable HTTP: one POST that may answer with
-  JSON or with an SSE stream, so it has to parse events as well as bodies. Both
-  raise the same <code>McpError</code>, which is what lets the caller above them not
-  care which one it got.</p>
-  <p><code>close</code> is worth a minute. Servers are children of this process, and
-  the shutdown path is explicit rather than left to the garbage collector, because a
-  stdio server that is never reaped is a hung terminal.</p>
-  <p class="take"><strong>Take with you:</strong> "lazy" here is not an optimisation
-  bolted on afterwards. It is the reason the config format carries a command and not
-  a connection.</p>
+  <p>Start in <code>client.py</code> and find the moment a server actually starts.
+  It's not in <code>servers</code> — that just reads config and builds handles. It's
+  inside the tool's own call path, the first time the model actually calls one of
+  that server's tools. Up to that point, nothing runs: no subprocess, no socket, no
+  <code>httpx</code> import. That's the startup budget again
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0012-startup-budget.md">ADR-0012</a>).
+  It's also why the two transports live in their own small modules, each imported
+  only once it's actually chosen.</p>
+  <p><code>discover</code> is the handshake, run once per server per session:</p>
+  <pre class="pseudo">discover(server):
+    connect (spawn the process, or open the HTTP connection)
+    send "initialize", check the reply's protocol version against PROTOCOL
+    ask for the tool list
+    cache it, keyed on a digest of this server's own config
+    # a changed command or URL invalidates the cache; nothing else does
+    if any step fails: mark this server "failed" for the rest of the session</pre>
+  <p>That last line is worth noticing: a broken server is not retried on every call.
+  Read it and decide for yourself whether you'd have written it the same way.</p>
+  <ul class="points">
+    <li><code>Stdio</code> spawns a process, writes newline-delimited JSON to it, and
+    drains its stderr on a separate thread — so a chatty server can't fill a pipe and
+    freeze the harness.</li>
+    <li><code>Http</code> speaks Streamable HTTP: one POST, answered either as plain
+    JSON or as an SSE stream, so it has to parse both.</li>
+    <li>Both raise the same <code>McpError</code>. The caller above them never has to
+    know which transport it got.</li>
+    <li><code>close</code> shuts a server down explicitly rather than leaving it to
+    the garbage collector — servers are child processes of edgar, and an unreaped
+    stdio server is a hung terminal.</li>
+  </ul>
+  <p class="take"><strong>Take with you:</strong> "lazy" here isn't an optimisation
+  bolted on afterwards. It's the reason the config format stores a command to run,
+  not a connection to hold open.</p>
 </article>
 
 <article class="stop" id="p2" data-files="src/edgar/tools/mcp/schema.py src/edgar/tools/builtin/tool_search.py">
   <h4><span class="n">2</span>Deferred schemas</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/mcp/schema.py"><code>tools/mcp/schema.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/tool_search.py"><code>tools/builtin/tool_search.py</code></a></p>
   <p class="look">Look for: <code>to_schema</code> <code>to_result</code> <code>hints</code> <code>tool_name</code> <code>ToolSearch</code> <code>FOUND</code> <code>RESERVE</code></p>
-  <p>Thirty servers with twenty tools each would put six hundred JSON schemas above
-  the cache breakpoint, and most of them would never be called. So the prompt carries
-  the <em>names</em>, and <code>tool_search</code> hands back the full schemas for the
-  handful the model asks about. The deferred tools become callable from that point in
-  the session, which is the whole trick: the model discovers a tool the way a person
-  would, by looking it up.</p>
-  <p><code>RESERVE</code> is the budget line — how much of the window this is allowed
-  to take — and <code>FOUND</code> is the wording the model gets back, written so the
-  next step is obvious without another round trip. Notice that the results are
-  ordinary tool output, not a special channel.</p>
-  <p><code>schema.py</code> is the border guard. <code>tool_name</code> namespaces a
-  server's tool so two servers cannot collide and a server cannot claim a built-in
-  name; <code>to_schema</code> accepts only what the harness can validate and drops
-  the rest; <code>to_result</code> turns whatever came back into ordinary content
-  blocks. Everything here is written on the assumption that the server is not
-  malicious but is certainly careless.</p>
+  <p>Picture thirty MCP servers with twenty tools each. That's six hundred JSON
+  schemas — and most would never get called. Put them all in the prompt and you'd
+  blow the cache budget before the model said a word. So the prompt only carries
+  <em>names</em>. The model finds a schema the way a person would: it looks the tool
+  up.</p>
+  <pre class="pseudo">prompt holds: tool names only (cheap, always present)
+
+when the model calls tool_search("something about spreadsheets"):
+    find matching tool names, up to RESERVE tokens worth
+    fetch their full schemas
+    return them as ordinary tool output, with FOUND explaining what just happened
+    # from this point in the session, those tools are directly callable</pre>
+  <ul class="points">
+    <li><code>RESERVE</code> caps how much of the context window a single search is
+    allowed to spend.</li>
+    <li><code>FOUND</code> is the reply text, worded so the model's next step is
+    obvious without a second round trip.</li>
+    <li>The result is plain tool output — no special channel, nothing the rest of
+    the loop needs to know about.</li>
+  </ul>
+  <p><code>schema.py</code> is the border guard between a server's schema and the
+  rest of the harness:</p>
+  <ul class="points">
+    <li><code>tool_name</code> — namespaces a server's tool, so two servers can't
+    collide and neither can claim a built-in tool's name.</li>
+    <li><code>to_schema</code> — accepts only what the harness can validate, and
+    drops the rest.</li>
+    <li><code>to_result</code> — turns whatever the server sent back into edgar's
+    ordinary content blocks.</li>
+  </ul>
+  <p>Everything here assumes the server isn't malicious, but is certainly careless.</p>
 </article>
 
 <h3 class="stage" id="stage-2">Stage 2. Signing in <small>about 15 minutes</small></h3>
@@ -126,38 +148,47 @@ flowchart TD
   <h4><span class="n">3</span>The loopback dance</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/auth/oauth.py"><code>auth/oauth.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/auth/store.py"><code>auth/store.py</code></a></p>
   <p class="look">Look for: <code>pkce</code> <code>Loopback</code> <code>listen</code> <code>visit</code> <code>post</code> <code>SERVICE</code> <code>available</code> <code>read</code> <code>write</code> <code>erase</code></p>
-  <p>OAuth 2.1 with PKCE, no client secret, on a loopback port the harness picks
-  itself. <code>pkce</code> makes the verifier and its challenge; <code>Loopback</code>
-  is a one-request HTTP server whose only job is to catch the redirect, check the
-  <code>state</code> value, and close. Read <code>listen</code> with an eye for what
-  it refuses: a mismatched state, a second request, a wait that has run out.</p>
-  <p><code>visit</code> is the only place in edgar that opens a browser, and it is
-  reached from a command, never from a turn. When there is no browser it prints the
-  URL and waits, which is the same flow over SSH.</p>
+  <p>Signing in uses OAuth 2.1 with PKCE, no client secret, on a loopback port the
+  harness picks for itself. Two files split the job cleanly:</p>
+  <ul class="points">
+    <li><code>pkce</code> — builds the verifier and its challenge, the pair that
+    proves the code exchange at the end came from the same place that started it.</li>
+    <li><code>Loopback</code> — a tiny HTTP server that answers exactly one request:
+    catch the redirect, check the <code>state</code> value matches, close. Read
+    <code>listen</code> for what it refuses: a mismatched <code>state</code>, a
+    second request, a wait that timed out.</li>
+    <li><code>visit</code> — the only place in edgar that opens a browser, reachable
+    only from a command a human runs, never from a turn. No browser available (over
+    SSH, say)? It prints the URL and waits instead.</li>
+  </ul>
   <p><code>store.py</code> is thirty lines that decide where a token lives.
-  <code>keyring</code> is an optional extra, imported inside the function, and
-  <code>available</code> answers honestly when it is missing rather than silently
-  writing a token to a file. <code>erase</code> exists so that logging out really
-  removes it.</p>
+  <code>keyring</code> is an optional extra, imported only inside the function that
+  needs it. <code>available</code> says honestly when it's missing, rather than
+  silently falling back to writing a token in plain text. <code>erase</code> makes
+  sure logging out really removes the token.</p>
 </article>
 
 <article class="stop" id="p4" data-files="src/edgar/auth/keys.py src/edgar/auth/mcp.py">
   <h4><span class="n">4</span>Two kinds of sign-in</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/auth/keys.py"><code>auth/keys.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/auth/mcp.py"><code>auth/mcp.py</code></a></p>
   <p class="look">Look for: <code>login</code> <code>logout</code> <code>account</code> <code>sign_in</code> <code>CLIENT</code> <code>SCOPES</code> <code>token</code> <code>_metadata</code> <code>_endpoints</code> <code>_register</code></p>
-  <p><code>keys.py</code> is <code>edgar login PROVIDER</code>: a key or a token for a
-  provider, resolved in a fixed order — the environment first, then what a previous
-  sign-in stored, then <code>api_key_command</code>
-  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0044-keyless-cloud-sign-in.md">ADR-0044</a>).
-  The order is the interesting part: an environment variable always wins, so a stored
-  token can never quietly override what you exported in this shell.</p>
-  <p><code>mcp.py</code> is <code>edgar mcp login NAME</code>, and it is longer because
-  the server has to be discovered before it can be talked to.
-  <code>_metadata</code> and <code>_endpoints</code> follow the protected-resource and
-  authorization-server documents; <code>_register</code> does dynamic client
-  registration when the server offers it, since there is no secret to hand out in
-  advance. <code>token</code> handles both the first exchange and the refresh, and
-  a refresh that fails deletes the stored token instead of retrying forever.</p>
+  <p><code>keys.py</code> is <code>edgar login PROVIDER</code>: it finds a key or
+  token for a provider by checking, in this fixed order,
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0044-keyless-cloud-sign-in.md">ADR-0044</a>):</p>
+  <ul class="points">
+    <li>the environment, first — always wins, so a stored token can never quietly
+    override what you exported in this shell;</li>
+    <li>then whatever a previous sign-in stored;</li>
+    <li>then <code>api_key_command</code>, a command the config runs to produce one.</li>
+  </ul>
+  <p><code>mcp.py</code> is <code>edgar mcp login NAME</code>, and it's longer
+  because an MCP server has to be discovered before it can even be talked to.
+  <code>_metadata</code> and <code>_endpoints</code> follow the protected-resource
+  and authorization-server documents the server publishes about itself.
+  <code>_register</code> does dynamic client registration when the server offers it
+  — there's no secret to hand out in advance, so the client has to introduce itself
+  fresh. <code>token</code> handles both the first exchange and later refreshes; a
+  refresh that fails deletes the stored token rather than retrying forever.</p>
   <div class="diagram"><pre class="mermaid">
 sequenceDiagram
     participant H as a human at a terminal

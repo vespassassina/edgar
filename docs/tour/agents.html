@@ -69,39 +69,47 @@ flowchart TD
   <h4><span class="n">1</span>What an agent is</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/task.py"><code>tools/builtin/task.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/definition.py"><code>agents/definition.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/discovery.py"><code>agents/discovery.py</code></a></p>
   <p class="look">Look for: <code>TaskTool</code> <code>subject</code> <code>AgentDefinition</code> <code>Found</code> <code>scan</code> <code>_agent</code></p>
-  <p><code>task.py</code> is about fifty lines and that is the point. It validates,
-  looks the agent up, hands the work to <code>spawn</code>, and returns one string.
-  <code>subject</code> is the short label the status bar shows, so a human watching
-  four rows scroll past knows which one is which.</p>
-  <p><code>definition.py</code> is smaller still: an agent is a markdown file with
-  front matter — a name, a description, which tools it may use, optionally a model.
-  Nothing executable, nothing Python, which is the extension model's rule
+  <p><code>task.py</code> is short on purpose — about fifty lines. It does four
+  things: check the call is valid, look the agent up, hand the work to
+  <code>spawn</code>, and return one string. <code>subject</code> is the short label
+  the status bar shows, so a human watching four rows scroll past can tell them
+  apart.</p>
+  <p>An agent is nothing more than a markdown file with front matter:</p>
+  <ul class="points">
+    <li>a name and a description</li>
+    <li>which tools it is allowed to use</li>
+    <li>optionally, a different model to run on</li>
+  </ul>
+  <p>Nothing executable, nothing in Python — that is the rule for every extension
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0018-extension-model.md">ADR-0018</a>).
-  <code>discovery.py</code> is the usual layered search, project over user, first
-  definition of a name winning, and <code>Found</code> carries where each one came
-  from so <code>edgar doctor</code> and error messages can say which file they mean.</p>
-  <p>Look at what a subagent does <em>not</em> inherit: the parent's transcript. It
-  gets a prompt and a fresh session. That is the whole reason to use one — the
-  parent's context stays small — and it is also why a subagent cannot ask the parent
-  a question.</p>
+  <code>discovery.py</code> searches the usual layered way: project files win over
+  user files, and the first definition of a name wins. <code>Found</code> remembers
+  where each one came from, so <code>edgar doctor</code> and error messages can say
+  exactly which file they mean.</p>
+  <p>One thing a subagent does <em>not</em> get: the parent's transcript. It starts
+  from a prompt and a fresh session. That is the whole point of using one — the
+  parent's context stays small — and it is also why a subagent can never ask the
+  parent a question.</p>
 </article>
 
 <article class="stop" id="a2" data-files="src/edgar/agents/spawn.py">
   <h4><span class="n">2</span>Narrowing, not widening</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/agents/spawn.py"><code>agents/spawn.py</code></a></p>
   <p class="look">Look for: <code>spawn</code> <code>SpawnLimits</code> <code>HARD_DEPTH</code> <code>subagents_config</code> <code>narrow_mode</code> <code>_cap</code> <code>_subset</code></p>
-  <p>This file is where the second invariant lives: humans widen, machines tighten
+  <p>This file carries edgar's second standing rule: humans widen, machines tighten
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0021-humans-widen-machines-tighten.md">ADR-0021</a>).
-  Read <code>narrow_mode</code> and <code>_subset</code> together and satisfy yourself
-  that there is no path by which a child ends up with a permission mode or a tool its
-  parent did not have. An agent file asking for a tool the parent lacks gets the
-  intersection, silently and deliberately.</p>
-  <p><code>HARD_DEPTH</code> is a constant, not a setting: a subagent may spawn, but
-  the nesting stops at a depth the config cannot raise. <code>_cap</code> divides
-  the parent's <em>remaining</em> budget rather than granting a fresh one, so ten
-  subagents cannot cost ten times the cap. <code>SpawnLimits</code> holds the rest —
-  concurrency, depth, per-child ceilings — in one dataclass so the rules are readable
-  in one place.</p>
+  Read <code>narrow_mode</code> and <code>_subset</code> together and check there is
+  no way a child ends up with a looser mode or a tool its parent did not have. If an
+  agent file asks for a tool the parent lacks, it quietly gets only the tools both
+  have — never more.</p>
+  <ul class="points">
+    <li><code>HARD_DEPTH</code> — a constant, not a setting. A subagent may spawn one
+    of its own, but the nesting stops at this depth no matter what the config says.</li>
+    <li><code>_cap</code> — splits the parent's <em>remaining</em> budget rather than
+    handing out a fresh one, so ten subagents cannot cost ten times the cap.</li>
+    <li><code>SpawnLimits</code> — one dataclass holding concurrency, depth and
+    per-child ceilings, so all the rules sit in one readable place.</li>
+  </ul>
   <p class="take"><strong>Take with you:</strong> every limit here is checked at the
   moment of spawning, where a clear error is possible, rather than mid-turn where it
   would only produce a confusing failure.</p>
@@ -113,21 +121,35 @@ flowchart TD
   <h4><span class="n">3</span>Fan-out, and watching it happen</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/execute.py"><code>tools/execute.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/statusbar.py"><code>cli/statusbar.py</code></a></p>
   <p class="look">Look for: <code>execute</code> <code>execute_many</code> <code>_fan_out_group</code> <code>FRAMES</code> <code>Status</code> <code>StderrLine</code> <code>rows</code> <code>terminal_ready</code></p>
-  <p>Tool calls from one response run in order — that is Core's rule and it has not
-  changed. <code>execute_many</code> adds exactly one exception: a <em>consecutive</em>
-  run of <code>task</code> calls goes concurrently [TOOL-12]. Find
-  <code>_fan_out_group</code> and check the two properties that matter: an ordinary
-  tool between two <code>task</code> calls breaks the group, and the results still come
-  back in call order however they finished. A subagent that fails becomes an error
-  result for that call and does not cancel its siblings.</p>
-  <p><code>statusbar.py</code> earns its size on the terminal, not on the logic. It
-  subscribes to the event bus like every other output component
+  <p>Tool calls from one response normally run one after another — that is Core's
+  rule, and it has not changed. <code>execute_many</code> adds exactly one exception:
+  a <em>consecutive</em> run of <code>task</code> calls runs at the same time
+  [TOOL-12]. Find <code>_fan_out_group</code> and check the two things that matter:</p>
+  <pre class="pseudo">for each tool call in the response, in order:
+    if this call is "task" and the next ones are too:
+        group the run of "task" calls together
+        run the whole group at the same time
+        keep the results in the original call order
+    else:
+        run this one call by itself, then move on</pre>
+  <ul class="points">
+    <li>An ordinary tool call between two <code>task</code> calls breaks the group —
+    no surprise concurrency slips in.</li>
+    <li>Results always come back in call order, whichever subagent actually finishes
+    first.</li>
+    <li>A subagent that fails becomes an error result for just its own call. It never
+    cancels its siblings.</li>
+  </ul>
+  <p><code>statusbar.py</code> earns its size on the terminal handling, not the
+  logic. It subscribes to the event bus like every other output component
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0011-events-not-callbacks.md">ADR-0011</a>)
-  and draws one row per running agent [SUB-9]. The details to look for are the
-  defensive ones: <code>terminal_ready</code> refuses to draw when stderr is not a
-  terminal, so piped and scheduled runs produce clean output, and
-  <code>StderrLine</code> exists so that anything else printing to stderr does not
-  end up interleaved through a half-drawn frame.</p>
+  and draws one row per running agent [SUB-9].</p>
+  <ul class="points">
+    <li><code>terminal_ready</code> — refuses to draw unless stderr is a real
+    terminal, so piped and scheduled runs stay clean.</li>
+    <li><code>StderrLine</code> — exists so that anything else printing to stderr
+    doesn't land in the middle of a half-drawn frame.</li>
+  </ul>
 </article>
 
 <h3 class="stage" id="stage-3">Stage 3. Choosing a model <small>about 10 minutes</small></h3>
@@ -136,22 +158,26 @@ flowchart TD
   <h4><span class="n">4</span>Three mechanisms, kept apart</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/routing.py"><code>providers/routing.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/fallback.py"><code>providers/fallback.py</code></a></p>
   <p class="look">Look for: <code>Role</code> <code>RoutingContext</code> <code>Route</code> <code>Selection</code> <code>select_model</code> <code>check_capabilities</code> <code>routes_from_config</code> <code>Candidate</code> <code>NoFallback</code> <code>choose</code> <code>next_provider</code> <code>chain_from_config</code></p>
-  <p>Routing, escalation and fallback get conflated everywhere else. Here they are
-  three files and one of them is not built yet
-  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0013-model-routing.md">ADR-0013</a>).
-  <strong>Routing</strong> decides up front: <code>select_model</code> is a pure
-  function from a <code>RoutingContext</code> and a list of <code>Route</code> rules to
-  a <code>Selection</code>, which is why it is property-tested rather than mocked.
-  <strong>Fallback</strong> goes sideways when a provider is unreachable and never
-  reduces capabilities — <code>choose</code> skips a candidate that cannot do what the
-  selected model could. <strong>Escalation</strong> goes upward on capability failure,
-  and it is v3; there is no file for it yet.</p>
-  <p><code>check_capabilities</code> is where a model with no tool support is refused,
-  and the place matters: at selection, with a message naming the model and the rule
-  that chose it, rather than as a provider error halfway through a turn [ROUTE-6].
-  <code>NoFallback</code> is the honest ending — when the chain is exhausted the run
-  stops and says so, instead of quietly reaching for something the user never
-  configured (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0023-no-hidden-behaviour.md">ADR-0023</a>).</p>
+  <p>Routing, escalation and fallback get mixed up together almost everywhere else.
+  Here they are three separate files, and one of them is not built yet
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0013-model-routing.md">ADR-0013</a>).</p>
+  <ul class="points">
+    <li><strong>Routing</strong> decides up front. <code>select_model</code> is a
+    pure function: a <code>RoutingContext</code> plus a list of <code>Route</code>
+    rules in, a <code>Selection</code> out. That is why it is property-tested rather
+    than mocked.</li>
+    <li><strong>Fallback</strong> goes sideways when a provider is unreachable, and
+    never lowers capabilities — <code>choose</code> skips any candidate that cannot
+    do what the selected model could.</li>
+    <li><strong>Escalation</strong> goes upward, on a capability failure. It belongs
+    to v3 — there is no file for it yet.</li>
+  </ul>
+  <p><code>check_capabilities</code> is where a model with no tool support gets
+  refused, and where matters: at selection, with a message naming the model and the
+  rule that picked it — not as a provider error halfway through a turn [ROUTE-6].
+  <code>NoFallback</code> is the honest ending: when the chain runs out, the run
+  stops and says so, instead of quietly reaching for something you never configured
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0023-no-hidden-behaviour.md">ADR-0023</a>).</p>
   <div class="diagram"><pre class="mermaid">
 flowchart LR
     ctx["role, prompt size,<br/>agent, config"] --> sel["routing<br/>select_model, pure"]

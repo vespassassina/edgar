@@ -71,21 +71,27 @@ flowchart TD
   <h4><span class="n">1</span>@path</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/attach.py"><code>context/attach.py</code></a></p>
   <p class="look">Look for: <code>TOKEN</code> <code>ACCEPTS</code> <code>Attached</code> <code>attach</code></p>
-  <p>Fifty lines, and almost all of the thinking is in what they refuse. A word
-  beginning with <code>@</code> in a typed line is a file to attach; the line itself is
-  never rewritten, which is the point. What the human typed stays exactly as typed,
-  because that string is the one thing allowed to create an active fact (MEM-9), and
-  the file's text leaves this module as a separate body that can only ever become a
+  <p>Fifty lines, and almost all the thinking is in what they refuse. A word starting
+  with <code>@</code> in a typed line is a file to attach. The line itself is never
+  rewritten — that's the point. What the human typed stays exactly as typed, because
+  that string is the one thing allowed to create an active fact (MEM-9). The file's
+  text leaves this module as a separate piece that can only ever become a
   <code>TextBlock(attached=True)</code>. The boundary is a type, not a filter.</p>
-  <p>Read <code>_refuse</code> before <code>attach</code>. A missing path, a directory,
-  a credential file, a path outside the working directory and anything that is not
-  text each get a sentence naming the path and saying what <code>@path</code> accepts,
-  and the turn does not run. None of them raises. Notice which case is <em>not</em>
-  there: <code>.edgar/config.toml</code> attaches like any other file, because the
-  permission engine asks about a control file only when a tool would write it. Adding
-  a rule here that the engine does not have would be this module inventing policy of
-  its own, which is exactly what edgar tries never to do.</p>
-  <p>The last line of <code>attach</code> is a reuse worth noticing: an oversized
+  <p>Read <code>_refuse</code> before you read <code>attach</code>. Each of these
+  stops the turn with a plain sentence naming the path and saying what
+  <code>@path</code> accepts — none of them raises an exception:</p>
+  <ul class="points">
+    <li>the path doesn't exist</li>
+    <li>the path is a directory, not a file</li>
+    <li>the path is a credential file</li>
+    <li>the path is outside the working directory</li>
+    <li>the file isn't text</li>
+  </ul>
+  <p>Notice which case is <em>missing</em>: <code>.edgar/config.toml</code> attaches
+  like any other file, because the permission engine only asks about a control file
+  when a tool tries to write it. Adding a rule here that the engine doesn't have would
+  mean this module inventing its own policy — exactly what edgar tries never to do.</p>
+  <p>One reuse worth noticing, in the last line of <code>attach</code>: an oversized
   attachment goes through the same <code>spill</code> as oversized tool output, so it
   keeps its head and tail and leaves a blob path the model can <code>read</code>. One
   mechanism, two callers.</p>
@@ -98,24 +104,31 @@ flowchart TD
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/context/working.py"><code>context/working.py</code></a></p>
   <p class="look">Look for: <code>Working</code> <code>render</code> <code>place</code>
   <code>enter</code> <code>leave</code></p>
-  <p>Working state is the plan and the todo list: fast, unconfirmed, gone at the end of
-  the session. Memory is the opposite of all three, which is why they are different
-  things in different files. The whole design is in where <code>Working</code> lives:
-  on the <code>Session</code>, never in <code>session.transcript</code>. Compaction only
-  ever rebuilds the transcript, so it cannot reach this, and the pairing invariant
-  (CTX-4) holds here by construction rather than by care. There was a version of this
-  that put a pinned message in the transcript and taught every stage to step over it.
-  Every stage is where bugs of that kind live.</p>
-  <p><code>render</code> makes one message; <code>place</code> puts it just above the
-  current turn, below the cache breakpoint because it changes. It is the same bytes in
-  every request until the state itself changes, which is what makes a sixty-turn session
-  with a dozen compactions send an identical list every time.</p>
-  <p>Then read <code>enter</code> and <code>leave</code>, which are plan mode entire.
-  <code>enter</code> sets the session's existing mode to <code>read-only</code> and
-  remembers what it was; <code>leave</code> puts that back. There is no second
-  permission engine and no plan-mode branch in <code>decide()</code>: a write in plan
-  mode is denied by the ordinary read-only rules. And because <code>leave</code> can
-  only restore a mode the session already had, and only a typed <code>/go</code> calls
+  <p>Working state is the plan and the todo list: fast, unconfirmed, thrown away at
+  the end of the session. Memory is the opposite of all three of those things, which is
+  why they live in different files. The whole design sits in where <code>Working</code>
+  lives: on the <code>Session</code>, never in <code>session.transcript</code>.
+  Compaction only ever rebuilds the transcript, so it can't touch this — the pairing
+  invariant (CTX-4) holds here by construction, not by careful handling. An earlier
+  version put a pinned message inside the transcript and taught every compaction stage
+  to step around it. That kind of "teach every stage to remember" is exactly where bugs
+  like this come from.</p>
+  <p><code>render</code> builds one message. <code>place</code> puts it just above the
+  current turn, below the cache breakpoint, because it changes while the cached prefix
+  must not. It's the same bytes on every request until the working state itself
+  changes — which is why a sixty-turn session with a dozen compactions still sends an
+  identical list every time nothing changed.</p>
+  <p>Then read <code>enter</code> and <code>leave</code> — together, they are plan mode
+  in full:</p>
+  <ul class="points">
+    <li><code>enter</code> — sets the session's current mode to <code>read-only</code>
+    and remembers what it was.</li>
+    <li><code>leave</code> — puts that remembered mode back.</li>
+  </ul>
+  <p>There is no second permission engine and no plan-mode branch inside
+  <code>decide()</code>: a write attempted in plan mode is denied by the ordinary
+  read-only rules, nothing special-cased. And because <code>leave</code> can only
+  restore a mode the session already had, and only a typed <code>/go</code> ever calls
   it, nothing automated can widen policy through this file (invariant 2).</p>
   <p class="take"><strong>Take with you:</strong> the cheapest way to survive a
   transformation is to live outside what it transforms.</p>
@@ -127,16 +140,19 @@ flowchart TD
   <h4><span class="n">3</span>The todo tool</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/tools/builtin/todo.py"><code>tools/builtin/todo.py</code></a></p>
   <p class="look">Look for: <code>ITEM</code> <code>TodoTool</code> <code>run</code></p>
-  <p>Forty lines, one call, no verbs. There is no add, no complete, no reorder: the
-  model sends the whole list as it should read now, and that replaces what was there.
-  A diff against a list the model cannot see is how todo tools drift out of step with
-  the conversation; a whole list cannot drift.</p>
-  <p>Two details are worth a minute. The tool's category is <code>read</code>, because
-  it touches no file the user owns: that keeps it out of the verify gate, and keeps it
-  callable in plan mode, where writing the list <em>is</em> the work. And the update
-  leaves by the event bus as <code>TodoUpdated</code>, which the status bar draws and
-  the session log records, so <code>--resume</code> brings the list back with no
-  separate save path. The event is the record.</p>
+  <p>Forty lines, one call, no verbs. There's no add, no complete, no reorder: the
+  model sends the whole list exactly as it should read right now, and that replaces
+  whatever was there before. A diff against a list the model can't see is how todo
+  tools usually drift out of step with the conversation. A whole list can't drift —
+  there's nothing to compare it against.</p>
+  <ul class="points">
+    <li>The tool's category is <code>read</code>, because it never touches a file
+    the user owns. That keeps it out of the verify gate, and keeps it callable even
+    in plan mode, where writing the list <em>is</em> the work.</li>
+    <li>The update leaves through the event bus as <code>TodoUpdated</code>, which
+    the status bar draws and the session log records. <code>--resume</code> brings
+    the list back with no separate save path — the event itself is the record.</li>
+  </ul>
   <p class="take"><strong>Take with you:</strong> a tool with one verb has no state
   machine to get wrong.</p>
 </article>
@@ -145,36 +161,44 @@ flowchart TD
   <h4><span class="n">4</span>Looking at it</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/inspect.py"><code>cli/inspect.py</code></a></p>
   <p class="look">Look for: <code>rows</code> <code>BREAKPOINT</code> <code>context_show</code> <code>route_explain</code> <code>agents_command</code></p>
-  <p><code>edgar context show</code> prints the prompt a session would send: one row
-  per section, with its token count, and the cache breakpoint drawn where it falls.
-  It calls no provider. It does not re-implement the assembly either, which is the
-  part worth copying: it calls the same <code>build</code> and <code>system_text</code>
-  a turn calls, so a command that lied about the prompt would have to lie by
-  assembling a different one.</p>
-  <p>The counting has a small honest trick in it. The prefix's sections are joined
-  into one system message, so a section's count is the difference between two running
-  totals of that same join. The rows therefore add up to the message, and the message
-  adds up to the prompt, whatever the separator between sections happens to be. The
-  test asserts exactly that: the printed rows sum to the builder's own total.</p>
-  <p>The other two commands are the same idea pointed elsewhere.
-  <code>edgar sessions compact ID</code> calls the loop's own
-  <code>compact(force=True)</code> against a session replayed from disk, and because
-  <code>compact()</code> appends one line per stage to that record, the history is
-  added to rather than rewritten and <code>--resume</code> replays into the compacted
-  view. <code>edgar config show --resolved</code> prints every effective key beside
-  the layer it came from, with a credential shown as <code>***</code>: a key is never
-  in the config in the first place, only the name of the variable holding it.</p>
-  <p>M22 added two more of the same shape. <code>edgar route explain [PROMPT]</code>
-  calls <code>routing.select_model()</code> — the pure function a turn calls — once per
-  role and prints its <code>Selection.reason</code>, then walks the rules saying
-  matched or skipped and why. It contacts nothing and needs no key. It also declines to
-  flatter itself: the main turn passes a bare <code>RoutingContext()</code>, so a rule
-  keyed on <code>mode</code>, <code>tags</code> or <code>schedule</code> can never match
-  for the main role, and the command shows that instead of inventing a richer context
-  no turn would ever build. <code>edgar agents list|validate</code> runs
-  <code>agents/discovery.py</code>'s own walk, folding an extension's agents in only
-  when the project is trusted, exactly as a session does; <code>validate</code> reports
-  each problem with the line the offending key sits on, so the fix is one jump away.</p>
+  <p><code>edgar context show</code> prints the prompt a session would actually send:
+  one row per section, its token count, and the cache breakpoint drawn where it falls.
+  It calls no provider. And it doesn't re-implement the assembly either, which is the
+  part worth copying — it calls the same <code>build</code> and <code>system_text</code>
+  a real turn calls, so a command that lied about the prompt would have to lie by
+  assembling a whole different one.</p>
+  <p>The counting has a small honest trick in it. The prefix's sections are joined into
+  one system message, so a section's count is just the difference between two running
+  totals of that same join. The rows add up to the message, and the message adds up to
+  the prompt, whatever separator sits between sections. The test checks exactly that:
+  the printed rows sum to the builder's own total.</p>
+  <p>The other two commands are the same idea, pointed elsewhere:</p>
+  <ul class="points">
+    <li><code>edgar sessions compact ID</code> — calls the loop's own
+    <code>compact(force=True)</code> on a session replayed from disk.
+    <code>compact()</code> appends one line per stage to that record, so history is
+    added to, never rewritten, and <code>--resume</code> replays straight into the
+    compacted view.</li>
+    <li><code>edgar config show --resolved</code> — prints every effective key next to
+    the layer it came from, with a credential shown as <code>***</code>. A key is
+    never in the config in the first place — only the name of the variable holding
+    it.</li>
+  </ul>
+  <p>M22 added two more of the same shape:</p>
+  <ul class="points">
+    <li><code>edgar route explain [PROMPT]</code> — calls
+    <code>routing.select_model()</code>, the same pure function a turn calls, once per
+    role, and prints its <code>Selection.reason</code>. Then it walks the rules,
+    saying matched or skipped and why. It contacts nothing and needs no key. It also
+    doesn't flatter itself: the main turn passes a bare <code>RoutingContext()</code>,
+    so a rule keyed on <code>mode</code>, <code>tags</code> or <code>schedule</code>
+    can never match for the main role — and the command shows exactly that, instead of
+    inventing a richer context no real turn would ever build.</li>
+    <li><code>edgar agents list|validate</code> — runs <code>agents/discovery.py</code>'s
+    own search, folding in an extension's agents only when the project is trusted,
+    exactly like a real session does. <code>validate</code> reports each problem with
+    the line the offending key sits on, so the fix is one jump away.</li>
+  </ul>
   <p class="take"><strong>Take with you:</strong> an inspection command should read the
   code it inspects, never a second copy of it.</p>
 </article>
