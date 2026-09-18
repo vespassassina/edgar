@@ -129,6 +129,11 @@ extension formats freeze.
   checked against left every field but the role at its default. `mode` and
   `tools_required` are now the real ones for that turn; `tags` and `schedule`
   stay unset, since nothing in edgar produces either yet [ROUTE-2].
+- The Seatbelt sandbox profile built its path literals from a platform-native
+  path string, so a writable root came out backslash-separated on Windows
+  instead of the forward-slash form SBPL always wants — visible only in the
+  cross-platform test suite, since this backend only ever runs on macOS
+  [NFR-6].
 
 ### Docs
 - The tour covers all of v1 and now has a map. Four new pages —

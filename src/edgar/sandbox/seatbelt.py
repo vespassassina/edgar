@@ -27,9 +27,12 @@ EXEC = "/usr/bin/sandbox-exec"
 
 
 def _quoted(path: Path) -> str:
-    # SBPL string literals are C-like: a path with a quote or a backslash in it
-    # must not be able to close the string and add a rule of its own.
-    return str(path).replace("\\", "\\\\").replace('"', '\\"')
+    # SBPL is a macOS-only syntax and always takes forward-slash paths, so
+    # `as_posix()` keeps the profile identical on every host platform that
+    # can run these tests, even though `available()` gates real use to
+    # darwin. SBPL string literals are C-like: a quote or backslash in the
+    # path must not be able to close the string and add a rule of its own.
+    return path.as_posix().replace("\\", "\\\\").replace('"', '\\"')
 
 
 class Seatbelt:
