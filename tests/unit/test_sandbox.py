@@ -45,8 +45,8 @@ def test_the_writable_set_is_the_harness_choice_not_the_models(tmp_path: Path) -
     blobs.mkdir()
     out = confined(Seatbelt(), ARGV, cwd=tmp_path, blob_dir=blobs, network=True)
     profile = out[2]
-    assert f'(allow file-write* (subpath "{tmp_path}"))' in profile
-    assert f'(allow file-write* (subpath "{blobs}"))' in profile
+    assert f'(allow file-write* (subpath "{tmp_path.as_posix()}"))' in profile
+    assert f'(allow file-write* (subpath "{blobs.as_posix()}"))' in profile
 
 
 def test_bwrap_binds_the_root_read_only_and_the_named_roots_writable(tmp_path: Path) -> None:

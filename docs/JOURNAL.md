@@ -54,6 +54,28 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
 
+## 2026-09-18 · CI: Windows fails `test_sandbox.py` on the Seatbelt profile
+
+**Found.** The tour-clarity merge's push was the first CI run since M9's
+Seatbelt sandbox commit (`51105ea`, 2026-09-17); `windows-latest` failed
+three `test_sandbox.py` cases. `Seatbelt._quoted` built its SBPL path
+literal from `str(path)`, which on Windows gives backslash-separated
+paths — so a plain root like `/w` came out as `\w`, and every existing
+backslash got doubled by the escaping step on top of that. SBPL is a
+macOS-only syntax that always wants forward slashes, and the tests
+construct profiles on any host on purpose (`test_sandbox.py`'s own
+docstring: "asserted here whatever the OS"), so this was a real
+cross-platform bug (NFR-6), not something to skip.
+
+**Fixed.** `_quoted` now builds from `path.as_posix()` instead of
+`str(path)`, so the profile is the same forward-slash text regardless of
+host platform; `available()` still gates real execution to darwin, so
+nothing changes for macOS. Updated the one test whose expected string was
+built from the platform-native `tmp_path` to compare against
+`tmp_path.as_posix()` too. Verified the fix against `PureWindowsPath`
+locally, since this Mac can't reproduce a real `WindowsPath`. `just check`
+green: 1037 tests, ruff, mypy.
+
 ## 2026-09-18 · Tour stops rewritten for clarity
 
 **Asked.** The tour's stops were "just a blob of text, very hard for humans."
