@@ -196,6 +196,9 @@ extension formats freeze.
   where they were really a list of facts or rules, small pseudocode boxes and
   per-stop diagrams replace one big diagram per page, and vocabulary is
   simpler throughout. No change to `src/`.
+- Removed the "Start the clock" self-timer widget from `index.html` and the
+  `.check` "Before you go" comprehension-question boxes at the end of every
+  tour page, with their now-dead CSS and JS. No change to `src/`.
 
 ## 1.0.0 — 2026-09-16
 

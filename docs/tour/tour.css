@@ -51,10 +51,6 @@ label.done input { accent-color: var(--ak-accent); margin: 0; }
 
 .take { border-left: 3px solid var(--ak-accent); background: var(--ak-accent-wash);
   padding: var(--ak-s3) var(--ak-s4); border-radius: 0 var(--ak-radius) var(--ak-radius) 0; }
-.check { border: 1px solid var(--ak-rule-mid); border-left: 3px solid var(--ak-accent-2);
-  background: var(--ak-fill); padding: var(--ak-s3) var(--ak-s4); border-radius: var(--ak-radius);
-  margin: var(--ak-s6) 0; font-size: 15px; }
-.check strong { color: var(--ak-accent-2); }
 
 .diagram { margin: var(--ak-s4) 0 var(--ak-s5); padding: var(--ak-s4); background: var(--ak-bg);
   border: 1px solid var(--ak-rule); border-radius: var(--ak-radius); overflow-x: auto; }
@@ -76,14 +72,11 @@ pre.pseudo::before { content: "pseudocode"; display: block; font-size: 10px; fon
   letter-spacing: .1em; text-transform: uppercase; color: var(--ak-ink-soft); margin-bottom: var(--ak-s2); }
 
 .ak-stepper .ak-step a { color: inherit; text-decoration: none; }
-.clock { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ak-s3); }
-.clock output { font: 600 22px/1 var(--ak-mono); min-width: 6.5rem; color: var(--ak-ink); }
-.clock .ak-small { margin: 0; }
 .ak-footer p { max-width: 80ch; }
 @media print {
-  .ak-toc, label.done, .clock { display: none !important; }
+  .ak-toc, label.done { display: none !important; }
   .tour-layout { display: block; }
-  article.stop, .diagram, .check { break-inside: avoid; }
+  article.stop, .diagram { break-inside: avoid; }
 }
 
 /* Added in M18: the header's list of pages, and the per-file size table the v1

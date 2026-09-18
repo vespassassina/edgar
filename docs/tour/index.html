@@ -127,13 +127,6 @@ takes longer, that is worth knowing:
 <a href="https://github.com/vespassassina/edgar/issues">open an issue</a> and say where
 you got stuck.</p>
 
-<div class="clock ak-exhibit" id="clock">
-  <output id="clock-time">0:00:00</output>
-  <button type="button" class="ak-btn ak-btn-primary" id="clock-start">Start the clock</button>
-  <button type="button" class="ak-btn" id="clock-reset" hidden>Reset</button>
-  <p class="ak-small" id="clock-note">It keeps running if you close the tab. Your ticks and the clock stay in this browser.</p>
-</div>
-
 <!-- ─────────────────────────────── Part I ─────────────────────────────── -->
 
 <div class="ak-sechead part-head"><span class="ak-n">PART I.</span><h2 class="part" id="core">Core</h2><span class="ak-pill ak-pill-ok">Built, M0 to M6</span></div>
@@ -287,8 +280,6 @@ flowchart LR
   "nothing is done until it's verified."</p>
 </article>
 
-<p class="check"><strong>Before moving on:</strong> can you draw the turn from memory?</p>
-
 <!-- Stage 2 -->
 <h3 class="stage" id="stage-2">Stage 2. The hands <small>about 45 minutes</small></h3>
 <p>How the loop touches the world: where "the model asked" turns into "the thing
@@ -422,9 +413,6 @@ flowchart TD
     secrets only from the environment, never from a value the model supplies.</li>
   </ul>
 </article>
-
-<p class="check"><strong>Before moving on:</strong> where exactly is the boundary
-between "the model asked" and "the thing happened"?</p>
 
 <!-- Stage 3 -->
 <h3 class="stage" id="stage-3">Stage 3. The mouth <small>about 45 minutes</small></h3>
@@ -599,12 +587,6 @@ flowchart TD
   check, exactly like any other command a model asks to run.</p>
 </article>
 
-<p class="check"><strong>By the end of Core</strong> you should be able to answer three
-questions without the docs open. What happens in a turn, step by step? Where does
-every tool call pass, and what can stop it there? How does a long session stay
-valid as it is compacted, cancelled and resumed? Any file you could not follow is a
-readability bug: <a href="https://github.com/vespassassina/edgar/issues">open an
-issue</a>.</p>
 
 <h3 class="stage" id="stage-7">Stage 7. The rest of it <small>reference, dip in as needed</small></h3>
 <p>Six stops that finish the map of Core. Nothing here is on the critical path of a
