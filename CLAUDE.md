@@ -29,12 +29,13 @@ to M8 in it, published to PyPI by the `v0.1.0` GitHub release, so
 `uvx edgar-harness` now runs it. **v1.0 is tagged and released** (M7 to M11,
 ADR-0056) at exactly 8,000 of 8,000 lines of code, on PyPI, `ghcr.io` and as
 GitHub release binaries for all three platforms. **v2, the daily driver, is
-underway** (M18 to M22, ADR-0057), not learning: M18 (tours for v1 and the map,
-ADR-0058) and M19 (working state — `@path` attachments, plan mode and the
-`todo` tool, `edgar context show`, `edgar sessions compact ID`,
-`edgar config show --resolved`, ADR-0059) are both done; `just loc` reads 8,374
-of the v2 budget of 9,500. **M20, seeing and searching, is next**: read
-`docs/HANDOFF.md` before anything else. M7 is done: facts,
+complete in code** (M18 to M22, ADR-0057; only the 2.0 release itself and its
+two human criteria are left), and **v3, learning, is underway**: M12 learning
+foundations (ADR-0063), M13 the controller (ADR-0064) and M14 skill synthesis
+(ADR-0065) are done, **M15 escalation and route suggest is next**. `just loc`
+reads 11,073 of the v3 budget of 12,000 — but only **9,495 of 9,500 outside the
+removable packages**, which is the number that actually constrains M15: read
+ADR-0065 §10 and `docs/HANDOFF.md` before anything else. M7 is done: facts,
 `recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
 `/history`, the daily cap and `edgar cost` (ADR-0046). M8 is done: MCP servers over stdio and
 Streamable HTTP, started only when a tool is called, deferred schemas through

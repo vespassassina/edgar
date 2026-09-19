@@ -54,6 +54,24 @@ CREATE TABLE IF NOT EXISTS errors (
 """
 
 
+def shape_of(agent: str, tools: Sequence[str]) -> str:
+    """What counts as "the same task shape". Resolves OQ-6 [SKL-8d].
+
+    The agent, then the distinct tool names in the order they were first called.
+    Order is part of it because reading then editing is a different job from editing
+    then reading. Routing tags, which OQ-6 also named, are left out: nothing in edgar
+    sets a tag yet, so including one would only ever add an empty string.
+
+    It lives here rather than in synthesis.py because this is the module that stores
+    a shape, and one definition is what lets `edgar stats` and the repeat trigger
+    agree about what recurred.
+    """
+    # A readable string rather than OQ-6's hash: it is short, it is what `edgar
+    # stats` prints under "shapes", and a person can tell two of them apart.
+    ordered = ">".join(dict.fromkeys(tools)) or "answer"
+    return f"{agent or 'main'}:{ordered}"
+
+
 @dataclass(slots=True)
 class Run:
     """One turn as it happens; the Recorder fills it in and writes it once."""
@@ -76,9 +94,10 @@ class Run:
 
     @property
     def shape(self) -> str:
-        """The run's distinct tools, sorted: two runs of the same shape are
-        comparable, which is what makes the shape worth storing at all."""
-        return "+".join(sorted(set(self.tools))) or "answer"
+        """Two runs of the same shape did the same kind of work, which is what makes
+        the shape worth storing at all. A main-loop run is the only kind recorded, so
+        the agent is always the main one [OQ-6]."""
+        return shape_of("", self.tools)
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,6 +158,12 @@ class Experience(Store):
             tools=tools.most_common(5),
             shapes=shapes.most_common(5),
         )
+
+    def shape_count(self, shape: str) -> int:
+        """How many recorded runs did this kind of work, the repeat trigger's one
+        question [SKL-8d]. Rows only: a shape nobody ran is zero, not an error."""
+        rows = self._rows("SELECT COUNT(*) FROM runs WHERE shape = ?", shape)
+        return int(rows[0][0]) if rows else 0
 
     def seen(self, scope: str, key: str, record: dict[str, Any]) -> tuple[int, bool]:
         """Count one more sighting of the same failure; return the count and whether

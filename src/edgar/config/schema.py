@@ -101,6 +101,25 @@ class ControllerSection:
     wall_clock_s: float = 300.0  # one turn's wall clock
 
 
+# Skill synthesis (v3) [SKL-8, SKL-10, SKL-14, SKL-15]. `propose` is the default
+# because a proposal costs a person one read and a mistake costs them a skill future
+# sessions obey. Nothing here fires unless `[controller] enabled` is true: the
+# triggers are checks in that gate, and the write needs the model call it makes.
+#
+# PRD §5 spells some of these nested (`synthesis_triggers.min_tool_calls`,
+# `curator.enabled`). A section here is a flat table of scalars — a nested one would
+# be read as a value of the wrong type — so they are flattened, one level, keeping
+# the names. There are no `curator` keys at all: `skills curate` was cut from M14,
+# and a key that reads fine and then does nothing is the hidden behaviour this
+# harness promises not to have. See the M14 ADR.
+@dataclass(frozen=True, slots=True)
+class SkillsSection:
+    synthesis: Literal["off", "propose", "auto"] = "propose"
+    min_tool_calls: int = 5  # trigger (a): a verified run at least this long [SKL-8]
+    min_repeats: int = 3  # trigger (d): the same task shape, this often, no skill for it
+    distill_after: int = 3  # observations before `skills distill` runs itself [SKL-14]
+
+
 @dataclass(frozen=True, slots=True)
 class BrowserSection:
     """What `/browser` connects [CLI-29, ADR-0036]: a command tool by name, or an MCP
@@ -171,6 +190,7 @@ SECTIONS: dict[str, type] = {
     "memory": MemorySection,
     "browser": BrowserSection,
     "controller": ControllerSection,
+    "skills": SkillsSection,
 }
 
 # Sections made of named blocks, `[providers.NAME]`, `[pricing."a/b"]` and
@@ -207,6 +227,7 @@ class Config:
     memory: MemorySection = field(default_factory=MemorySection)
     browser: BrowserSection = field(default_factory=BrowserSection)
     controller: ControllerSection = field(default_factory=ControllerSection)
+    skills: SkillsSection = field(default_factory=SkillsSection)
     providers: dict[str, ProviderSection] = field(default_factory=dict)
     pricing: dict[str, PriceSection] = field(default_factory=dict)
     mcp: dict[str, McpSection] = field(default_factory=dict)

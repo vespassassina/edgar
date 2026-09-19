@@ -358,6 +358,17 @@ class PromptTyped(Event):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class PromptSteered(Event):
+    """A correction a human typed while the turn was still running [SKL-8c]."""
+
+    # cli/slash.py's /steer, at the moment the line arrives. It is a second
+    # PromptTyped in every way that matters — a human, a keyboard, no other source —
+    # but it is its own event because PromptTyped *opens a run* for the recorder,
+    # and a correction belongs to the run already open, not to a new one.
+    text: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SkillsActivated(Event):
     # cli/setup.py's verify_for_turn(), once per turn, naming the skills it loaded,
     # so telemetry can record them without re-deriving the match [MEM-18].

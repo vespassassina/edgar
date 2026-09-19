@@ -70,6 +70,13 @@ class Site:
     root: Path
     policy: Policy
     dry_run: bool = True
+    # What `propose_skill` needs to know before it may write rather than propose
+    # [SKL-11, CTRL-13]. Every one of them defaults to the refusing answer.
+    home: Path = Path()
+    session: str = ""
+    synthesis: str = "off"  # off | propose | auto
+    verified: bool = False  # did the declared check actually pass this turn?
+    trigger: str = ""  # which SKL-8 checks fired, comma-separated
 
 
 def apply(proposal: Proposal, site: Site) -> Outcome:
@@ -161,10 +168,50 @@ def _propose_instruction(p: ProposeInstruction, site: Site) -> Outcome:
 
 
 def _propose_skill(p: ProposeSkill, site: Site) -> Outcome:
-    # M13 writes the proposal and stops. Turning one into a real skill file is
-    # M14's (SKL-8..16); there is no `skills.synthesis` setting to honour yet.
-    body = f"---\nname: {p.name}\n---\n\n{p.body}\n\n> Why: {p.reason or 'no reason given'}\n"
+    # Four conditions, all of them, before a skill file is ever written by a machine
+    # [SKL-11, CTRL-13]. Anything short of all four is a file a person reads first.
+    #
+    #   synthesis = auto   the person asked for it, in config, knowing the disclaimer
+    #   verified           the declared check actually passed this turn [VER-7]
+    #   no correction      trigger (c) means a human was fixing it: propose, always
+    #   write_learned()    refuses a bad body shape or a hand-authored name collision
+    if site.synthesis == "auto" and site.verified and "correction" not in site.trigger.split(","):
+        written = _write_learned(p, site)
+        if isinstance(written, Path):
+            shown = written.relative_to(site.root).as_posix()
+            detail = f"wrote the learned skill {shown}"
+            row = _log(site, "propose_skill", detail, "applied", p.reason, shown)
+            return Outcome(
+                "applied",
+                f"{detail}; `edgar controller revert {row}` undoes it",
+                "propose_skill",
+                row,
+            )
+        refused = written  # the sentence saying why, carried into the proposal below
+    else:
+        refused = ""
+    # The proposal file, which is the deliverable in every other case [SKL-10].
+    note = f"\n\n> Not written automatically: {refused}" if refused else ""
+    body = f"---\nname: {p.name}\n---\n\n{p.body}\n\n> Why: {p.reason or 'no reason given'}{note}\n"
     return _proposal_file(site, "propose_skill", f"skill-{p.name}", body, p.reason)
+
+
+def _write_learned(p: ProposeSkill, site: Site) -> Path | str:
+    # learning/ is the other removable package, imported here rather than at the top
+    # so deleting it leaves the controller proposing files and nothing else [NFR-12].
+    try:
+        from edgar.learning.synthesis import write_learned
+    except ModuleNotFoundError:
+        return "the learning package is not installed"
+    return write_learned(
+        site.root,
+        site.home or site.root,
+        p.name,
+        p.body,
+        session=site.session,
+        trigger=site.trigger,
+        created=time.strftime("%Y-%m-%d", time.localtime()),
+    )
 
 
 def _proposal_file(site: Site, action: str, slug: str, body: str, reason: str) -> Outcome:
@@ -184,7 +231,7 @@ def _slug(title: str) -> str:
     return "-".join(part for part in kept.split("-") if part)[:40] or "instruction"
 
 
-def revert(store: Controls, mutation_id: int) -> str:
+def revert(store: Controls, mutation_id: int, root: Path | None = None) -> str:
     """Undo one row of the log by id, the way `edgar memory undo` does [CTRL-10]."""
     # 1. There has to be a row, and it has to be one that is in force.
     mutation = store.mutation(mutation_id)
@@ -192,11 +239,24 @@ def revert(store: Controls, mutation_id: int) -> str:
         return f"no mutation {mutation_id}"
     if mutation.state != "applied":
         return f"mutation {mutation_id} is {mutation.state}, not applied"
-    # 2. Reverting is one state change. overrides() stops returning the row, so the
-    #    next session falls back to what config.toml says, which is the only other
-    #    answer there has ever been [CTRL-6].
+    # 2. A learned skill is the one action whose effect is a file, so its revert has
+    #    to move the file. Archived, never deleted: a skill edgar wrote is still
+    #    something a person may want to read before it is gone [SKL-12].
+    undone = _unwrite(mutation.action, mutation.after, root)
+    # 3. Everything else is one state change. overrides() stops returning the row,
+    #    so the next session falls back to what config.toml says, which is the only
+    #    other answer there has ever been [CTRL-6].
     store.set_state(mutation_id, "reverted")
-    return f"reverted {mutation_id}: {mutation.detail}"
+    return f"reverted {mutation_id}: {mutation.detail}{undone}"
+
+
+def _unwrite(action: str, after: str, root: Path | None) -> str:
+    if action != "propose_skill" or root is None or not after:
+        return ""
+    from edgar.skills.discovery import archive
+
+    where = archive(root, (root / after).parent)
+    return f"; archived to {where}" if where else ""
 
 
 def approve(store: Controls, mutation_id: int) -> str:

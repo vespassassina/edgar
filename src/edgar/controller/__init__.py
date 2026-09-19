@@ -31,6 +31,7 @@ def attach(
     config: Config,
     guard: Guard,
     window: int = 0,
+    session: str = "",
 ) -> Gate | None:
     """Subscribe the controller to one session's bus, if it is switched on [CTRL-2]."""
     if not config.controller.enabled:
@@ -43,6 +44,7 @@ def attach(
         store=Controls(root / ".edgar" / "controller.db"),
         bus=bus,
         window=window,
+        session=session,
     )
     bus.subscribe(gate)
     return gate

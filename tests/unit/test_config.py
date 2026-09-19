@@ -138,3 +138,24 @@ def test_other_programs_edgar_variables_are_left_alone(tmp_project: Path, home: 
 def test_bad_flag_values_are_rejected(tmp_project: Path, home: Path) -> None:
     with pytest.raises(ConfigError, match="flag --mode"):
         load(tmp_project, home=home, env={}, flags={"permissions.mode": ("root", "flag --mode")})
+
+
+# [skills], the section M14 added [SKL-10]. The default is the whole point: a
+# harness that learns by proposing, never by writing behind you.
+
+
+def test_skills_synthesis_defaults_to_propose(tmp_project: Path, home: Path) -> None:
+    config = load(tmp_project, home=home, env={})
+    assert config.skills.synthesis == "propose"
+    assert config.skills.min_tool_calls == 5
+    assert config.skills.min_repeats == 3
+    assert config.skills.distill_after == 3
+    assert not hasattr(config.skills, "curator")  # `skills curate` was cut from M14
+
+
+def test_skills_synthesis_takes_only_the_three_modes(tmp_project: Path, home: Path) -> None:
+    _write(tmp_project / ".edgar" / "config.toml", '[skills]\nsynthesis = "auto"\n')
+    assert load(tmp_project, home=home, env={}).skills.synthesis == "auto"
+    _write(tmp_project / ".edgar" / "config.toml", '[skills]\nsynthesis = "yes please"\n')
+    with pytest.raises(ConfigError):
+        load(tmp_project, home=home, env={})

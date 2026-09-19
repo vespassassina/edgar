@@ -26,7 +26,7 @@ from edgar.context.tokens import message_text
 from edgar.core.errors import UsageError
 from edgar.permissions.guard import Guard
 from edgar.permissions.policy import Policy
-from edgar.skills.discovery import lint
+from edgar.skills.discovery import Skill, archive, body_shape, learned, lint
 from edgar.storage.db import Store
 from edgar.storage.transcript import conversation, find, forks, listing
 from edgar.tools.builtin.task import TaskTool
@@ -37,7 +37,8 @@ USAGE = """usage: edgar init | edgar doctor [--network]
        edgar trust [--yes] | edgar permissions list | edgar permissions revoke ID
        edgar sessions list | show ID | rm ID | compact ID
        edgar tools list | describe NAME | edgar cost
-       edgar skills list | validate | edgar skills audit PATH [--strict] [--diff]
+       edgar skills list [--learned] | validate | forget NAME | distill NAME
+       edgar skills audit PATH [--strict] [--diff]
        edgar mcp list | test NAME | login NAME | logout NAME
        edgar ext list | edgar ext validate PATH | edgar ext add PATH [--yes]
        edgar login PROVIDER | edgar logout PROVIDER
@@ -83,6 +84,13 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         return sessions_compact(argv[2], cwd, home)
     if argv[0] == "sessions" and len(argv) in (2, 3):
         return _sessions(argv[1:], cwd)
+    if argv[:2] == ["skills", "distill"] and len(argv) == 3:
+        from importlib import import_module  # learning/ is v3 and removable [NFR-12]
+
+        try:  # a deleted learning package means no distilling, and nothing else
+            return int(import_module("edgar.learning.distill").command(argv[2], cwd, home))
+        except ModuleNotFoundError:
+            raise UsageError("skills distill needs the learning package") from None
     if argv[:2] == ["skills", "audit"]:
         from edgar.skills.audit import command as audit_command  # deterministic, no model
 
@@ -261,20 +269,51 @@ def _tools(argv: list[str], cwd: Path, home: Path) -> int:
         fields = ("name", "description", "kind", "origin", "category", "read_only")
         shown = {k: getattr(tool.schema, k) for k in fields}
         print(json.dumps({**shown, "input": tool.schema.input_schema}, indent=2))
-    elif argv[1:] == ["list"]:
-        for s in found.skills.values():
-            print(f"{s.name:<24} {s.origin:<16} {s.description}")
-        if not found.skills:
+    elif argv[1:] in (["list"], ["list", "--learned"]):
+        # The index says which ones a machine wrote, and `--learned` shows only
+        # those, because "what has edgar taught itself" is its own question [SKL-12].
+        only = argv[2:] == ["--learned"]
+        listed = [s for s in found.skills.values() if learned(s) or not only]
+        for s in listed:
+            mark = " [learned]" if learned(s) else ""
+            print(f"{s.name:<24} {s.origin:<16} {s.description}{mark}")
+        if not listed:
             print("no skills; add one as .edgar/skills/NAME/SKILL.md")
+    elif argv[0] == "skills" and argv[1] == "forget" and len(argv) == 3:
+        return _forget(argv[2], found.skills.get(argv[2]), cwd)
     elif argv[1:] == ["validate"] and argv[0] == "skills":
         lints = [warn for s in found.skills.values() if (warn := lint(s))]
-        for warn in lints:
+        # SKL-16's fixed shape, on the ones a machine wrote. A hand-authored skill
+        # is its author's business; only `skills audit --strict` judges that one.
+        shapes = [
+            f"{s.name}: {wrong}"
+            for s in found.skills.values()
+            if learned(s) and (wrong := body_shape(s.path.read_text(encoding="utf-8")))
+        ]
+        for warn in lints + shapes:
             print(f"warning: {warn}", file=sys.stderr)
         print(f"{len(found.skills)} skills ok, {len(found.problems)} with problems")
-        return 1 if found.problems else 0
+        # A broken shape fails the command, unlike a lint: SKL-16 is a rule about
+        # learned skills, and nothing but this command enforces it.
+        return 1 if found.problems or shapes else 0
     else:
         print(USAGE, file=sys.stderr)
         return 2
+    return 0
+
+
+def _forget(name: str, skill: Skill | None, cwd: Path) -> int:
+    """`edgar skills forget NAME`: take one learned skill out of the index [SKL-12]."""
+    # Only a learned one — a skill a person wrote is theirs to delete, with the
+    # tool they already have — and archived rather than deleted, because a machine
+    # wrote it and they may still want to read it.
+    if skill is None or not learned(skill):
+        print(f"no learned skill named {name}", file=sys.stderr)
+        return 1
+    if not (where := archive(cwd, skill.path.parent)):
+        print(f"{name} is not in this project's learned folder", file=sys.stderr)
+        return 1
+    print(f"archived {name} to {where}")
     return 0
 
 

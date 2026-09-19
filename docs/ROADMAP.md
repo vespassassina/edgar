@@ -56,7 +56,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M22 Inspection, 2.0 release | Code done ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)) — **the 2.0 release is not started**, `edgar.testing.contract` [PRV-14] dropped to v3 for budget, and the two human "Done when" criteria are open | 2.0 |
 | M12 Learning foundations | Done 2026-09-17 ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)) | 3.0 |
 | M13 Controller | Done 2026-09-18 ([ADR-0064](adr/0064-m13-controller-as-built.md)) | 3.0 |
-| M14–M15 Synthesis, escalation | Planned | 3.0 |
+| M14 Skill synthesis | Done 2026-09-19 ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)) | 3.0 |
+| M15 Escalation, route suggest | Planned; blocked on budget (ADR-0065 §10) | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -922,9 +923,9 @@ models until M15 adds the escalation chain [ROUTE-8].
 - Provenance frontmatter, `[learned]`, `skills list --learned`, `skills forget` [SKL-12]
 - Per-skill `HISTORY.md` observations and `skills distill` [SKL-6, SKL-14]
 - Fixed body shape checked by `skills validate` [SKL-16]
-- `learning/curator.py` and `skills curate`, off by default [SKL-15] *(Should)*
+- ~~`learning/curator.py` and `skills curate`, off by default [SKL-15]~~ *(Should; **cut** for budget, ADR-0065 §8)*
 
-- **Tour delivery:** `docs/tour/synthesis.html`, s27 turned into a link; `just map`
+- **Tour delivery:** `docs/tour/synthesis.html`, s33 turned into a link; `just map`
 
 **Done when:** J8 holds with the fake provider; a test asserts no tool output and
 no error text reaches the synthesiser; in `auto` mode a property test over
