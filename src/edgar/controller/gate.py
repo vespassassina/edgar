@@ -29,27 +29,40 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from edgar.config.schema import Config
 from edgar.controller.apply import Site, apply
-from edgar.controller.proposals import Outline, Proposal, Rejected, parse, targets
+from edgar.controller.proposals import (
+    Outline,
+    Proposal,
+    ProposeSkill,
+    Rejected,
+    parse,
+    targets,
+)
 from edgar.controller.store import Controls
 from edgar.controller.triggers import Signals, summary, tripped
 from edgar.core.events import (
     ControllerActed,
     Event,
     EventBus,
+    PromptSteered,
+    PromptTyped,
+    SkillsActivated,
     ToolFinished,
     TurnFinished,
     TurnStarted,
     VerifyFinished,
 )
-from edgar.core.message import Message
+from edgar.core.message import ErrorRecord, Message
 from edgar.permissions.guard import Guard
 from edgar.providers.registry import resolve
 from edgar.providers.routing import RoutingContext, routes_from_config, select_model
+from edgar.skills.discovery import discover
 from edgar.storage.db import Store
 
 # Held for the same reason extensions/hooks.py holds its tasks: asyncio keeps only a
@@ -92,27 +105,44 @@ class Gate:
     guard: Guard
     store: Controls
     bus: EventBus
+    session: str = ""  # the session id, written into a learned skill's provenance
     window: int = 0  # the main model's context window, for token_fraction
     streak: int = 0  # turns in a row that ended with a failing tool call
     failed: int = 0  # failing tool calls in the turn running now
     started: float = 0.0
     checked: str = "unverified"
     tools: list[str] = field(default_factory=list)
+    # The three below are read by the synthesis step only, and each is on ADR-0017's
+    # safe list: a line a human typed, a line a human typed while it ran, the four
+    # fields the harness computed about a failure, the names of skills it loaded.
+    prompt: str = ""
+    corrections: list[str] = field(default_factory=list)
+    errors: list[ErrorRecord] = field(default_factory=list)
+    skills: list[str] = field(default_factory=list)
 
     def __call__(self, event: Event) -> None:
         # A subagent's turn is not the unit a person thinks in, so the gate watches
         # the main loop only — the same line the learner's Recorder draws [SUB-3].
         if event.depth:
             return
-        if isinstance(event, TurnStarted):
+        if isinstance(event, PromptTyped):
+            self.prompt, self.corrections = event.text, []
+        elif isinstance(event, PromptSteered):
+            self.corrections.append(event.text)
+        elif isinstance(event, SkillsActivated):
+            self.skills = list(event.names)
+        elif isinstance(event, TurnStarted):
             self.failed, self.started, self.checked, self.tools = 0, time.monotonic(), "", []
+            self.errors = []
         elif isinstance(event, ToolFinished):
             self.tools.append(event.tool)
             self.failed += 0 if event.ok else 1
+            self.errors += [event.error] if event.error is not None else []
         elif isinstance(event, VerifyFinished):
             self.checked = "passed" if event.ok else "failed"
         elif isinstance(event, TurnFinished):
             self._ended(event)
+            self._synthesis()
 
     def _ended(self, event: TurnFinished) -> None:
         # 1. The streak is counted here, in this session, off the bus. It is
@@ -189,12 +219,124 @@ class Gate:
             return
         self._act(proposal)
 
-    def _act(self, proposal: Proposal) -> None:
+    # --- skill synthesis [SKL-8..12] -------------------------------------------
+    #
+    # A second, separate question asked of the same finished turn: was this worth
+    # writing down? It hangs here rather than in learning/ because SKL-8 asks for
+    # deterministic triggers in this gate, and this is where the turn is counted.
+    #
+    # learning/ is the other removable package, so it is imported inside the
+    # function and a ModuleNotFoundError simply means no synthesis: either folder
+    # can be deleted without the other noticing [NFR-12].
+
+    def _synthesis(self) -> None:
+        # 1. Off is off, and it is one comparison before anything is imported.
+        if self.config.skills.synthesis == "off":
+            return
+        try:
+            from edgar.learning.experience import Experience
+            from edgar.learning.synthesis import Outline, Turn, triggers
+        except ModuleNotFoundError:
+            return
+        # 1b. A skill this turn followed, on a turn that went badly, earns a line
+        #     and eventually a patch. It runs first because it is arithmetic on
+        #     what already happened, and because it can fire when nothing else
+        #     does: a bad turn trips no synthesis trigger at all [SKL-14].
+        self._observe()
+        # 2. The turn, in the only terms SKL-9 allows. Tool names, not arguments.
+        turn = Turn(
+            prompt=self.prompt,
+            corrections=tuple(self.corrections),
+            tools=tuple(self.tools),
+            errors=tuple(self.errors),
+            verification=self.checked or "unverified",
+            skills=tuple(self.skills),
+        )
+        # 3. Arithmetic decides whether a model is asked at all, exactly as above.
+        names = triggers(turn, self.config.skills, Experience(self.root / ".edgar" / "learning.db"))
+        if not names:
+            return
+        self._fire(self._synthesise(Outline.of(turn, names).render(), names))
+
+    def _observe(self) -> None:
+        # One line per skill the turn loaded, then one call once there are enough.
+        # Nothing here reads tool output: observe() is handed names, ErrorRecords
+        # and typed corrections, and there is no fourth argument [SKL-9, SKL-14].
+        from edgar.learning.observations import notes, observe, outline
+
+        for name in self.skills:
+            seen = observe(
+                self.root,
+                name,
+                errors=tuple(self.errors),
+                corrections=tuple(self.corrections),
+                verification=self.checked or "unverified",
+            )
+            skill = discover(self.root, self.home).skills.get(name)
+            if seen < self.config.skills.distill_after or skill is None:
+                continue
+            body = skill.path.read_text(encoding="utf-8")
+            asked = outline(name, body, notes(self.root, name))
+            self._fire(self._synthesise(asked, ("distilled",), brief="patch"))
+
+    def _fire(self, work: Coroutine[Any, Any, None]) -> None:
+        # The same background-task dance as _ended(): the turn is over, and nothing
+        # started here may reach it [CTRL-11].
+        task = asyncio.ensure_future(work)
+        _running.add(task)
+        task.add_done_callback(_running.discard)
+
+    async def _synthesise(
+        self, outline: str, names: tuple[str, ...], *, brief: str = "write"
+    ) -> None:
+        # Wrapped like _look() and for the same reason: housekeeping never fails a
+        # turn, and a synthesiser that breaks leaves a row in the rejected table.
+        try:
+            await self._ask_skill(outline, names, brief)
+        except Exception as exc:
+            self.store.reject("", f"the synthesiser did not answer: {exc}")
+
+    async def _ask_skill(self, outline: str, names: tuple[str, ...], brief: str) -> None:
+        from edgar.learning.observations import PATCH_BRIEF
+        from edgar.learning.synthesis import BRIEF
+
+        told = BRIEF if brief == "write" else PATCH_BRIEF
+
+        # 1. The same model, the same no-tools call, the same parser. What differs
+        #    is the brief and the outline, which is the whole of SKL-9.
+        rules = routes_from_config(self.config.later)
+        ctx = RoutingContext(role="controller", mode=self.config.permissions.mode)
+        provider, model = resolve(select_model(ctx, self.config.model, rules).model, self.config)
+        prompt = [Message.user(f"{told}\n\n---\n\n{outline}")]
+        answer = await provider.stream(prompt, [], model=model, bus=EventBus(), reasoning=False)
+        proposal = parse(answer.message.text, models=targets(self.config.model, rules))
+        # 2. Only one of the eight means anything here. A synthesiser that answers
+        #    `tighten_policy` is answering a question nobody asked it [CTRL-4].
+        if isinstance(proposal, Rejected):
+            self.store.reject(proposal.raw, proposal.problem)
+            self._announce("rejected", proposal.problem, 0)
+            return
+        if not isinstance(proposal, ProposeSkill):
+            self._announce("noop", "the synthesiser proposed no skill", 0)
+            return
+        self._act(proposal, trigger=",".join(names))
+
+    def _act(self, proposal: Proposal, trigger: str = "") -> None:
         # 4. Apply it, and adopt a tightened policy if one came back. Guard is a
         #    mutable dataclass whose check() rebuilds from `base` on every call, so
         #    replacing `base` holds for the rest of this session and for nothing
         #    else: it is never written to config [PERM-8, ADR-0021].
-        site = Site(self.store, self.root, self.guard.base, self.config.controller.dry_run)
+        site = Site(
+            self.store,
+            self.root,
+            self.guard.base,
+            self.config.controller.dry_run,
+            home=self.home,
+            session=self.session,
+            synthesis=self.config.skills.synthesis,
+            verified=self.checked == "passed",
+            trigger=trigger,
+        )
         outcome = apply(proposal, site)
         if outcome.policy is not None:
             self.guard.base = outcome.policy

@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 10494,
+    "loc": 11007,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6655,
+        "loc": 6737,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2114,
+            "loc": 2152,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 234,
+                "loc": 261,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -104,9 +104,9 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 383,
+                "loc": 393,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
-                "stop": "index.html#s18",
+                "stop": "synthesis.html#k4",
                 "status": "built",
                 "port": false
               },
@@ -116,7 +116,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 356,
+                "loc": 357,
                 "summary": "Slash commands [CLI-14, CLI-22, CLI-25, CLI-27, CLI-28].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -152,7 +152,7 @@ window.EDGAR_MAP = {
             "id": "core/config",
             "name": "config/",
             "kind": "package",
-            "loc": 403,
+            "loc": 411,
             "status": "built",
             "children": [
               {
@@ -173,7 +173,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "config",
-                "loc": 159,
+                "loc": 167,
                 "summary": "The config model (BLUEPRINT §14). The dataclasses are the schema.",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 794,
+            "loc": 798,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 206,
+                "loc": 210,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -566,7 +566,7 @@ window.EDGAR_MAP = {
             "id": "core/skills",
             "name": "skills/",
             "kind": "package",
-            "loc": 271,
+            "loc": 303,
             "status": "built",
             "children": [
               {
@@ -587,7 +587,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "skills",
-                "loc": 91,
+                "loc": 123,
                 "summary": "Finding skills: `SKILL.md` folders, read for their frontmatter only [SKL-1..3].",
                 "stop": "extensions.html#x4",
                 "status": "built",
@@ -750,7 +750,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2234,
+        "loc": 2241,
         "status": "built",
         "children": [
           {
@@ -859,7 +859,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 221,
+            "loc": 228,
             "status": "built",
             "children": [
               {
@@ -868,7 +868,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 97,
+                "loc": 104,
                 "summary": "`edgar doctor`: what this machine and this project would do to a session",
                 "stop": "isolation.html#w2",
                 "status": "built",
@@ -1363,14 +1363,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 1090,
+        "loc": 1514,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 708,
+            "loc": 853,
             "status": "built",
             "children": [
               {
@@ -1379,7 +1379,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 123,
+                "loc": 165,
                 "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
                 "stop": "controller.html#c4",
                 "status": "built",
@@ -1403,7 +1403,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 129,
+                "loc": 232,
                 "summary": "Five numbers, sometimes one call, never a failed turn [CTRL-1, CTRL-3, CTRL-9, CTRL-11].",
                 "stop": "controller.html#c5",
                 "status": "built",
@@ -1463,7 +1463,7 @@ window.EDGAR_MAP = {
             "id": "v3/learning",
             "name": "learning/",
             "kind": "package",
-            "loc": 382,
+            "loc": 661,
             "status": "built",
             "children": [
               {
@@ -1479,15 +1479,15 @@ window.EDGAR_MAP = {
                 "port": false
               },
               {
-                "path": "src/edgar/learning/curator.py",
-                "name": "curator.py",
+                "path": "src/edgar/learning/distill.py",
+                "name": "distill.py",
                 "kind": "file",
                 "tier": "v3",
                 "package": "learning",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s33",
-                "status": "planned",
+                "loc": 54,
+                "summary": "`edgar skills distill NAME`: turn a skill's observations into a better body [SKL-14].",
+                "stop": "synthesis.html#k5",
+                "status": "built",
                 "port": false
               },
               {
@@ -1508,7 +1508,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "learning",
-                "loc": 166,
+                "loc": 184,
                 "summary": "What each run did, recorded from the bus so nothing has to be re-derived [MEM-18].",
                 "stop": "learning.html#l2",
                 "status": "built",
@@ -1539,15 +1539,27 @@ window.EDGAR_MAP = {
                 "port": false
               },
               {
+                "path": "src/edgar/learning/observations.py",
+                "name": "observations.py",
+                "kind": "file",
+                "tier": "v3",
+                "package": "learning",
+                "loc": 58,
+                "summary": "Skills improve in use: what a turn noticed, and the patch it eventually earns [SKL-6, SKL-14].",
+                "stop": "synthesis.html#k5",
+                "status": "built",
+                "port": false
+              },
+              {
                 "path": "src/edgar/learning/synthesis.py",
                 "name": "synthesis.py",
                 "kind": "file",
                 "tier": "v3",
                 "package": "learning",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s33",
-                "status": "planned",
+                "loc": 149,
+                "summary": "When a run is worth keeping, and what may be read while keeping it [SKL-8..12, SKL-16].",
+                "stop": "synthesis.html#k1",
+                "status": "built",
                 "port": false
               }
             ]

@@ -19,6 +19,7 @@ a session."""
 from __future__ import annotations
 
 import os
+import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from importlib import import_module
@@ -372,7 +373,7 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
             session.record({"type": "model", "model": rt.name})
         session.mode, session.model = mode, rt.name
     _learning(s, bus, session)
-    _controller(s, bus, rt)
+    _controller(s, bus, rt, session.id)
     bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
     return session, rt
 
@@ -396,7 +397,15 @@ def _learning(s: Setup, bus: EventBus, session: Session) -> None:
     )
 
 
-def _controller(s: Setup, bus: EventBus, rt: Runtime) -> None:
+AUTO_SYNTHESIS = (
+    "skills.synthesis = auto: edgar writes skills that future sessions follow as "
+    "instructions, without your review. A mistake, or an instruction injected into a "
+    "task, that reaches a learned skill persists until you remove it. Review with "
+    "`edgar skills list --learned`."
+)
+
+
+def _controller(s: Setup, bus: EventBus, rt: Runtime, session: str = "") -> None:
     # The second v3 seam, by name for the same reason as the first [ADR-0015]. It
     # subscribes nothing at all unless [controller] enabled is true, which is the
     # default: a harness promising no hidden calls does not start making one per
@@ -405,6 +414,11 @@ def _controller(s: Setup, bus: EventBus, rt: Runtime) -> None:
         controller = import_module("edgar.controller")
     except ModuleNotFoundError:  # pragma: no cover - the tier was removed
         return
+    # SKL-13, printed before anything can be written rather than after: `auto`
+    # writes instructions future sessions obey, and the cost of that is a sentence
+    # a person sees every single session, not a line in a config file they set once.
+    if s.config.skills.synthesis == "auto":
+        print(AUTO_SYNTHESIS, file=sys.stderr)
     controller.attach(
         bus,
         root=s.root,
@@ -412,6 +426,7 @@ def _controller(s: Setup, bus: EventBus, rt: Runtime) -> None:
         config=s.config,
         guard=s.guard,
         window=rt.provider.capabilities.max_context,
+        session=session,  # provenance for a learned skill, if one is written [SKL-12]
     )
 
 

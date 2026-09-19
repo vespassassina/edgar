@@ -52,6 +52,13 @@ from edgar.sandbox.base import best
 CLOUD = ("icloud", "mobile documents", "onedrive", "dropbox", "google drive", "my drive")
 
 
+SYNTHESIS = {  # what each `skills.synthesis` mode means, in one line [SKL-13]
+    "off": "edgar never writes a skill",
+    "propose": "a proposal file you read; nothing reaches the index",
+    "auto": "edgar writes skills into .edgar/skills/learned/ without your review",
+}
+
+
 def command(cwd: Path, home: Path | None = None, *, network: bool = False) -> int:
     home = home or Path.home()
     config = load(cwd, home=home)
@@ -65,6 +72,11 @@ def command(cwd: Path, home: Path | None = None, *, network: bool = False) -> in
     now, could = config.shell.sandbox, best()
     advice = "ok" if now == could else f"set [shell] sandbox = {could!r} for a real sandbox"
     print(f"sandbox  {now:<11} best available here: {could}; {advice}")
+    # Which skill-synthesis mode this project runs under [SKL-13]. `auto` is the
+    # one worth a line of its own: it is the only setting under which edgar writes
+    # instructions that future sessions follow without anyone reading them first.
+    inert = "" if config.controller.enabled else "; inert: [controller] enabled is false"
+    print(f"skills   {config.skills.synthesis:<11} {SYNTHESIS[config.skills.synthesis]}{inert}")
     _trust(cwd, config, home)
     _db(cwd, home)
     _mcp(config)

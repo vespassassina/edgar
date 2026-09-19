@@ -9,6 +9,39 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **edgar can write its own skills, and by default asks you first (v3, M14).**
+  When a turn ends, four plain checks ask whether it was worth remembering: it
+  used a lot of tools and **the project's own check passed**; something failed,
+  it recovered and the check passed; you typed a correction mid-run; or this
+  shape of work has come up repeatedly with no skill covering it. If none fire,
+  nothing happens — no call, no cost. If one does, a second model is asked for
+  one skill, **with no tools at all**, and it is shown an *outline* of the run:
+  what you typed, your corrections, tool **names** in order, the four fields of
+  each recorded failure, and whether the check passed. No tool output, no error
+  text, no tool arguments — there is no field that can carry them
+  [SKL-8, SKL-9, ADR-0017, ADR-0065].
+- **`skills.synthesis = off | propose | auto`, default `propose`.** On
+  `propose`, the skill lands in `.edgar/proposals/` for you to read and move
+  yourself. On `auto` it is written straight into `.edgar/skills/learned/`, only
+  after a passing verification, never for the correction trigger, never over a
+  name you used — and edgar prints a disclaimer saying so at the start of every
+  session [SKL-10, SKL-11, SKL-13].
+- **A learned skill says where it came from.** Frontmatter carries
+  `learned: true`, the session, the trigger and the date; **`edgar skills list
+  --learned`** shows them with a `[learned]` marker, and **`edgar skills forget
+  NAME`** takes one out of the index by moving it to `learned/.archive/` — it is
+  never deleted. `edgar skills validate` now also checks that a learned skill has
+  its four sections (*When to use*, *Procedure*, *Pitfalls*, *Verification*) in
+  order; a skill you wrote is prose you chose the shape of
+  [SKL-12, SKL-16].
+- **Skills improve from use.** A turn that loaded a skill and then went badly
+  leaves one redacted line in `.edgar/skills/learned/.history/`, and once enough
+  pile up edgar proposes a better body. **`edgar skills distill NAME`** asks for
+  that patch by hand. Observations are kept in edgar's own folder whatever the
+  skill's origin, so nothing edgar writes ever lands beside a file you wrote
+  [SKL-6, SKL-14].
+- **`edgar doctor`** now prints the synthesis mode in plain words, and says so
+  when `[controller] enabled` is false and the whole thing is inert.
 - **The controller, off until you turn it on (v3, M13).** After a turn ends, five
   deterministic checks look at how full the context got, how many turns in a row
   ended with a failing tool call, how much of today's cost cap is gone, how much
@@ -185,6 +218,10 @@ extension formats freeze.
   [NFR-6].
 
 ### Docs
+- **[Skill synthesis](docs/tour/synthesis.html)**, a new tour page: five stops on
+  when edgar decides a run is worth a skill, what the writer is allowed to see,
+  the one function that creates a skill file, who says yes, and how a skill gets
+  better from being watched. The M14 stop on the index links to it.
 - The tour covers all of v1 and now has a map. Four new pages —
   [memory](docs/tour/memory.html), [MCP and signing in](docs/tour/mcp.html),
   [subagents](docs/tour/agents.html) and [extensions](docs/tour/extensions.html)

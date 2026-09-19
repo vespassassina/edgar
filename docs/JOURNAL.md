@@ -35,9 +35,12 @@ In order:
 4. ~~**M12, learning foundations.**~~ Done 2026-09-17
    ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)); it flipped
    `TARGET_TIER` to `"v3"`. ~~**M13, the controller.**~~ Done 2026-09-18
-   ([ADR-0064](adr/0064-m13-controller-as-built.md)). **M14, skill synthesis, is
-   next**, and it has 94 lines of code outside the removable packages to spend
-   for itself *and* M15, so read ADR-0064's consequences before planning it.
+   ([ADR-0064](adr/0064-m13-controller-as-built.md)). ~~**M14, skill
+   synthesis.**~~ Done 2026-09-19
+   ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)). **M15, escalation and
+   route suggest, is next, and cannot start as planned**: only 5 lines of code
+   remain outside the removable packages. Read ADR-0065 §10 first and decide
+   what moves before writing anything.
 5. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 6. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
@@ -53,6 +56,40 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-19 · M14, skill synthesis
+
+**Asked.** Build M14: verified procedures become skills, with the tour page and
+the usual trace, on `feat/m14-skill-synthesis`, commit only.
+
+**Done.** `learning/synthesis.py` (triggers, the outline, `write_learned()`),
+`learning/observations.py` (SKL-6, SKL-14), `learning/distill.py` (`edgar skills
+distill NAME`), the synthesis step in `controller/gate.py`, the auto branch in
+`controller/apply.py`, `skills list --learned`, `skills forget`, the body-shape
+check in `skills validate`, the `[learned]` marker, the doctor line and the
+once-a-session `auto` disclaimer in `cli/setup.py`. 33 new tests; `just check`
+green at 1,082, ruff and mypy clean. Tour page `docs/tour/synthesis.html`, five
+stops, both mermaid diagrams verified rendering in a browser; index stop s33 is
+now built and links to it; `just map` rerun.
+
+**Decided** ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md), ten
+decisions). The ones worth arguing with: tool arguments are kept out of the
+outline although SKL-9 allows them, because an argument is model text written
+after reading tool output; observations go to one machine-owned
+`.edgar/skills/learned/.history/` folder rather than a `HISTORY.md` inside a
+folder a person owns; `skills distill` depends on the controller rather than
+copying its propose-or-write rule; OQ-6 is resolved as `agent:tool>tool`
+(`main:shell>edit`).
+
+**Cut.** SKL-15, `learning/curator.py` and `edgar skills curate`, a *Should*.
+Its two speculative config keys were removed with it: a key that parses and then
+does nothing is the hidden behaviour edgar promises not to have.
+
+**Pending, and it blocks M15.** `just loc` reads 11,073 of 12,000 for the tier
+but **9,495 of 9,500 outside the removable packages** — five lines for all of
+M15. Something in v3 has to become removable, or M15's non-removable surface
+(`edgar route suggest`) moves to a later tier. Decide before writing code.
+ADR-0065 §10.
 
 ## 2026-09-18 · CI: Windows fails `test_sandbox.py` on the Seatbelt profile
 

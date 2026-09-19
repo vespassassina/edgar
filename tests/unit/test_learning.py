@@ -163,10 +163,12 @@ def test_a_subagents_turn_is_not_a_run_of_its_own(store: Experience) -> None:
     assert store.stats().runs == 0
 
 
-def test_a_runs_shape_is_its_distinct_tools() -> None:
+def test_a_runs_shape_is_its_distinct_tools_in_call_order() -> None:
+    # M14 resolved OQ-6 and the shape gained the agent and its call order, so the
+    # repeat trigger and `edgar stats` read the same string [SKL-8d].
     run = Run(session="s", prompt="p", tools=["read", "edit", "read"])
-    assert run.shape == "edit+read"
-    assert Run(session="s", prompt="p").shape == "answer"
+    assert run.shape == "main:read>edit"
+    assert Run(session="s", prompt="p").shape == "main:answer"
 
 
 def test_the_recorded_prompt_is_redacted(store: Experience) -> None:

@@ -34,6 +34,7 @@
       <li><a href="isolation.html">Isolation</a></li>
       <li><a href="learning.html">Learning</a></li>
       <li><a href="controller.html">The controller</a></li>
+      <li><a href="synthesis.html">Skill synthesis</a></li>
       <li><a href="map.html">The map</a></li>
     </ul>
   </div>
@@ -88,7 +89,7 @@
   <ol class="ak-nav">
     <li><a href="#s31"><span class="n">31</span>Learning (M12)</a></li>
     <li><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
-    <li class="planned"><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
+    <li><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
     <li class="planned"><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
     <li class="planned"><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
     <li class="planned"><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
@@ -148,17 +149,17 @@ totals.</p>
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,450</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
     <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,320</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
-    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~305</td><td>Finding skills, reading only their frontmatter, deterministic activation, and the audit before a copy (v1, v2)</td></tr>
+    <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~339</td><td>Finding skills, reading only their frontmatter, deterministic activation, and the audit before a copy (v1, v2)</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~290</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,470</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,543</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
     <tr data-package="sandbox"><td><code>sandbox/</code></td><td class="loc">~110</td><td>The Sandbox port and its backends: nothing, bubblewrap, seatbelt (v2)</td></tr>
-    <tr data-package="learning"><td><code>learning/</code></td><td class="loc">~410</td><td>Telemetry, autolearn from typed text, error facts, <code>history.md</code> (v3)</td></tr>
-    <tr data-package="controller"><td><code>controller/</code></td><td class="loc">~745</td><td>Deterministic triggers, eight whitelisted actions, policy that only tightens (v3)</td></tr>
+    <tr data-package="learning"><td><code>learning/</code></td><td class="loc">~686</td><td>Telemetry, autolearn from typed text, error facts, <code>history.md</code>, skill synthesis (v3)</td></tr>
+    <tr data-package="controller"><td><code>controller/</code></td><td class="loc">~892</td><td>Deterministic triggers, eight whitelisted actions, policy that only tightens (v3)</td></tr>
     <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
   </tbody>
 </table>
@@ -983,14 +984,23 @@ flowchart LR
   <p>Everything that persists is dry-run by default, logged, and revertible.</p>
 </article>
 
-<article class="stop planned" id="s33" data-files="src/edgar/learning/synthesis.py src/edgar/learning/curator.py">
+<article class="stop" id="s33" data-files="src/edgar/learning/synthesis.py src/edgar/learning/observations.py src/edgar/learning/distill.py">
   <h4><span class="n">33</span>Skill synthesis</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M14 · planned</span> <code>learning/synthesis.py</code> <code>learning/curator.py</code></p>
-  <p>Only a verified procedure ever becomes a skill. The synthesiser sees the
-  outline of a run — what happened, in order — never the raw tool output. It
-  writes only into <code>.edgar/skills/learned/</code>, and only after a check
-  has actually passed.
-  <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m14--skill-synthesis">Roadmap: M14</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/synthesis.py"><code>learning/synthesis.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/observations.py"><code>learning/observations.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/learning/distill.py"><code>learning/distill.py</code></a></p>
+  <p class="look">Look for: <code>triggers</code> <code>Outline</code> <code>write_learned</code> <code>observe</code> <code>command</code></p>
+  <p>M14 has a tour of its own: <a href="synthesis.html">Skill synthesis</a>, five
+  stops on when edgar writes its own instructions and what it is not allowed to
+  read while doing it. What to carry from here: an agent writing its own standing
+  instructions is safe only under refusals.</p>
+  <ul class="points">
+    <li>Four plain checks decide whether to try, and three of them need the
+    project's own test command to have passed.</li>
+    <li>The writer is given an outline that has no field for a tool's output —
+    the type is the filter, so it cannot fall out of date.</li>
+    <li>It writes into one machine-owned folder, never over a name a human
+    owns, and by default only as a proposal you read first.</li>
+  </ul>
+  <p>Choose <code>auto</code> and edgar says so at the start of every session.</p>
 </article>
 
 <article class="stop planned" id="s34" data-files="src/edgar/providers/escalation.py">

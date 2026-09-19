@@ -129,6 +129,59 @@ def _when(when: Any) -> tuple[tuple[str, ...], tuple[str, ...]]:
     return tuple(paths), tuple(k.lower() for k in keywords)
 
 
+# The fixed body shape a synthesised skill has to have [SKL-16]. It lives here, not
+# in learning/synthesis.py, for two reasons: `skills validate` is a v1 command that
+# has to keep working with the whole learning package deleted, and one definition
+# means the writer and the checker can never disagree about what a skill looks like.
+BODY_SECTIONS = ("When to use", "Procedure", "Pitfalls", "Verification")
+
+
+def learned(skill: Skill) -> bool:
+    """Did a machine write this one? The origin says so, and only discovery sets it."""
+    return skill.origin.endswith("learned")
+
+
+def body_shape(body: str) -> str | None:
+    """The four `##` headings, all of them, in that order, or a sentence saying what
+    is wrong. Checked for learned skills only: a hand-authored skill is prose a
+    person chose the shape of [SKL-16]."""
+    # Only `## ` headings count. A deeper heading inside Procedure is the skill's
+    # own business, and a `#` title above them all is not a section.
+    found = [line[3:].strip() for line in body.splitlines() if line.startswith("## ")]
+    missing = [name for name in BODY_SECTIONS if name not in found]
+    if missing:
+        return f"missing section(s): {', '.join(missing)}"
+    if [name for name in found if name in BODY_SECTIONS] != list(BODY_SECTIONS):
+        return f"sections out of order: expected {', '.join(BODY_SECTIONS)}"
+    return None
+
+
+LEARNED = ".edgar/skills/learned"  # machine-owned, per PRD §9.5 [SKL-11]
+
+
+def archive(root: Path, folder: Path) -> str:
+    """Move one learned skill folder into `learned/.archive/`, and say where it went.
+
+    The one way a skill ever leaves the index, shared by `edgar skills forget` and
+    `edgar controller revert`. It never deletes: a machine wrote the file, and a
+    person may still want to read it [SKL-12, SKL-15]. It lives here rather than in
+    `learning/` because `forget` has to work with that package deleted [NFR-12].
+    """
+    # 1. Inside learned/ or nowhere. A path from a log row is a path off a disk, so
+    #    the containment is checked rather than assumed.
+    learned_at = root.joinpath(*LEARNED.split("/")).resolve()
+    if not folder.exists() or learned_at not in folder.resolve().parents:
+        return ""
+    # 2. A name already archived gets a suffix rather than being overwritten: two
+    #    attempts at the same skill are two things a person may want to compare.
+    target = learned_at / ".archive" / folder.name
+    target.parent.mkdir(parents=True, exist_ok=True)
+    while target.exists():
+        target = target.with_name(f"{target.name}~")
+    folder.rename(target)
+    return target.relative_to(root).as_posix()
+
+
 _WHEN_TO_USE = ("use when", "use for", "use this", "when to use", "whenever")
 
 

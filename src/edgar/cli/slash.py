@@ -23,7 +23,7 @@ from edgar.context.compact import compact, rewind, turn_starts
 from edgar.context.tokens import message_text
 from edgar.context.working import enter, leave
 from edgar.core.errors import EdgarError
-from edgar.core.events import FactSaved, Paused, Resumed
+from edgar.core.events import FactSaved, Paused, PromptSteered, Resumed
 from edgar.core.session import Session
 from edgar.storage.transcript import (
     adopt,
@@ -198,6 +198,9 @@ async def _steer(shell: Shell, arg: str) -> None:
         shell.say("usage: /steer TEXT")
     elif shell.busy:
         shell.session.steer(arg)
+        # A correction is human-typed text about a running turn, which is exactly
+        # what SKL-8's third synthesis trigger is: say so on the bus [SKL-8c].
+        shell.rt.bus.emit(PromptSteered(text=arg))
         shell.say("steer pending: it lands before the next request")
     else:
         shell.submit(arg)  # after the turn has ended, a steer is the next turn
