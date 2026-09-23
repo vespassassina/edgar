@@ -36,19 +36,31 @@ first, then the three documents under "Read".
     has exactly the fields `ScopeRefusal` asks for. Fixed by having
     `Broker.check()` return a plain `tuple[str, str] | None` (caveat, reason)
     instead — a structural type mypy does not need a Protocol to check.
+  - **Intent creation**: `broker/intent.py` (`Intent`, `Intents`), the
+    subscriber that opens an intent from a typed line, mirroring
+    `learning/learner.py`'s "boundary is the subscription" shape. Reads only
+    `PromptTyped` at depth 0; ignores `PromptSteered` by design (a correction
+    belongs to the run already open, my own extension of that event's own
+    reasoning, not an explicit ADR-0039 line — flag it if it matters later)
+    [CAP-1]. Not yet wired to anything (no subscriber attached to a real
+    bus, no `Runtime`/`ToolContext` field) — that lands with item 7 below.
   - Tests: `tests/unit/test_broker_caveats.py` (20), `tests/property/test_broker_chain.py`
     (2 hypothesis tests, CAP-5), `tests/unit/test_broker_guard.py` (6, the
     veto stage exercised through the real `execute()` pipeline with a fake
-    tool). All 60 pass; `just check`'s non-tour suite (982 tests) is green;
-    `ruff format`, `ruff check` and `mypy --strict` are clean project-wide.
-  - **Budget is getting tight.** `just loc` now reads `9422 / 9500` outside
-    the removable packages — **78 lines of code of headroom left** for
-    everything still on the list below that is not itself inside
-    `broker/` (the `--scope`/`/scope` CLI surface, `config/schema.py`'s
-    `[broker]` section, the `edgar receipt` command, the `doctor` line, and
-    `cli/setup.py`'s wiring seam are all non-removable). Keep as much of the
-    real logic inside `broker/` itself and let the non-removable call sites
-    stay one or two lines each, the way `cli/setup.py`'s existing
+    tool), `tests/unit/test_broker_intent.py` (6) and
+    `tests/property/test_broker_intent_boundary.py` (1 hypothesis test,
+    modelled on `test_learning_boundary.py`'s `ACTIVE_FROM` check). All 67
+    pass; `just check`'s non-tour suite (1135 tests) is green; `ruff format`,
+    `ruff check` and `mypy --strict` are clean project-wide.
+  - **Budget is getting tight.** `just loc` still reads `9422 / 9500` outside
+    the removable packages — `intent.py` lives entirely inside `broker/`, so
+    it cost nothing. **78 lines of code of headroom left** for everything
+    still on the list below that is not itself inside `broker/` (the
+    `--scope`/`/scope` CLI surface, `config/schema.py`'s `[broker]` section,
+    the `edgar receipt` command, the `doctor` line, and `cli/setup.py`'s
+    wiring seam are all non-removable). Keep as much of the real logic
+    inside `broker/` itself and let the non-removable call sites stay one or
+    two lines each, the way `cli/setup.py`'s existing
     `_escalation()`/`_controller()`/`_learning()` seams do.
 - **v2 is complete in code.** The 2.0 release itself and its two human criteria
   (a two-week dogfood period, an outside person's PRD §11 checks) are still
@@ -81,47 +93,43 @@ instant), since no real caveat reaches a `Ticket` except through
 ## What M17 still needs
 
 Everything below is unbuilt. Roadmap order, from
-[`ROADMAP.md`](ROADMAP.md) "M17 — Capability broker". Item 1 (the veto
-stage) is now done — see "Where things stand" above; renumbered from there.
+[`ROADMAP.md`](ROADMAP.md) "M17 — Capability broker". Items 1 (the veto
+stage) and 2 (intent creation) are now done — see "Where things stand"
+above; renumbered from there.
 
-1. **Intent creation**, restricted to the same call sites that emit
-   `PromptTyped`/`PromptSteered` (`cli/repl.py`'s `submit()`,
-   `cli/oneshot.py`'s `run_prompt()`) — never from tool output, fetched
-   content, or model text, mirroring the MEM-8 boundary. Needs its own
-   property test analogous to `store.py`'s `ACTIVE_FROM` allowlist test.
-2. **`--scope KEY=VALUE`** (repeatable) on `-p` (`cli/main.py`), and
+1. **`--scope KEY=VALUE`** (repeatable) on `-p` (`cli/main.py`), and
    **`/scope`** in the REPL (`cli/slash.py` — bare shows the current ticket,
    `/scope clear` resets). Both build on `caveats.parse_scope()`, already
    built.
-3. **`task` attenuates the parent's ticket** on delegation; the
+2. **`task` attenuates the parent's ticket** on delegation; the
    controller's `tighten_policy` adds caveats to a live ticket. Both call
    `ticket.attenuate()`, already built.
-4. **`broker/receipt.py`**: append-only, hash-chained, HMAC-SHA256-signed
+3. **`broker/receipt.py`**: append-only, hash-chained, HMAC-SHA256-signed
    JSONL at `.edgar/sessions/<id>/receipt.jsonl` (`Session.dir` already
    exists structurally). Key at `~/.edgar/receipt.key`, 32 random bytes
    created on first use, added to the hard layer's credential paths so the
    agent's own tools cannot read it. Entry kinds: `intent`, `ticket`,
    `delegate`, `allow`/`refuse`, `permission`. Nothing here exists yet —
    wholly new code, no hash-chain/HMAC precedent anywhere else in the repo.
-5. **`edgar receipt [ID] [--refused] [--verify]`** CLI command; `--verify`
+4. **`edgar receipt [ID] [--refused] [--verify]`** CLI command; `--verify`
    checks the chain/signatures and exits 1 at the first break.
-6. **`[broker] enabled` config section** (`config/schema.py`), default
+5. **`[broker] enabled` config section** (`config/schema.py`), default
    `True`, plus an `edgar doctor` report line.
-7. **`cli/setup.py`'s `_broker(...)`** `import_module`-by-name seam,
+6. **`cli/setup.py`'s `_broker(...)`** `import_module`-by-name seam,
    mirroring `_escalation`/`_controller`/`_learning` — both an event-bus
-   subscriber for the receipt writer and whatever builds the live
-   `TicketGuard` onto `Runtime.broker`/`ToolContext.broker` (both fields
-   already exist and default to `None`).
-8. **Bump `tests/support/budget.py`'s `TARGET_TIER`** from `"v3"` to
+   subscriber (attaching `Intents` and the receipt writer) and whatever
+   builds the live `TicketGuard` onto `Runtime.broker`/`ToolContext.broker`
+   (both fields already exist and default to `None`).
+7. **Bump `tests/support/budget.py`'s `TARGET_TIER`** from `"v3"` to
    `"v4"`. Not done yet — `just check` currently fails on the tour tests
    below, not on budget, but do this before the tour work so `just loc`
    reports against the right ceiling.
-9. **The confused-deputy integration test** named in the roadmap's "Done
+8. **The confused-deputy integration test** named in the roadmap's "Done
    when": a session scoped `paths=reports/q3.md`, injected content tries to
    read `reports/2024-salaries.md` and fetch an outside host, both refused,
    `edgar receipt --refused` shows both, `--verify` catches a one-byte
    tamper.
-10. **Tour delivery**: `docs/tour/broker.html`, turn stop `s29` (per the
+9. **Tour delivery**: `docs/tour/broker.html`, turn stop `s29` (per the
     roadmap row — check it against `docs/tour/index.html` directly, the way
     M14's handoff caught a stale id) into a link, then `just map`.
 

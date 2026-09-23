@@ -60,6 +60,34 @@ none of which lives inside `broker/` itself. Still not wired: intent
 creation, `--scope`/`/scope`, `task` attenuation, the receipt module, the
 CLI command, config, and the tour page.
 
+## 2026-09-23 — M17: intent creation lands
+
+Built `broker/intent.py`: `Intent` (id, text, an ISO instant for the receipt)
+and `Intents`, a subscriber mirroring `learning/learner.py`'s "the boundary
+is the subscription, not a check inside it" shape [CAP-1]. It reads exactly
+one event kind, `PromptTyped` at depth 0, and nothing else — every other
+source MEM-9 excludes (tool output, an `@path` body, piped stdin, model text,
+a subagent's own `task` argument) travels a different road and never reaches
+this subscriber, so there is nothing to filter inside it. `PromptSteered` is
+deliberately not read: a correction belongs to the run already open, the same
+reasoning the event's own docstring gives for not opening a fresh run for the
+recorder — this is my own extension of that reasoning to intent-opening, not
+an explicit ADR-0039 requirement, and worth confirming with the maintainer if
+it matters later.
+
+6 unit tests (`tests/unit/test_broker_intent.py`) plus a hypothesis property
+test (`tests/property/test_broker_intent_boundary.py`, modelled on
+`test_learning_boundary.py`'s `ACTIVE_FROM` check) assert that
+`Intents.current`'s text can never differ from some depth-0 `PromptTyped`
+event that was actually emitted, across arbitrary generated trajectories
+mixing typed lines, steers, model text and tool calls at various depths. All
+pass; ruff, mypy and the rest of the suite stay clean. `just loc` still reads
+9422/9500 outside the removable packages — `intent.py` lives entirely inside
+`broker/`, so it cost none of the 78-line headroom.
+
+Next: `--scope`/`/scope`, `task` attenuation, the receipt module, the CLI
+command, config, and the tour page. Full order in `HANDOFF.md`.
+
 ## Pick up here
 
 The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md),
