@@ -179,14 +179,20 @@ also done — see "Where things stand" above. Renumbered again from there.
    As expected, this only raised the *total*-tier ceiling (12,000 → 13,000);
    the "without removable packages" cap is still `9500 / 9500`, so item 1's
    blocker is unchanged.
-3. **The confused-deputy integration test** named in the roadmap's "Done
-   when": a session scoped `paths=reports/q3.md`, injected content tries to
-   read `reports/2024-salaries.md` and fetch an outside host, both refused,
-   `edgar receipt --refused` shows both, `--verify` catches a one-byte
-   tamper. The infrastructure for this now all exists (the receipt, the CLI
-   command); this is the first item on the list that only needs test code,
-   no non-removable touch, so it is the one to reach for next if item 1
-   stays blocked.
+3. ~~**The confused-deputy integration test** named in the roadmap's "Done
+   when".~~ Done:
+   `tests/integration/test_confused_deputy.py`, two tests. A ticket scoped
+   `paths=reports/q3.md`; a `read` on `reports/2024-salaries.md` is refused;
+   a `shell curl` toward an outside host is refused too — `shell`'s `Subject`
+   is neither a path nor a URL, so it falls into `authorize()`'s "unchecked"
+   branch and is refused outright under `paths=`, not because of a `hosts=`
+   check (a `fetch`-style URL-shaped call would need `hosts=` to be refused;
+   `paths=` alone does not constrain it — worth remembering if this test is
+   ever extended to a real network-fetch tool). Both refusals verified in the
+   signed receipt chain, then exercised through `edgar receipt --refused`
+   and `--verify`, including a one-byte tamper turning `--verify`'s exit
+   code from 0 to 1. Pure test code, no non-removable touch; `just loc` is
+   unchanged at `9500 / 9500`.
 4. **Tour delivery**: `docs/tour/broker.html`, turn stop `s29` (per the
    roadmap row — check it against `docs/tour/index.html` directly, the way
    M14's handoff caught a stale id) into a link, then `just map`. Also
@@ -197,15 +203,15 @@ also done — see "Where things stand" above. Renumbered again from there.
 
 There is **no budget headroom left** outside the removable packages (see
 "Where things stand" above) — item 1 needs the maintainer's decision before
-any further non-removable touch; items 2–4 do not touch a non-removable
-file at all.
+any further non-removable touch; item 4 (the only one left) does not touch
+a non-removable file either.
 
 `just check` currently fails with five tour/map test failures
 (`test_tour.py`, `test_tour_map.py`) because `broker/caveats.py`,
-`broker/guard.py` and `broker/intent.py` exist with no tour stop and the
-committed `map.json`/`map.data.js` are stale against the new LOC count.
-That is expected and will clear once item 7 above is done — do not try to
-make the tour tests pass before the rest of the module is built; the tour
+`broker/cli.py`, `broker/guard.py` and `broker/intent.py` exist with no tour
+stop and the committed `map.json`/`map.data.js` are stale against the new LOC
+count. That is expected and will clear once item 4 above is done — do not try
+to make the tour tests pass before the rest of the module is built; the tour
 describes what shipped, not what is half-built.
 
 ## Read, in this order
@@ -224,13 +230,13 @@ describes what shipped, not what is half-built.
 
 ## Resume commands
 
-M17's work through the delegation-attenuation commit is committed on
-`feat/m17-capability-broker`; the receipt module, `edgar receipt` and
-`[broker] enabled` built this session are still only in the working tree,
-not yet committed. From that branch:
+M17's work through the confused-deputy test is committed on
+`feat/m17-capability-broker`. Only item 4 (tour delivery) is left, and item 1
+(the controller) is blocked on the maintainer's budget decision. From that
+branch:
 
 ```bash
-uv run pytest tests/unit/test_broker_receipt.py tests/unit/test_broker_cli.py tests/integration/test_broker_setup.py -q
+uv run pytest tests/integration/test_confused_deputy.py -q
 ```
 
 ```bash

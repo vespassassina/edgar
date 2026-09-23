@@ -5,6 +5,44 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17: the confused-deputy integration test
+
+Built HANDOFF's item 3, the roadmap's M17 "Done when" acceptance test:
+`tests/integration/test_confused_deputy.py`. A ticket scoped
+`paths=reports/q3.md`; a `read` call on `reports/2024-salaries.md` refused;
+a `shell` call running `curl` toward an outside host refused too. The second
+refusal needed care: `authorize()` only checks `paths=`/`hosts=` against a
+tool whose `Subject` resolves to a path or a URL. `shell`'s `Subject` is
+neither (it carries the raw command text), so it lands in `authorize()`'s
+"unchecked" branch and is refused outright under `paths=` unless named in
+`tools=` — the deliberate cost of scoping to files, per ADR-0039's own
+comment in `authorize.py`. A `fetch`-style URL-shaped call would need a
+`hosts=` caveat to be refused; `paths=` alone would not touch it — worth
+remembering if this test is ever extended to cover a real network-fetch
+tool, since a `paths=`-only ticket does not, by itself, stop a URL-shaped
+tool from reaching an outside host.
+
+Two tests: one drives `execute()` directly (mirroring
+`tests/unit/test_broker_guard.py`'s pattern) and checks both refusals carry
+`ErrorKind == "out_of_scope"`, both show up as `ScopeRefused` events, and
+the resulting receipt chain still verifies; the other exercises the same
+scenario through `edgar receipt --refused` (both refusals print) and
+`--verify` (holds, then fails with exit 1 after a one-byte tamper). Two of
+the four sub-claims in the roadmap's "Done when" — that a subagent cannot
+drop a caveat, and that no chain verifies without one — were already
+covered by the existing hypothesis tests in `tests/property/test_broker_chain.py`,
+so this test only needed to prove the receipt/refusal/CLI-verify story.
+
+Pure test code: no non-removable file touched, `just loc` unchanged at
+`9500 / 9500` outside removable packages. `just check`'s non-tour suite is
+1168 passed (up from 1166); the five tour/map failures are the expected,
+already-documented gap (item 4, not yet built). `ruff format`, `ruff check`
+and `mypy --strict` clean.
+
+Only item 4 (tour delivery) is left on HANDOFF's list; item 1 (the
+controller's `tighten_policy`) stays blocked on the maintainer's budget
+decision.
+
 ## 2026-09-23 — M17: `TARGET_TIER` bumped to `"v4"`
 
 One-line follow-up to the receipt entry below: `tests/support/budget.py`'s
