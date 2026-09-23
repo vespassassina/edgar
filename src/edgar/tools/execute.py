@@ -1,6 +1,6 @@
 """Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].
 
-    validate → pre_tool hooks → permission → run with timeout → spill
+    validate → pre_tool hooks → ticket → permission → run with timeout → spill
 
 Each failure becomes a ToolResultBlock(is_error=True) with an ErrorRecord the
 harness computed, and goes back to the model, which often recovers by trying
@@ -16,10 +16,11 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import Any
 
-from edgar.core.events import ToolFinished, ToolProposed, ToolStarted
+from edgar.core.events import ScopeRefused, ToolFinished, ToolProposed, ToolStarted
 from edgar.core.message import ErrorKind, ErrorRecord, TextBlock, ToolResultBlock, ToolUseBlock
 from edgar.extensions.hooks import veto as hooks_veto
 from edgar.permissions.guard import Guard
+from edgar.permissions.matcher import subject as resolve
 from edgar.permissions.policy import Deny, network_allowed
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry
@@ -61,6 +62,17 @@ async def execute(
             return _failed(call, "permission_denied", f"denied by hook: {reason}")
 
     described = getattr(tool, "subject", None)  # command and HTTP tools say what they touch
+    subj = described(call.args, ctx.cwd) if described else resolve(call.args, ctx.cwd)
+
+    if ctx.broker is not None:
+        refusal = ctx.broker.check(
+            tool=call.name, read_only=tool.schema.read_only, subject=subj, cwd=ctx.cwd
+        )
+        if refusal is not None:
+            caveat, reason = refusal
+            bus.emit(ScopeRefused(id=call.id, tool=call.name, caveat=caveat, reason=reason))
+            return _failed(call, "out_of_scope", f"refused by scope: {reason}")
+
     decision = await guard.check(
         tool.schema,
         call.args,
@@ -69,7 +81,7 @@ async def execute(
         tainted=tainted,
         call_id=call.id,
         bus=bus,
-        subject=described(call.args, ctx.cwd) if described else None,
+        subject=subj,
         agent_id=ctx.chain[-1] if ctx.chain else "main",
     )
     if isinstance(decision, Deny):

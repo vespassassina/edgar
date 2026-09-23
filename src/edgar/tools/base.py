@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, cast
 from edgar.context.working import Working
 from edgar.core.events import EventBus
 from edgar.core.message import ErrorKind, ImageBlock
+from edgar.permissions.matcher import Subject
 
 if TYPE_CHECKING:
     from edgar.core.loop import Runtime
@@ -18,6 +19,16 @@ if TYPE_CHECKING:
 Category = Literal["read", "write", "shell", "network", "memory", "agent"]
 
 DEFAULT_TIMEOUT_S = 120.0  # [TOOL-3]
+
+
+class Broker(Protocol):
+    # v4's shape, not its import: `edgar.broker` is removable [NFR-12], so
+    # this file never names it. `TicketGuard` matches this structurally.
+    # A refusal is (caveat, reason); mypy's Protocol matching does not follow
+    # a nested Protocol return type, so a plain tuple carries it instead.
+    def check(
+        self, *, tool: str, read_only: bool, subject: Subject, cwd: Path
+    ) -> tuple[str, str] | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -73,6 +84,7 @@ class ToolContext:
     hooks: tuple[Hook, ...] = ()  # `pre_tool` rules that may veto this call [EXT-6]
     working: Working | None = None  # the session's plan and todo list, for `todo` [CTX-18]
     network: bool = True  # what a sandbox is told about this call; set per call [PERM-15]
+    broker: Broker | None = None  # v4, the ticket's own veto; None: no scope set [CAP-3]
 
 
 def build_context(session: Session, rt: Runtime) -> ToolContext:
@@ -91,6 +103,7 @@ def build_context(session: Session, rt: Runtime) -> ToolContext:
         budget_remaining=remaining,
         hooks=cast("tuple[Hook, ...]", rt.hooks),
         working=session.working,
+        broker=rt.broker,
     )
 
 

@@ -225,6 +225,18 @@ class PermissionResolved(Event):
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class ScopeRefused(Event):
+    """A ticket's own veto, one step before the permission engine [CAP-3, CAP-6]."""
+
+    # tools/execute.py, when the broker's authorize() refuses a call.
+
+    id: str
+    tool: str
+    caveat: str  # which caveat kind refused it: tools | paths | hosts | calls | until
+    reason: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class SessionTainted(Event):
     # core/loop.py, the first time network content enters the session.
     by_tool: str  # [PERM-11]

@@ -66,7 +66,7 @@ from edgar.permissions.guard import Guard
 from edgar.permissions.policy import Policy, category
 from edgar.providers.base import Provider, Usage, plus
 from edgar.providers.fallback import next_provider
-from edgar.tools.base import ToolContext, build_context
+from edgar.tools.base import Broker, ToolContext, build_context
 from edgar.tools.execute import execute_many
 from edgar.tools.registry import ToolRegistry
 
@@ -101,6 +101,7 @@ class Runtime:
     fallback: tuple[tuple[str, Provider, str], ...] = ()  # (name, provider, its model) [ROUTE-7]
     escalation: _Escalator | None = None  # v3, upward on repeated failure [ROUTE-5]
     hooks: tuple[object, ...] = ()  # `[[hooks]]` rules; opaque here, typed in tools/base.py [EXT-4]
+    broker: Broker | None = None  # v4, the session's ticket; opaque here too [CAP-3]
 
 
 @dataclass(frozen=True, slots=True)

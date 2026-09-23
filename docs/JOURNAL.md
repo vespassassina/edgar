@@ -23,14 +23,42 @@ instead of raw object equality — see `docs/HANDOFF.md` for the detail, kept
 there rather than here because the next person to touch `ticket.py` needs it,
 not just a record that it happened.
 
-**Not done yet, and not wired into anything at runtime:** the `pre_tool` veto
-stage, intent creation, `--scope`/`/scope`, `task` attenuation, the receipt
-module, the `edgar receipt` command, config, the tour page, and the
+**Not done yet:** intent creation, `--scope`/`/scope`, `task` attenuation, the
+receipt module, the `edgar receipt` command, config, the tour page, and the
 confused-deputy integration test the roadmap names as M17's "done when". Full
 list in `HANDOFF.md`. `just check` currently fails on five tour/map tests
 because the new module has no tour stop yet — expected until the tour item
 lands in the same commit as the rest of the module, per the project's own
 rule that the tour changes with the code, not after it.
+
+## 2026-09-23 — M17: the `pre_tool` veto stage lands
+
+Wired the broker's pure core into the real tool pipeline. `tools/execute.py`
+now runs `validate → pre_tool hooks → ticket → permission → run → spill`; the
+new step calls a `TicketGuard` (`broker/guard.py`, a mutable adapter around
+`authorize()`) through a structural `Broker` Protocol on `ToolContext` and
+`Runtime` (both fields default to `None`, so a session with no `--scope` is
+unaffected). A refused call becomes a new `"out_of_scope"` `ErrorKind` and
+emits a new `ScopeRefused` event, mirroring `PermissionResolved`. The check
+reuses the same resolved `Subject` the permission engine already computes,
+rather than resolving the call's path or URL twice.
+
+One mypy surprise: `Broker.check()` first returned a second Protocol
+(`ScopeRefusal`) matching `authorize.Refusal`'s shape. mypy's Protocol
+matching does not follow a *nested* Protocol return type — it compared
+`Refusal | None` against `ScopeRefusal | None` nominally and failed even
+though the fields line up. Fixed by returning a plain `tuple[str, str] | None`
+instead. Worth remembering anywhere else a Protocol method's return value is
+itself meant to be duck-typed.
+
+6 new tests (`tests/unit/test_broker_guard.py`) exercise the stage through
+the real `execute()`, including that a refused call does not count toward a
+`calls=` cap. All 982 non-tour tests pass; ruff and mypy are clean
+project-wide. `just loc` reads 9422/9500 outside the removable packages —
+**78 lines of code left** for the CLI, config and receipt work still ahead,
+none of which lives inside `broker/` itself. Still not wired: intent
+creation, `--scope`/`/scope`, `task` attenuation, the receipt module, the
+CLI command, config, and the tour page.
 
 ## Pick up here
 

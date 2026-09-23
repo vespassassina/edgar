@@ -40,6 +40,7 @@ ErrorKind = Literal[
     "provider_http",
     "cancelled",  # the turn was cancelled while the call was open
     "internal",  # the tool itself raised: a bug in the tool, not in the call
+    "out_of_scope",  # the capability broker's ticket refused it [CAP-3]
 ]
 
 
