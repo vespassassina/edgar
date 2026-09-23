@@ -5,13 +5,18 @@
 # It is a pure function over two values, like permissions.decide(), so a generated
 # test can throw thousands of policies and narrowings at it.
 #
-# The four fields a narrowing may touch, and what tightening means for each:
+# The five fields a narrowing may touch, and what tightening means for each:
 #
 #   mode          only further along yolo -> auto -> ask -> read-only, never back
 #   shell_deny    entries are added; an existing one is never dropped
 #   write_paths   the list may only shrink, and only to patterns already in it
 #   rules         a tool's verdict may go allow -> ask -> deny, never the other way,
 #                 and a narrowing may never say "allow" at all
+#   caveats       raw "KEY=VALUE" scope pairs [CAP-2], applied to the session's
+#                 ticket (if one exists) through the same attenuate() `task`
+#                 uses on delegation -- monotonic by construction, so unlike the
+#                 four fields above this file never has to judge whether one is
+#                 "tighter": broker/ticket.py already refuses to loosen anything
 #
 # Two rules are deliberately blunt. A narrowing may not introduce a *new*
 # write_paths pattern even if it looks tighter, because "./src/**" being narrower
@@ -52,9 +57,10 @@ class Narrowing:
     shell_deny: tuple[str, ...] = ()
     write_paths: tuple[str, ...] | None = None
     rules: Mapping[str, str] = field(default_factory=dict)  # tool -> ask | deny
+    caveats: tuple[str, ...] = ()  # raw "KEY=VALUE" scope pairs [CAP-2]
 
     def is_empty(self) -> bool:
-        return not (self.mode or self.shell_deny or self.write_paths or self.rules)
+        return not (self.mode or self.shell_deny or self.write_paths or self.rules or self.caveats)
 
     def to_json(self) -> str:
         return json.dumps(
@@ -63,6 +69,7 @@ class Narrowing:
                 "shell_deny": list(self.shell_deny),
                 "write_paths": None if self.write_paths is None else list(self.write_paths),
                 "rules": dict(self.rules),
+                "caveats": list(self.caveats),
             },
             ensure_ascii=False,
             sort_keys=True,
@@ -83,6 +90,7 @@ class Narrowing:
                 None if data.get("write_paths") is None else _strings(data["write_paths"], "paths")
             ),
             rules=_verdicts(data.get("rules")),
+            caveats=_caveats(data.get("caveats")),
         )
 
 
@@ -173,6 +181,26 @@ def _verdicts(value: object) -> Mapping[str, str]:
     if bad:
         raise _bad(f"a narrowing says ask or deny, never allow ({', '.join(bad)})")
     return rules
+
+
+def _caveats(value: object) -> tuple[str, ...]:
+    # Validated here, against the same parser --scope uses, so a malformed pair is
+    # a rejected proposal rather than an exception escaping into the turn. Imported
+    # lazily: broker is its own removable package, and a proposal with no caveats
+    # field never needs it at all [NFR-12].
+    if value is None:
+        return ()
+    pairs = _strings(value, "caveats")
+    try:
+        from edgar.broker.caveats import parse_scope
+        from edgar.core.errors import ConfigError
+    except ModuleNotFoundError as exc:
+        raise _bad("caveats: the capability broker is not in this build") from exc
+    try:
+        parse_scope(pairs)
+    except ConfigError as exc:
+        raise _bad(str(exc)) from exc
+    return pairs
 
 
 def _bad(message: str) -> Exception:

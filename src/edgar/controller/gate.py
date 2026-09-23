@@ -81,7 +81,8 @@ The actions, and the fields each one takes:
   warn_user            "message": what to tell the person
   compact              "compact_at": 0.10-0.95, start compacting earlier than now
   switch_model         "model": one of the models listed below, spelled exactly
-  tighten_policy       "mode", "shell_deny", "write_paths" or "rules": stricter only
+  tighten_policy       "mode", "shell_deny", "write_paths", "rules" or "caveats":
+                       stricter only
   abort                stop acting: the session goes read-only
   propose_instruction  "title", "body": a note for the person to apply by hand
   propose_skill        "name" (lowercase and dashes), "body": a procedure worth keeping
@@ -105,6 +106,7 @@ class Gate:
     guard: Guard
     store: Controls
     bus: EventBus
+    broker: Any = None  # the session's TicketGuard, if `--scope` opened a ticket
     session: str = ""  # the session id, written into a learned skill's provenance
     window: int = 0  # the main model's context window, for token_fraction
     streak: int = 0  # turns in a row that ended with a failing tool call
@@ -336,6 +338,7 @@ class Gate:
             synthesis=self.config.skills.synthesis,
             verified=self.checked == "passed",
             trigger=trigger,
+            broker=self.broker,
         )
         outcome = apply(proposal, site)
         if outcome.policy is not None:

@@ -207,6 +207,14 @@ def test_attach_does_nothing_at_all_unless_the_controller_is_switched_on(tmp_pat
     assert attach(bus, root=tmp_path, home=tmp_path, config=_config(), guard=guard) is not None
 
 
+def test_attach_wires_the_broker_through_for_tighten_policys_caveats(tmp_path: Path) -> None:
+    bus = EventBus()
+    guard = Guard(Policy(mode="auto", cwd=tmp_path, home=tmp_path))
+    sentinel = object()
+    gate = attach(bus, root=tmp_path, home=tmp_path, config=_config(), guard=guard, broker=sentinel)
+    assert gate is not None and gate.broker is sentinel
+
+
 def _turn_is_ignored(bus: EventBus) -> None:
     # Nothing subscribed means a turn passes through the bus with no effect at all;
     # emitting one is a better proof of that than reading the subscriber list.

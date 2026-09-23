@@ -1,7 +1,7 @@
-"""What `-p` and the REPL share: config, tools, the permission guard, the verify
-check, the prompt's prefix, the runtime built from them, and opening and closing
-a session."""
-
+# What `-p` and the REPL share: config, tools, the permission guard, the verify
+# check, the prompt's prefix, the runtime built from them, and opening and closing
+# a session.
+#
 # A session's life, as the REPL and -p both run it:
 #
 #   prepare   the working directory and layered config; yolo only with a human's say-so
@@ -486,6 +486,7 @@ def _controller(s: Setup, bus: EventBus, rt: Runtime, session: str = "") -> None
         guard=s.guard,
         window=rt.provider.capabilities.max_context,
         session=session,  # provenance for a learned skill, if one is written [SKL-12]
+        broker=rt.broker,  # CTRL-8: tighten_policy's caveats attenuate this ticket
     )
 
 

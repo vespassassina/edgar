@@ -137,6 +137,28 @@ def test_a_proposal_that_loosens_policy_is_rejected_and_logged(site: Site) -> No
     assert len(logged) == 1 and "looser" in logged[0][3]
 
 
+def test_a_caveats_tightening_attenuates_the_sessions_live_ticket(site: Site) -> None:
+    # CTRL-8's fifth field, applied through the same attenuate() `task` uses on
+    # delegation, not a new merge function [ADR-0039].
+    from edgar.broker.guard import TicketGuard
+    from edgar.broker.ticket import Ticket
+
+    guard = TicketGuard(Ticket(intent_id="i1"))
+    live = Site(site.store, site.root, site.policy, dry_run=False, broker=guard)
+    outcome = apply(TightenPolicy(Narrowing(caveats=("paths=reports/",)), "narrowing"), live)
+    assert outcome.state == "applied"
+    assert {c.kind: c.value for c in guard.ticket.caveats} == {"paths": "reports/"}
+
+
+def test_a_caveats_tightening_with_no_ticket_this_session_is_rejected_and_logged(
+    site: Site,
+) -> None:
+    outcome = apply(TightenPolicy(Narrowing(caveats=("paths=reports/",)), "narrowing"), site)
+    assert outcome.state == "rejected"
+    logged = site.store.rejections()
+    assert len(logged) == 1 and "no ticket" in logged[0][3]
+
+
 def test_a_switch_model_naming_an_arbitrary_model_is_rejected_and_logged(site: Site) -> None:
     # It never becomes a proposal, so the rejection is the parser's and the log is
     # the rejected table. Same outcome, one step earlier [ROUTE-8].

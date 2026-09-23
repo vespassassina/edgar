@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 11441,
+    "loc": 11469,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6728,
+        "loc": 6726,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2226,
+            "loc": 2224,
             "status": "built",
             "children": [
               {
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 430,
+                "loc": 428,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "synthesis.html#k4",
                 "status": "built",
@@ -1363,14 +1363,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 1604,
+        "loc": 1632,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 853,
+            "loc": 881,
             "status": "built",
             "children": [
               {
@@ -1379,7 +1379,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 165,
+                "loc": 173,
                 "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
                 "stop": "controller.html#c4",
                 "status": "built",
@@ -1403,7 +1403,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 232,
+                "loc": 235,
                 "summary": "Five numbers, sometimes one call, never a failed turn [CTRL-1, CTRL-3, CTRL-9, CTRL-11].",
                 "stop": "controller.html#c5",
                 "status": "built",
@@ -1439,7 +1439,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 118,
+                "loc": 135,
                 "summary": "Policy may only tighten, never loosen [CTRL-8, PERM-8, ADR-0021].",
                 "stop": "controller.html#c3",
                 "status": "built",
@@ -1593,14 +1593,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M17 then M16",
         "summary": "Runs while you are away. Removable.",
-        "loc": 339,
+        "loc": 341,
         "status": "built",
         "children": [
           {
             "id": "v4/broker",
             "name": "broker/",
             "kind": "package",
-            "loc": 339,
+            "loc": 341,
             "status": "built",
             "children": [
               {
@@ -1645,7 +1645,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "broker",
-                "loc": 35,
+                "loc": 37,
                 "summary": "TicketGuard: the mutable adapter tools/execute.py's pre_tool stage actually",
                 "stop": "broker.html#b2",
                 "status": "built",

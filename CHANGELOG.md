@@ -9,6 +9,18 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **`--scope KEY=VALUE` and `/scope` open a ticket that narrows what a session
+  may do (v4, M17).** `paths=`, `hosts=`, `tools=`, `calls=` and `until=`
+  caveats are checked one step before the permission engine, on every tool
+  call, and can only get stricter as a session runs: a `task` subagent
+  inherits its parent's ticket and may only add to it, never loosen it, and
+  the controller's `tighten_policy` (CTRL-8) can now do the same thing mid-run
+  when a threshold trips — `{"caveats": ["paths=..."]}`, applied to the live
+  ticket the same way delegation is. Every intent, ticket, refusal and
+  permission decision is written into a signed, hash-chained
+  `.edgar/sessions/<id>/receipt.jsonl`; `edgar receipt [ID] [--refused]
+  [--verify]` reads it back and catches tampering. `[broker] enabled = false`
+  turns both the veto and the receipt off [ADR-0039, CAP-1..CAP-10].
 - **A weak model that fails gets help from a stronger one, visibly (v3, M15).**
   When the same round of tool calls fails twice in a row, or a model keeps
   losing the tool-call format, `[model.escalation]` walks a declared chain

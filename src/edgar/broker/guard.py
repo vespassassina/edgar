@@ -7,6 +7,9 @@
 # 3. narrowed() is `task`'s delegation seam: agents/spawn.py calls it with the
 #    agent definition's own `tools:` and any `scope` argument the model gave.
 #    Both can only add caveats, via attenuate(), never drop one [CAP-5].
+# 4. tighten() is the controller's seam (CTRL-8): the same attenuate(), on the
+#    live ticket in place rather than a fresh guard, since the session already
+#    holds this one.
 
 from __future__ import annotations
 
@@ -49,3 +52,6 @@ class TicketGuard:
         if tools:
             extra = (*extra, Caveat(kind="tools", value=",".join(tools)))
         return TicketGuard(attenuate(self.ticket, subject=subject, extra=extra))
+
+    def tighten(self, extra: tuple[Caveat, ...]) -> None:
+        self.ticket = attenuate(self.ticket, subject=self.ticket.subject, extra=extra)

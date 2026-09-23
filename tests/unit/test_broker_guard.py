@@ -100,6 +100,17 @@ def test_narrowed_merges_in_the_model_given_scope() -> None:
     assert by_kind["paths"] == "a.txt"
 
 
+def test_tighten_narrows_the_live_ticket_in_place() -> None:
+    # The controller's seam (CTRL-8): the same attenuate() narrowed() uses, applied
+    # to this guard's own ticket rather than handed back as a new one.
+    ticket = Ticket(intent_id="i1", caveats=parse_scope(["paths=a.txt"]))
+    ticket_guard = TicketGuard(ticket)
+    ticket_guard.tighten(parse_scope(["paths=b.txt"]))
+    by_kind = {c.kind: c.value for c in ticket_guard.ticket.caveats}
+    assert set(by_kind["paths"].split(",")) == {"a.txt", "b.txt"}
+    assert ticket_guard.ticket.parent is ticket
+
+
 def test_ticket_guard_check_matches_the_subject_it_is_given(tmp_project: Path) -> None:
     ticket = Ticket(intent_id="i1", caveats=parse_scope(["hosts=api.github.com"]))
     ticket_guard = TicketGuard(ticket)
