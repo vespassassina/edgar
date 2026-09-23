@@ -5,6 +5,17 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17: `TARGET_TIER` bumped to `"v4"`
+
+One-line follow-up to the receipt entry below: `tests/support/budget.py`'s
+`TARGET_TIER` moved from `"v3"` to `"v4"`, per HANDOFF's item 2, ahead of the
+tour work so `just loc` reports against the right ceiling once that lands.
+`just loc` now reads `src/ total (v4 tier) 11533 / 13000` — the total-tier
+ceiling only, 12,000 → 13,000; "without removable packages" is unaffected
+and still reads `9500 / 9500`, so this does not unblock item 1 (the
+controller). Non-tour suite still 1166 passed; `ruff format`/`ruff check`
+clean.
+
 ## 2026-09-23 — M17: the receipt, `edgar receipt`, and `[broker] enabled`
 
 Built HANDOFF's items 2–4 in one pass. `broker/receipt.py`: an append-only,

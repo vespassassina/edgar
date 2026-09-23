@@ -174,12 +174,11 @@ also done — see "Where things stand" above. Renumbered again from there.
    lines of code of headroom remain outside the removable packages (see
    "Where things stand" above); raise this with the maintainer before
    touching any non-removable file for it.**
-2. **Bump `tests/support/budget.py`'s `TARGET_TIER`** from `"v3"` to
-   `"v4"`. Not done yet — `just check` currently fails on the tour tests
-   below, not on budget, but do this before the tour work so `just loc`
-   reports against the right ceiling. Raises the *total*-tier ceiling
-   (12,000 → 13,000) only; the "without removable packages" cap stays at
-   9,500 either way, so this does not touch item 1's blocker.
+2. ~~**Bump `tests/support/budget.py`'s `TARGET_TIER`** from `"v3"` to
+   `"v4"`.~~ Done: `just loc` now reports `src/ total (v4 tier) 11533 / 13000`.
+   As expected, this only raised the *total*-tier ceiling (12,000 → 13,000);
+   the "without removable packages" cap is still `9500 / 9500`, so item 1's
+   blocker is unchanged.
 3. **The confused-deputy integration test** named in the roadmap's "Done
    when": a session scoped `paths=reports/q3.md`, injected content tries to
    read `reports/2024-salaries.md` and fetch an outside host, both refused,
