@@ -1,13 +1,12 @@
-"""Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].
-
-Core binds roles statically: each auxiliary role uses its own `[model]` key, or
-the main model when it has none. Declarative `[[route]]` rules join in v1, with
-the same first-match-wins shape as `permissions.decide()` — one pattern to
-learn rather than two [ROUTE-2]. Capability validation [ROUTE-6] is a separate
-step the caller takes after resolving the selected model's provider, not part
-of this function: keeping `select_model()` free of I/O is what makes it a zero-
-cost, exhaustively testable pure function [ROUTE-3, ROUTE-4].
-"""
+# Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].
+#
+# Core binds roles statically: each auxiliary role uses its own [model] key, or
+# the main model when it has none. Declarative [[route]] rules join in v1, with
+# the same first-match-wins shape as permissions.decide() — one pattern to
+# learn rather than two [ROUTE-2]. Capability validation [ROUTE-6] is a separate
+# step the caller takes after resolving the selected model's provider, not part
+# of this function: keeping select_model() free of I/O is what makes it a zero-
+# cost, exhaustively testable pure function [ROUTE-3, ROUTE-4].
 
 from __future__ import annotations
 
@@ -35,9 +34,8 @@ class RoutingContext:
 
 @dataclass(frozen=True, slots=True)
 class Route:
-    """One `[[route]]` rule [ROUTE-2]. Every condition left as `None` (or an
-    empty `tags`) matches anything; the rule matches when every set condition
-    does."""
+    # One [[route]] rule [ROUTE-2]. Every condition left as None (or an
+    # empty tags) matches anything; the rule matches when every set condition does.
 
     name: str
     model: str
@@ -85,8 +83,8 @@ def select_model(
 
 
 def matches(rule: Route, ctx: RoutingContext) -> bool:
-    """True when every condition this rule sets holds. Public because
-    `edgar route explain` shows the verdict rule by rule [ROUTE-9]."""
+    # True when every condition this rule sets holds. Public because
+    # `edgar route explain` shows the verdict rule by rule [ROUTE-9].
     return (
         (rule.role is None or rule.role == ctx.role)
         and (rule.agent is None or rule.agent == ctx.agent)
@@ -104,7 +102,7 @@ def matches(rule: Route, ctx: RoutingContext) -> bool:
 
 
 def check_capabilities(selection: Selection, *, tools_required: bool, has_tools: bool) -> None:
-    """A hard error at selection, never a confusing mid-stream failure [ROUTE-6]."""
+    # A hard error at selection, never a confusing mid-stream failure [ROUTE-6].
     if tools_required and not has_tools:
         raise ConfigError(
             f"routing picked {selection.model!r} ({selection.rule}) for a task that "
@@ -115,8 +113,8 @@ def check_capabilities(selection: Selection, *, tools_required: bool, has_tools:
 
 
 def check_images(model: str, *, has_images: bool) -> None:
-    """The same rule as tool support, for pictures: the model in use either takes an
-    image or the prompt does not run. Never a silent drop [ROUTE-6, ADR-0052]."""
+    # The same rule as tool support, for pictures: the model in use either takes an
+    # image or the prompt does not run. Never a silent drop [ROUTE-6, ADR-0052].
     if not has_images:
         raise ConfigError(
             f"{model!r} cannot take images, and this prompt attaches one",
@@ -126,8 +124,8 @@ def check_images(model: str, *, has_images: bool) -> None:
 
 
 def routes_from_config(later: dict[str, Any]) -> tuple[Route, ...]:
-    """`[[route]]` arrives in `Config.later["route"]` as a list of raw tables
-    (`config/schema.py`'s `LATER`); this is where v1 finally reads it."""
+    # [[route]] arrives in Config.later["route"] as a list of raw tables
+    # (config/schema.py's LATER); this is where v1 finally reads it.
     raw = later.get("route", [])
     if not isinstance(raw, list):
         raise ConfigError('[[route]] must be an array of tables, written "[[route]]"')

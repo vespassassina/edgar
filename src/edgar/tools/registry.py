@@ -1,10 +1,9 @@
-"""Tools by name, which one wins a name, and which schemas a request can afford
-[TOOL-9, TOOL-15].
-
-    project custom  >  user custom  >  extensions (by name)  >  MCP  >  built-in
-
-A replaced tool is reported, never silent.
-"""
+# Tools by name, which one wins a name, and which schemas a request can afford
+# [TOOL-9, TOOL-15].
+#
+#     project custom  >  user custom  >  extensions (by name)  >  MCP  >  built-in
+#
+# A replaced tool is reported, never silent.
 
 # Building a registry:
 #
@@ -51,19 +50,19 @@ class ToolRegistry:
         return self._tools.get(name)
 
     def exposed(self) -> list[Tool]:
-        """The tools whose schemas the next request carries."""
+        # The tools whose schemas the next request carries.
         return [t for n, t in self._tools.items() if n not in self.deferred]
 
     def schemas(self) -> list[ToolSchema]:
-        """What goes in the request: everything but the tools still deferred."""
+        # What goes in the request: everything but the tools still deferred.
         return [tool.schema for tool in self.exposed()]
 
     def names(self) -> list[str]:
         return list(self._tools)
 
     def add(self, tools: Iterable[Tool], *, defer: bool | None = None) -> None:
-        """Tools found after the session started: an MCP server discovered by
-        `tool_search`, or the browser `/browser` connected."""
+        # Tools found after the session started: an MCP server discovered by
+        # tool_search, or the browser /browser connected.
         for tool in tools:
             self._tools[tool.schema.name] = tool
             over = self.budget is not None and cost(self.schemas()) > self.budget
@@ -71,8 +70,8 @@ class ToolRegistry:
                 self.deferred[tool.schema.name] = tool
 
     def load(self, names: Iterable[str]) -> list[ToolSchema]:
-        """Expose deferred tools for the rest of the session. They join the list at
-        the end, so what the model already saw keeps its place."""
+        # Expose deferred tools for the rest of the session. They join the list at
+        # the end, so what the model already saw keeps its place.
         loaded = []
         for name in names:
             tool = self.deferred.pop(name, None) or self._tools.get(name)
@@ -83,7 +82,7 @@ class ToolRegistry:
 
 
 def cost(schemas: Iterable[ToolSchema]) -> int:
-    """Roughly what these schemas cost in a request [TOOL-15]."""
+    # Roughly what these schemas cost in a request [TOOL-15].
 
     def described(s: ToolSchema) -> str:
         return json.dumps(
@@ -118,10 +117,10 @@ def registry_for(
     budget: int | None = None,
     sandbox: Sandbox | None = None,
 ) -> ToolRegistry:
-    """Built-ins and `extra` (the `skill` tool), then the MCP servers' tools, then
-    `ext` (an extension's bundled `tools/` [EXT-8]), then `~/.edgar/tools/*.toml`,
-    then, in a trusted project, `.edgar/tools/*.toml` [PERM-13]. Later beats
-    earlier, so a tool a human wrote wins its name."""
+    # Built-ins and `extra` (the skill tool), then the MCP servers' tools, then
+    # `ext` (an extension's bundled tools/ [EXT-8]), then ~/.edgar/tools/*.toml,
+    # then, in a trusted project, .edgar/tools/*.toml [PERM-13]. Later beats
+    # earlier, so a tool a human wrote wins its name.
     from edgar.tools.builtin.fs import builtins
     from edgar.tools.custom import load
 

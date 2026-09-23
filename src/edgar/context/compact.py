@@ -1,20 +1,19 @@
-"""Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].
-
-Once the prompt passes `compact_at` of the usable window, stages run until it is
-under `compact_to`:
-
-- **S1 elide**: in turns older than `keep_last_turns`, each tool result becomes a
-  one-line stub, thinking is dropped and each picture becomes a line naming it.
-  No model call; the blocks stay.
-- **S2 summarise**: those turns fold into one summary message of fixed shape,
-  with any earlier summary folded in. One model call.
-- **S3 overflow**: only if the prompt still does not fit the window, elide inside
-  the recent turns too, all but the last unit; then `ContextOverflow`.
-
-Every stage is a pure function of the view and a cut point on a turn boundary,
-so the pairing invariant holds by construction, and `apply()` replays a recorded
-compaction exactly on `--resume` [CTX-14]. The first prompt is never compacted.
-"""
+# Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].
+#
+# Once the prompt passes `compact_at` of the usable window, stages run until it is
+# under `compact_to`:
+#
+# - S1 elide: in turns older than `keep_last_turns`, each tool result becomes a
+#   one-line stub, thinking is dropped and each picture becomes a line naming it.
+#   No model call; the blocks stay.
+# - S2 summarise: those turns fold into one summary message of fixed shape,
+#   with any earlier summary folded in. One model call.
+# - S3 overflow: only if the prompt still does not fit the window, elide inside
+#   the recent turns too, all but the last unit; then ContextOverflow.
+#
+# Every stage is a pure function of the view and a cut point on a turn boundary,
+# so the pairing invariant holds by construction, and apply() replays a recorded
+# compaction exactly on --resume [CTX-14]. The first prompt is never compacted.
 
 from __future__ import annotations
 
@@ -39,13 +38,13 @@ ELIDED = "[elided: "
 
 
 def turn_starts(view: list[Message]) -> list[int]:
-    """Where each turn begins: a prompt the user typed, not a steer or a summary."""
+    # Where each turn begins: a prompt the user typed, not a steer or a summary.
     return [i for i, m in enumerate(view) if m.role == "user" and not m.meta.get("via")]
 
 
 def elide(view: list[Message], upto: int) -> list[Message]:
-    """S1: before `upto`, tool results become stubs and thinking goes, except in the
-    turn in progress, whose thinking providers need unchanged [CTX-4, CTX-11]."""
+    # S1: before `upto`, tool results become stubs and thinking goes, except in the
+    # turn in progress, whose thinking providers need unchanged [CTX-4, CTX-11].
     calls = {c.id: c for m in view[:upto] for c in m.tool_calls}
     current = (turn_starts(view) or [0])[-1]
     out = []
@@ -80,14 +79,14 @@ def _stub(block: Any, calls: dict[str, Any]) -> Any:
 
 
 def fold(view: list[Message], upto: int, summary: str) -> list[Message]:
-    """S2: everything between the first prompt and `upto` becomes one summary,
-    an earlier summary included, so there is at most one [CTX-5, CTX-6]."""
+    # S2: everything between the first prompt and `upto` becomes one summary,
+    # an earlier summary included, so there is at most one [CTX-5, CTX-6].
     return [view[0], Message.user(summary, via="summary"), *view[upto:]]
 
 
 def rewind(view: list[Message], turns: int) -> tuple[list[Message], list[str]]:
-    """`/undo N`: the last N turns go, whole. Returns the files `write` and `edit`
-    changed in them, which stay changed on disk [CLI-26, OQ-10]."""
+    # /undo N: the last N turns go, whole. Returns the files `write` and `edit`
+    # changed in them, which stay changed on disk [CLI-26, OQ-10].
     starts = turn_starts(view)
     cut = starts[-turns] if turns <= len(starts) else 0
     files = [
@@ -100,7 +99,7 @@ def rewind(view: list[Message], turns: int) -> tuple[list[Message], list[str]]:
 
 
 def apply(view: list[Message], entry: dict[str, Any]) -> list[Message]:
-    """Replay one recorded change to the view: a compaction stage, reset or undo."""
+    # Replay one recorded change to the view: a compaction stage, reset or undo.
     kind = entry["type"]
     if kind == "compaction":
         if entry["stage"] == "S2":
@@ -116,8 +115,8 @@ def apply(view: list[Message], entry: dict[str, Any]) -> list[Message]:
 async def compact(
     session: Session, rt: Runtime, *, force: bool = False, focus: str | None = None
 ) -> None:
-    """Run the stages the prompt needs. `force` (`/compact`) summarises the old
-    turns even under the threshold; below it, autocompact is a no-op [CTX-7, CTX-8]."""
+    # Run the stages the prompt needs. `force` (/compact) summarises the old
+    # turns even under the threshold; below it, autocompact is a no-op [CTX-7, CTX-8].
     cfg, caps = rt.context, rt.provider.capabilities
     # The window less the output reserve, which never takes more than half of it.
     usable = caps.max_context - min(caps.max_output, caps.max_context // 2)
@@ -172,8 +171,8 @@ async def compact(
 async def _summarise(
     old: list[Message], rt: Runtime, session: Session, focus: str | None
 ) -> tuple[str, float | None]:
-    """One call to the compactor, the main model unless `model.compactor` names
-    another [PRV-15]. It sees the elided turns, never the full tool output."""
+    # One call to the compactor, the main model unless `model.compactor` names
+    # another [PRV-15]. It sees the elided turns, never the full tool output.
     provider, model = rt.compactor or (rt.provider, rt.model)
     lines = "\n\n".join(f"{m.role}: {message_text(m)}" for m in old)
     ask = f"Focus on: {focus}\n\n{lines}" if focus else lines

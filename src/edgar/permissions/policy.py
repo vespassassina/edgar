@@ -1,18 +1,17 @@
-"""The permission decision: one pure function
-[PERM-1..5, PERM-11, PERM-12, PERM-14, PERM-16].
-
-Everything that needs I/O (resolving paths, loading grants, asking the user) is
-done by the caller, `permissions/guard.py`. What is left can be tested
-exhaustively. First match wins:
-
-1. the hard layer, which no rule or grant overrides: catastrophic commands, a
-   literal link-local URL (cloud metadata), credentials, control files, and
-   anything outside the working directory
-2. an explicit per-tool rule from config, then a grant a human gave
-3. the mode's default, tightened by taint in `auto`; `remember` only proposes a
-   fact a human confirms later, so it needs no prompt outside read-only [MEM-21]
-4. the tool's own `dangerous` flag, which turns an allow into an ask
-"""
+# The permission decision: one pure function
+# [PERM-1..5, PERM-11, PERM-12, PERM-14, PERM-16].
+#
+# Everything that needs I/O (resolving paths, loading grants, asking the user) is
+# done by the caller, permissions/guard.py. What is left can be tested
+# exhaustively. First match wins:
+#
+# 1. the hard layer, which no rule or grant overrides: catastrophic commands, a
+#    literal link-local URL (cloud metadata), credentials, control files, and
+#    anything outside the working directory
+# 2. an explicit per-tool rule from config, then a grant a human gave
+# 3. the mode's default, tightened by taint in auto; remember only proposes a
+#    fact a human confirms later, so it needs no prompt outside read-only [MEM-21]
+# 4. the tool's own dangerous flag, which turns an allow into an ask
 
 from __future__ import annotations
 
@@ -64,7 +63,7 @@ class Policy:
 
 
 def category(tool: ToolSchema) -> str:
-    """Command tools marked read_only count as reads; everything else as declared."""
+    # Command tools marked read_only count as reads; everything else as declared.
     return "read" if tool.read_only and tool.kind == "command" else tool.category
 
 
@@ -110,13 +109,12 @@ def _decide(tool: ToolSchema, s: Subject, p: Policy) -> Decision:
 
 
 def network_allowed(mode: str, tainted: bool) -> bool:
-    """Whether a confined process may reach the network [PERM-15, PERM-11].
-
-    A sandbox enforces, it does not decide, so the answer is made here and carried
-    to it. It mirrors `_decide` on the same inputs: yolo allows before anything
-    else is read, read-only never reaches out on its own, and a session that has
-    taken in untrusted content does not either.
-    """
+    # Whether a confined process may reach the network [PERM-15, PERM-11].
+    #
+    # A sandbox enforces, it does not decide, so the answer is made here and carried
+    # to it. It mirrors _decide on the same inputs: yolo allows before anything
+    # else is read, read-only never reaches out on its own, and a session that has
+    # taken in untrusted content does not either.
     return mode == "yolo" or (mode != "read-only" and not tainted)
 
 

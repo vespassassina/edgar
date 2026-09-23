@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 11007,
+    "loc": 10886,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6737,
+        "loc": 6616,
         "status": "built",
         "children": [
           {
@@ -185,7 +185,7 @@ window.EDGAR_MAP = {
             "id": "core/context",
             "name": "context/",
             "kind": "package",
-            "loc": 276,
+            "loc": 250,
             "status": "built",
             "children": [
               {
@@ -206,7 +206,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "context",
-                "loc": 146,
+                "loc": 120,
                 "summary": "Staged compaction, cheapest first, on whole units [CTX-3, CTX-5, CTX-11, ADR-0016].",
                 "stop": "media.html#m6",
                 "status": "built",
@@ -380,7 +380,7 @@ window.EDGAR_MAP = {
             "id": "core/permissions",
             "name": "permissions/",
             "kind": "package",
-            "loc": 304,
+            "loc": 284,
             "status": "built",
             "children": [
               {
@@ -425,7 +425,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "permissions",
-                "loc": 114,
+                "loc": 94,
                 "summary": "The permission decision: one pure function",
                 "stop": "isolation.html#w2",
                 "status": "built",
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1251,
+            "loc": 1213,
             "status": "built",
             "children": [
               {
@@ -482,7 +482,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 248,
+                "loc": 229,
                 "summary": "What the two HTTP adapters share: the request with its retries, server-sent",
                 "stop": "media.html#m4",
                 "status": "built",
@@ -554,7 +554,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 118,
+                "loc": 99,
                 "summary": "Which model runs this? A pure function over config [ROUTE-1..4, ADR-0013].",
                 "stop": "agents.html#a4",
                 "status": "built",
@@ -599,7 +599,7 @@ window.EDGAR_MAP = {
             "id": "core/storage",
             "name": "storage/",
             "kind": "package",
-            "loc": 290,
+            "loc": 269,
             "status": "built",
             "children": [
               {
@@ -620,8 +620,8 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "storage",
-                "loc": 208,
-                "summary": "The session record: `.edgar/sessions/<id>.jsonl`, append-only [CTX-14, ADR-0010].",
+                "loc": 187,
+                "summary": "The session record: .edgar/sessions/<id>.jsonl, append-only [CTX-14, ADR-0010].",
                 "stop": "memory.html#m4",
                 "status": "built",
                 "port": false
@@ -632,7 +632,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 599,
+            "loc": 583,
             "status": "built",
             "children": [
               {
@@ -677,7 +677,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 92,
+                "loc": 76,
                 "summary": "Tools by name, which one wins a name, and which schemas a request can afford",
                 "stop": "index.html#s23",
                 "status": "built",
