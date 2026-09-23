@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from dataclasses import replace as replace_rt
 from pathlib import Path
 from typing import get_args
 
 from edgar.cli.memory import listing as fact_listing
 from edgar.cli.memory import said
 from edgar.cli.repl import Shell
-from edgar.cli.setup import spending
+from edgar.cli.setup import broker_describe, broker_guard, spending
 from edgar.config.schema import Mode
 from edgar.context.compact import compact, rewind, turn_starts
 from edgar.context.tokens import message_text
@@ -170,6 +171,22 @@ async def _mode(shell: Shell, arg: str) -> None:
         shell.say(f"mode: {arg}")
     else:
         shell.say(f"modes: {', '.join(get_args(Mode))}")
+
+
+@command("/scope", "show the ticket, /scope KEY=VALUE to set it, /scope clear [CAP-2]")
+async def _scope(shell: Shell, arg: str) -> None:
+    if not arg:
+        shell.say(broker_describe(shell.rt.broker))
+    elif arg == "clear":
+        shell.rt = replace_rt(shell.rt, broker=None)
+        shell.say("scope cleared")
+    else:
+        try:
+            shell.rt = replace_rt(shell.rt, broker=broker_guard(tuple(arg.split())))
+        except EdgarError as exc:
+            shell.say(f"edgar: {exc}" + (f"\nhint: {exc.hint}" if exc.hint else ""))
+            return
+        shell.say(broker_describe(shell.rt.broker))
 
 
 @command("/thinking", "show or hide reasoning")

@@ -88,6 +88,42 @@ pass; ruff, mypy and the rest of the suite stay clean. `just loc` still reads
 Next: `--scope`/`/scope`, `task` attenuation, the receipt module, the CLI
 command, config, and the tour page. Full order in `HANDOFF.md`.
 
+## 2026-09-23 — M17: `--scope` and `/scope` land, wired end to end
+
+Built `--scope KEY=VALUE` (repeatable) on `-p` and `/scope` in the REPL
+(bare shows the ticket, `/scope KEY=VALUE...` sets a fresh one, `/scope
+clear` resets), both live: a call outside the scope is refused through the
+same `pre_tool` veto stage M17 built earlier. Centralised the wiring in
+`cli/setup.py` as two public functions, `broker_guard()` and
+`broker_describe()`, both reaching `edgar.broker` through `import_module`
+by name, the same pattern `_escalation()`/`_controller()` already use so
+that no non-removable file has to import a removable one [ADR-0015,
+NFR-12]. `begin()` gained a `scope` keyword that applies the guard right
+after building the `Runtime`; `/scope` swaps `shell.rt` the same way
+`/model` already does, with `dataclasses.replace`.
+
+This was originally two separate roadmap items (`--scope`/`/scope`, and a
+later "wiring seam" item for attaching the live guard to `Runtime.broker`).
+Built them together: a `--scope` flag with nothing behind it does nothing,
+so splitting them across two commits would have meant shipping a flag that
+silently no-ops for a while. The receipt subscriber and `Intents` still
+need attaching to a real bus — that is genuinely later work, since the
+receipt module does not exist yet.
+
+New tests: a oneshot integration test asserting a scoped `-p` run emits
+`ScopeRefused` and still completes the turn (the model is told the read
+failed, same as any other tool error), and five `/scope` cases in the
+REPL's parametrized command table plus one dedicated set/clear test. All
+pass; `just check`'s non-tour suite (1140 tests) is green.
+
+**Budget is now the binding constraint, not a warning.** `just loc` reads
+`9464/9500` outside the removable packages — **36 lines of code of
+headroom left**, down from 78, because the CLI/REPL surface and the
+`setup.py` seam are themselves non-removable and cost 42 lines of code
+between them. Everything left on M17's list that touches a non-removable
+file (the `edgar receipt` command, `[broker]` config, the `doctor` line)
+has to fit in what remains.
+
 ## Pick up here
 
 The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md),

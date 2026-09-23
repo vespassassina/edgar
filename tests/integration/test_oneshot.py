@@ -11,7 +11,7 @@ from harness import Recorder
 
 from edgar.cli.oneshot import run_prompt
 from edgar.core.errors import ConfigError
-from edgar.core.events import ModelSelected
+from edgar.core.events import ModelSelected, ScopeRefused
 from edgar.core.message import Message, TextBlock
 
 
@@ -49,6 +49,22 @@ def test_read_a_file_with_the_fake_model(
         "TurnFinished",
         "SessionEnded",
     ]
+
+
+def test_scope_refuses_a_read_outside_it(tmp_project: Path, home: Path, recorder: Recorder) -> None:
+    code = run_prompt(
+        "read a.txt",
+        cwd=tmp_project,
+        model="fake/test",
+        mode="read-only",
+        subscribers=[recorder],
+        env={},
+        home=home,
+        scope=["paths=nope.txt"],
+    )
+    assert code == 0  # the model still finishes the turn, told the read was refused [CAP-3]
+    (refused,) = recorder.of(ScopeRefused)
+    assert refused.caveat == "paths" and refused.tool == "read"
 
 
 def test_mode_is_required(tmp_project: Path, home: Path) -> None:

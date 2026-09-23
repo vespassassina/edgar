@@ -60,6 +60,7 @@ def run_prompt(
     resume: str | None = None,
     plan: bool = False,
     no_history: bool = False,
+    scope: list[str] | None = None,
 ) -> int:
     if mode is None:
         # Nobody is there to answer a permission prompt, so the mode must be a
@@ -90,7 +91,7 @@ def run_prompt(
     if not quiet and terminal_ready(sys.stderr):
         status = Status(config.model.default or "")
         bus.subscribe(status)
-    session, rt = begin(s, bus, resume)
+    session, rt = begin(s, bus, resume, scope=tuple(scope or ()))
     # `prompt` is the -p argument exactly as given. Piped stdin arrived as `attached`
     # and @path bodies are read below, so neither can reach a learner [MEM-9, CLI-3].
     bus.emit(PromptTyped(text=prompt))

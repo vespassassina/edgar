@@ -74,6 +74,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-project-exec", action="store_true", help="ignore this project's tools and verify"
     )
+    parser.add_argument(
+        "--scope",
+        action="append",
+        metavar="KEY=VALUE",
+        help="a caveat the ticket may not exceed [CAP-2]",
+    )
     return parser
 
 
@@ -143,6 +149,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
                 resume=args.resume,
                 plan=args.plan,
                 no_history=args.no_history,
+                scope=args.scope,
             )
         )
     from edgar.cli.oneshot import run_prompt
@@ -163,6 +170,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         resume=args.resume,
         plan=args.plan,
         no_history=args.no_history,
+        scope=args.scope,
     )
 
 

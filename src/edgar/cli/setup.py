@@ -372,9 +372,12 @@ def _escalation(config: Config, env: Mapping[str, str] | None) -> Any:
     return escalation.EscalationState(chain, plan.max_escalations, plan.on)
 
 
-def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, Runtime]:
+def begin(
+    s: Setup, bus: EventBus, resume: str | None = None, *, scope: tuple[str, ...] = ()
+) -> tuple[Session, Runtime]:
     """A new session, recorded to disk; or with `resume`, a session id or "" for the
-    latest, one replayed from it [CLI-11]. It keeps its model unless --model names one."""
+    latest, one replayed from it [CLI-11]. It keeps its model unless --model names one.
+    `scope` is `--scope`'s KEY=VALUE pairs, if any [CAP-2]."""
     mode = s.config.permissions.mode
     bus.subscribe(lambda event: _spend(s.home, event))
     if s.hooks:
@@ -391,10 +394,32 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
         if session.model != rt.name:
             session.record({"type": "model", "model": rt.name})
         session.mode, session.model = mode, rt.name
+    if scope:
+        rt = replace(rt, broker=broker_guard(scope))
     _learning(s, bus, session)
     _controller(s, bus, rt, session.id)
     bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
     return session, rt
+
+
+def broker_guard(scope: tuple[str, ...]) -> Any:
+    # v4's third seam, mirroring _escalation and _controller: edgar.broker is
+    # removable, so this file never imports it, only reaches it through
+    # import_module [ADR-0015, NFR-12]. cli/slash.py's /scope calls this too, so
+    # it stays public rather than underscore-prefixed like the others.
+    try:
+        broker = import_module("edgar.broker")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return None
+    return broker.from_scope(scope)
+
+
+def broker_describe(guard: Any) -> str:
+    try:
+        broker = import_module("edgar.broker")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return "the capability broker is not in this build"
+    return str(broker.describe(guard))
 
 
 def _learning(s: Setup, bus: EventBus, session: Session) -> None:
