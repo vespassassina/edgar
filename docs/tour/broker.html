@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capability broker · A Tour of the Harness</title>
+<meta name="description" content="A typed request opens an intent and a ticket; a pure authorize() vetoes calls at the pre_tool stage; every decision is written into a signed, hash-chained receipt.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%AD%3C/text%3E%3C/svg%3E">
+<!-- Styled with artifactkit, vendored in artifactkit/. Only its theme block is ours. -->
+<link rel="stylesheet" href="artifactkit/theme.css">
+<link rel="stylesheet" href="artifactkit/components.css">
+<link rel="stylesheet" href="artifactkit/print.css">
+<link rel="stylesheet" href="tour.css">
+</head>
+<body>
+<div class="ak-wrap" id="top">
+
+<header class="ak-pagehead">
+  <div>
+    <p class="ak-eyebrow"><a href="index.html">A Tour of the Harness</a> · v4 · M17</p>
+    <h1>Capability broker</h1>
+    <p class="ak-lede">Every tool call answers to what the human actually asked for,
+    and the record of what was allowed and refused is signed. Four stops, about
+    twenty minutes.</p>
+    <ul class="pages">
+      <li><a href="index.html">Core and v1</a></li>
+      <li><a href="memory.html">Memory</a></li>
+      <li><a href="mcp.html">MCP</a></li>
+      <li><a href="agents.html">Subagents</a></li>
+      <li><a href="extensions.html">Extensions</a></li>
+      <li><a href="working.html">Working state</a></li>
+      <li><a href="media.html">Seeing and searching</a></li>
+      <li><a href="isolation.html">Isolation</a></li>
+      <li><a href="learning.html">Learning</a></li>
+      <li><a href="controller.html">The controller</a></li>
+      <li><a href="synthesis.html">Skill synthesis</a></li>
+      <li><a href="broker.html" aria-current="page">Capability broker</a></li>
+      <li><a href="map.html">The map</a></li>
+    </ul>
+  </div>
+  <div class="ak-meta">
+    <span class="ak-pill ak-pill-ok">Built</span> M17, v4<br>
+    Kept in sync by a test
+  </div>
+</header>
+
+<main class="tour-main">
+
+<p>A ticket is what an intent may do, carrying its own chain of custody. A
+subagent spawned under one can only narrow its caveats, never loosen them —
+the same "humans widen, machines tighten" rule (invariant 2) applied to scope
+rather than to permission mode
+(<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0039-capability-broker.md">ADR-0039</a>).</p>
+
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+    typed["a typed line<br/>PromptTyped, depth 0"] --> intent["Intent<br/>the why"]
+    scope(["--scope / /scope<br/>KEY=VALUE"]) --> ticket["Ticket<br/>caveats: tools, paths, hosts, calls, until"]
+    task(["task tool<br/>delegation"]) -->|"attenuate() only adds"| ticket
+    ticket --> gate["authorize()<br/>pre_tool, one step before permissions"]
+    gate -->|"refuse"| refuse["ScopeRefused &mdash;<br/>an error tool result, caveat named"]
+    gate -->|"allow"| run["the call runs"]
+    intent --> receipt[("Receipts<br/>signed, hash-chained JSONL")]
+    ticket --> receipt
+    refuse --> receipt
+    run --> receipt
+</pre></div>
+
+<article class="stop" id="b1" data-files="src/edgar/broker/intent.py src/edgar/broker/ticket.py src/edgar/broker/caveats.py">
+  <h4><span class="n">1</span>Intent and the ticket</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/intent.py"><code>broker/intent.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/ticket.py"><code>broker/ticket.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/caveats.py"><code>broker/caveats.py</code></a></p>
+  <p class="look">Look for: <code>Intents</code> <code>Ticket</code> <code>attenuate</code>
+  <code>verify_chain</code> <code>Caveat</code> <code>parse_scope</code></p>
+  <p><code>Intents</code> is the bus subscriber that opens an intent from a typed
+  line — the same "the boundary is the subscription" shape as
+  <a href="learning.html#l1">learning's own subscribers</a>: it reads exactly
+  one event kind, <code>PromptTyped</code> at depth 0, and nothing a subagent,
+  a tool result or an <code>@path</code> body produces ever reaches it
+  (MEM-8, MEM-9). <code>parse_scope</code> turns human-typed
+  <code>KEY=VALUE</code> pairs — <code>tools=</code>, <code>paths=</code>,
+  <code>hosts=</code>, <code>calls=</code>, <code>until=</code> — into
+  <code>Caveat</code>s, resolving a relative <code>until=10m</code> to an
+  absolute instant right away, so a ticket's expiry never depends on when
+  someone later checks it.</p>
+  <ul class="points">
+    <li><code>attenuate()</code> is the only way to get a child ticket. A
+    list-shaped caveat can only gain items; <code>calls</code> and
+    <code>until</code> can only tighten — so "merge" means "narrow" for the
+    two of them.</li>
+    <li><code>verify_chain()</code> walks the parent links and fails the
+    moment a child's caveats are not at least as strict as its parent's. It
+    compares what each kind <em>means</em> (a list superset, or a tighter
+    limit), never raw equality — a naive set comparison flags even an honest
+    attenuation as a forgery, since <code>attenuate()</code> legitimately
+    rewrites a caveat's value string (<code>tools=a</code> +
+    <code>tools=b</code> → <code>tools=a,b</code>). A hypothesis property
+    test caught that the first time round.</li>
+  </ul>
+</article>
+
+<article class="stop" id="b2" data-files="src/edgar/broker/guard.py src/edgar/broker/authorize.py">
+  <h4><span class="n">2</span>The veto, one step before permissions</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/guard.py"><code>broker/guard.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/authorize.py"><code>broker/authorize.py</code></a></p>
+  <p class="look">Look for: <code>TicketGuard</code> <code>check</code> <code>narrowed</code>
+  <code>authorize</code> <code>Refusal</code></p>
+  <p><code>authorize()</code> is pure and property-tested, like
+  <code>permissions.decide()</code> on the Core tour: the same ticket, the same
+  call, always refuses or allows the same way. <code>tools/execute.py</code>'s
+  pipeline is <code>validate → pre_tool hooks → ticket → permission → run →
+  spill</code> — the ticket check runs first, on the same resolved
+  <code>Subject</code> the permission engine reuses, so a refused call never
+  even reaches the mode's own rules. <code>TicketGuard</code> is the mutable
+  adapter <code>execute()</code> actually calls; it matches
+  <code>tools/base.py</code>'s <code>Broker</code> Protocol structurally, so
+  Core never imports this file, only its shape.</p>
+  <ul class="points">
+    <li>A <code>paths</code> or <code>hosts</code> caveat can only check a
+    tool whose subject resolves to a path or a URL. <code>shell</code>, and
+    any command tool not marked read-only, has neither — it is refused
+    outright unless named in <code>tools=</code>. That is the deliberate,
+    visible cost of scoping to files or hosts: a <code>paths=</code>-only
+    ticket does not, by itself, stop a URL-shaped call from reaching an
+    outside host — that needs <code>hosts=</code>.</li>
+    <li>A call the ticket allows counts toward <code>calls=</code>; a refused
+    one does not, since it never happened as far as the ticket's own budget
+    is concerned.</li>
+    <li><code>narrowed()</code> is <code>task</code>'s delegation seam:
+    <code>agents/spawn.py</code> calls it with the agent definition's own
+    <code>tools:</code> and any model-given <code>scope</code> argument, both
+    folded in through <code>attenuate()</code> — never a drop.</li>
+  </ul>
+</article>
+
+<article class="stop" id="b3" data-files="src/edgar/broker/receipt.py">
+  <h4><span class="n">3</span>The signed receipt</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/receipt.py"><code>broker/receipt.py</code></a></p>
+  <p class="look">Look for: <code>Receipts</code> <code>append</code> <code>sign</code>
+  <code>verify</code> <code>load_or_create_key</code> <code>Break</code></p>
+  <p>Every decision the broker makes — intent, ticket, delegation, refusal,
+  permission — is one line in an append-only JSONL log at
+  <code>.edgar/sessions/&lt;id&gt;/receipt.jsonl</code>. Each line signs its
+  own <code>prev</code>/<code>kind</code>/<code>data</code> with HMAC-SHA256;
+  <code>prev</code> is the SHA-256 of the previous line's exact text, so
+  tampering with an earlier line breaks every hash after it, and tampering
+  with a line's own content breaks its own signature. <code>verify()</code>
+  checks both, in order, and stops at the first <code>Break</code>.</p>
+  <ul class="points">
+    <li>The key lives at <code>~/.edgar/receipt.key</code>, 32 random bytes
+    made once, mode 0600 — a hard-layer credential path the model's own
+    tools can never read, the same protection <code>permissions.matcher</code>
+    already gives real credentials.</li>
+    <li><code>Receipts</code> is a bus subscriber, the same shape as
+    <code>Intents</code>: one line per depth-0 <code>PromptTyped</code>
+    (<code>intent</code>), depth&gt;0 <code>TurnStarted</code>
+    (<code>delegate</code>), <code>ScopeRefused</code> (<code>refuse</code>),
+    and <code>PermissionResolved</code> (<code>permission</code>); the ticket
+    itself is written once, directly, when a session starts one.</li>
+  </ul>
+</article>
+
+<article class="stop" id="b4" data-files="src/edgar/broker/cli.py src/edgar/broker/__init__.py">
+  <h4><span class="n">4</span><code>edgar receipt</code>, and the wiring</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/cli.py"><code>broker/cli.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/__init__.py"><code>broker/__init__.py</code></a></p>
+  <p class="look">Look for: <code>command</code> <code>attach</code> <code>from_scope</code>
+  <code>describe</code></p>
+  <p><code>command</code> is <code>edgar receipt [ID] [--refused] [--verify]</code>'s
+  whole implementation: with no flag it tells the story, one line per entry;
+  <code>--refused</code> narrows to what was refused; <code>--verify</code>
+  replays the chain and exits 1 at the first break. <code>attach()</code> is
+  the one function that wires both subscribers onto a real bus, called from
+  <code>cli/setup.py</code>'s <code>_broker()</code> — the fourth seam reached
+  by name through <code>import_module</code>, the same way
+  <code>cli/setup.py</code> reaches escalation and the controller, so nothing
+  outside <code>broker/</code> ever imports it directly (NFR-12).</p>
+  <ul class="points">
+    <li><code>from_scope()</code> and <code>describe()</code> are what
+    <code>--scope</code> and <code>/scope</code> actually call — building a
+    live ticket from typed <code>KEY=VALUE</code> pairs, and summarising one
+    for a bare <code>/scope</code>.</li>
+    <li><code>[broker] enabled = false</code> (<code>config/schema.py</code>,
+    default <code>true</code>) turns off both the veto and the receipt
+    through this same seam. A setting that read fine and did nothing would be
+    exactly the hidden behaviour this harness promises not to have.</li>
+  </ul>
+</article>
+
+<h3 class="stage">Sizes</h3>
+<p>Lines of code: blank lines and comments do not count, docstrings do.
+<code>just loc</code> prints the current totals.</p>
+
+<div class="ak-tblwrap">
+<table class="ak-table sizes">
+  <thead><tr><th>File</th><th class="loc">Lines of code</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr data-file="src/edgar/broker/intent.py"><td><code>broker/intent.py</code></td><td class="loc">~27</td><td>Opens an intent from a typed line, and nothing else</td></tr>
+    <tr data-file="src/edgar/broker/caveats.py"><td><code>broker/caveats.py</code></td><td class="loc">~37</td><td>The five caveat kinds, and parsing <code>KEY=VALUE</code></td></tr>
+    <tr data-file="src/edgar/broker/ticket.py"><td><code>broker/ticket.py</code></td><td class="loc">~57</td><td>Attenuation, and chain verification</td></tr>
+    <tr data-file="src/edgar/broker/guard.py"><td><code>broker/guard.py</code></td><td class="loc">~35</td><td>The mutable adapter the pipeline actually calls</td></tr>
+    <tr data-file="src/edgar/broker/authorize.py"><td><code>broker/authorize.py</code></td><td class="loc">~72</td><td>The pure veto, property-tested</td></tr>
+    <tr data-file="src/edgar/broker/receipt.py"><td><code>broker/receipt.py</code></td><td class="loc">~78</td><td>The hash-chained, signed log</td></tr>
+    <tr data-file="src/edgar/broker/cli.py"><td><code>broker/cli.py</code></td><td class="loc">~33</td><td><code>edgar receipt</code>'s whole implementation</td></tr>
+    <tr data-file="src/edgar/broker/__init__.py"><td><code>broker/__init__.py</code></td><td class="loc">~26</td><td>The one seam <code>cli/setup.py</code> reaches by name</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="ak-source">Source: <code>just loc</code>, which counts with
+<code>tests/support/budget.py</code>. Rounded; the tour's test fails if a figure drifts
+more than 25 lines of code from the code.</p>
+
+<footer class="ak-footer">
+  <p><strong>Where next:</strong> <a href="map.html">the map</a> shows all of it at
+  once, or back to the <a href="index.html">Core tour</a>.</p>
+  <p><strong>Keeping this page honest.</strong> It changes in the same commit as the
+  code it describes, and
+  <a href="https://github.com/vespassassina/edgar/blob/main/tests/unit/test_tour.py"><code>tests/unit/test_tour.py</code></a>
+  fails when a linked file is gone, when a name under "Look for" is no longer defined
+  in its files, or when a size here drifts from the real one. It cannot tell when a
+  description has gone stale, so reread a stop whenever you change its code. The
+  source of this page is
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/tour/broker.html"><code>docs/tour/broker.html</code></a>.</p>
+</footer>
+
+</main>
+</div>
+
+<!-- Diagrams are Mermaid text above, readable as plain text if this never loads.
+     The classic (UMD) build, so the page also works opened as a local file. -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script src="tour.js"></script>
+</body>
+</html>

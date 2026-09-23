@@ -44,7 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
         "edgar sessions list|show ID|rm ID, edgar tools list|describe NAME, "
         "edgar skills list|validate, edgar memory list|add|edit|review|forget ID|undo, "
         "edgar cost, edgar mcp list|test|login|logout NAME, "
-        "edgar login PROVIDER, edgar logout PROVIDER",
+        "edgar login PROVIDER, edgar logout PROVIDER, "
+        "edgar receipt [ID] [--refused] [--verify]",
     )
     parser.add_argument("--version", action="version", version=f"edgar {__version__}")
     parser.add_argument("-p", "--prompt", help="run one turn non-interactively and exit")
@@ -74,6 +75,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-project-exec", action="store_true", help="ignore this project's tools and verify"
     )
+    parser.add_argument(
+        "--scope",
+        action="append",
+        metavar="KEY=VALUE",
+        help="a caveat the ticket may not exceed [CAP-2]",
+    )
     return parser
 
 
@@ -84,14 +91,15 @@ def main(argv: list[str] | None = None) -> int:
             return _prompt_command(argv[1:])
         if argv[:1] == ["models"]:
             return _models_command(argv[1:])
-        if argv[:1] in (["stats"], ["history"], ["controller"]):
-            # v3's own commands, reached by name: a module under cli/ that imported
-            # edgar.learning or edgar.controller would break tier isolation
-            # [NFR-12, ADR-0015].
+        if argv[:1] in (["stats"], ["history"], ["controller"], ["receipt"]):
+            # v3 and v4's own commands, reached by name: a module under cli/ that
+            # imported edgar.learning, edgar.controller or edgar.broker would
+            # break tier isolation [NFR-12, ADR-0015, ADR-0039].
             from importlib import import_module
 
-            v3 = "edgar.controller" if argv[0] == "controller" else "edgar.learning"
-            return int(import_module(f"{v3}.cli").command(argv, Path.cwd()))
+            tier = {"controller": "edgar.controller", "receipt": "edgar.broker"}
+            mod = import_module(f"{tier.get(argv[0], 'edgar.learning')}.cli")
+            return int(mod.command(argv, Path.cwd()))
         if argv[:1] == ["memory"]:
             from edgar.cli.memory import command as memory
 
@@ -143,6 +151,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
                 resume=args.resume,
                 plan=args.plan,
                 no_history=args.no_history,
+                scope=args.scope,
             )
         )
     from edgar.cli.oneshot import run_prompt
@@ -163,6 +172,7 @@ def _run(parser: argparse.ArgumentParser, argv: list[str]) -> int:
         resume=args.resume,
         plan=args.plan,
         no_history=args.no_history,
+        scope=args.scope,
     )
 
 

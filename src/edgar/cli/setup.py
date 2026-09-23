@@ -1,7 +1,7 @@
-"""What `-p` and the REPL share: config, tools, the permission guard, the verify
-check, the prompt's prefix, the runtime built from them, and opening and closing
-a session."""
-
+# What `-p` and the REPL share: config, tools, the permission guard, the verify
+# check, the prompt's prefix, the runtime built from them, and opening and closing
+# a session.
+#
 # A session's life, as the REPL and -p both run it:
 #
 #   prepare   the working directory and layered config; yolo only with a human's say-so
@@ -349,13 +349,35 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
         budget=config.budget,
         compactor=resolve(role, config, env=s.env) if role else None,
         fallback=fallback,
+        escalation=_escalation(config, s.env),
         hooks=s.hooks,
     )
 
 
-def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, Runtime]:
+def _escalation(config: Config, env: Mapping[str, str] | None) -> Any:
+    # v3's third seam, by name for the same reason as the other two [ADR-0015,
+    # NFR-12]: `providers/escalation.py` is removable, so this file never
+    # imports it, only reaches it through `import_module`, which the static
+    # layering test cannot follow. The `Any` return crosses into `Runtime`'s
+    # `_Escalator | None` field silently, since `ModuleType.__getattr__` is
+    # typed `Any` too [ADR-0015].
+    try:
+        escalation = import_module("edgar.providers.escalation")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return None
+    plan = escalation.chain_from_config(config.later)
+    if plan is None:
+        return None
+    chain = tuple((name, *resolve(name, config, env=env)) for name in plan.models)
+    return escalation.EscalationState(chain, plan.max_escalations, plan.on)
+
+
+def begin(
+    s: Setup, bus: EventBus, resume: str | None = None, *, scope: tuple[str, ...] = ()
+) -> tuple[Session, Runtime]:
     """A new session, recorded to disk; or with `resume`, a session id or "" for the
-    latest, one replayed from it [CLI-11]. It keeps its model unless --model names one."""
+    latest, one replayed from it [CLI-11]. It keeps its model unless --model names one.
+    `scope` is `--scope`'s KEY=VALUE pairs, if any [CAP-2]."""
     mode = s.config.permissions.mode
     bus.subscribe(lambda event: _spend(s.home, event))
     if s.hooks:
@@ -372,10 +394,47 @@ def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, 
         if session.model != rt.name:
             session.record({"type": "model", "model": rt.name})
         session.mode, session.model = mode, rt.name
+    if scope:
+        rt = replace(rt, broker=broker_guard(scope))
+    _broker(s, bus, session, rt)
     _learning(s, bus, session)
     _controller(s, bus, rt, session.id)
     bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
     return session, rt
+
+
+def broker_guard(scope: tuple[str, ...]) -> Any:
+    # v4's third seam, mirroring _escalation and _controller: edgar.broker is
+    # removable, so this file never imports it, only reaches it through
+    # import_module [ADR-0015, NFR-12]. cli/slash.py's /scope calls this too, so
+    # it stays public rather than underscore-prefixed like the others.
+    try:
+        broker = import_module("edgar.broker")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return None
+    return broker.from_scope(scope)
+
+
+def broker_describe(guard: Any) -> str:
+    try:
+        broker = import_module("edgar.broker")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return "the capability broker is not in this build"
+    return str(broker.describe(guard))
+
+
+def _broker(s: Setup, bus: EventBus, session: Session, rt: Runtime) -> None:
+    # The fourth v4 seam, by name for the same reason as `broker_guard` [ADR-0015].
+    # Runs with no `--scope` too: the receipt still records intents and permission
+    # decisions with no ticket at all [ADR-0039]. `[broker] enabled = false` turns
+    # off both the veto and the receipt, not just one of them.
+    if not s.config.broker.enabled:
+        return
+    try:
+        broker = import_module("edgar.broker")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return
+    broker.attach(bus, session=session, home=s.home, guard=rt.broker)
 
 
 def _learning(s: Setup, bus: EventBus, session: Session) -> None:
@@ -427,6 +486,7 @@ def _controller(s: Setup, bus: EventBus, rt: Runtime, session: str = "") -> None
         guard=s.guard,
         window=rt.provider.capabilities.max_context,
         session=session,  # provenance for a learned skill, if one is written [SKL-12]
+        broker=rt.broker,  # CTRL-8: tighten_policy's caveats attenuate this ticket
     )
 
 

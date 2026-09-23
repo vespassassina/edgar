@@ -16,8 +16,10 @@ from edgar.core.events import (
     AsideFinished,
     Compacted,
     ControllerActed,
+    Escalation,
     Event,
     FactSaved,
+    Fallback,
     ModelSelected,
     ProviderRetry,
     ReasoningDropped,
@@ -158,6 +160,10 @@ def _notice(event: Event) -> str | None:
         return f"controller: {event.message}{where}"
     if isinstance(event, Compacted):
         return f"compacted {event.before:,} → {event.after:,} tokens ({event.stages})"
+    if isinstance(event, Fallback):
+        return f"{event.from_model} unreachable, falling back to {event.to_model}"
+    if isinstance(event, Escalation):
+        return f"escalating from {event.from_model} to {event.to_model}: {event.reason}"
     return None
 
 

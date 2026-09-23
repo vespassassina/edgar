@@ -159,3 +159,13 @@ def test_skills_synthesis_takes_only_the_three_modes(tmp_project: Path, home: Pa
     _write(tmp_project / ".edgar" / "config.toml", '[skills]\nsynthesis = "yes please"\n')
     with pytest.raises(ConfigError):
         load(tmp_project, home=home, env={})
+
+
+# [broker] (M17) [ADR-0039]. Default true: the ticket veto and receipt log run
+# unless a project opts out.
+
+
+def test_broker_enabled_defaults_to_true(tmp_project: Path, home: Path) -> None:
+    assert load(tmp_project, home=home, env={}).broker.enabled is True
+    _write(tmp_project / ".edgar" / "config.toml", "[broker]\nenabled = false\n")
+    assert load(tmp_project, home=home, env={}).broker.enabled is False

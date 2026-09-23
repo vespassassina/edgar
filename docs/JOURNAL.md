@@ -5,6 +5,345 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17: `tighten_policy`'s caveats, CTRL-8, and M17 closes
+
+The one item HANDOFF.md left blocked: the controller's `tighten_policy` can
+now narrow a session's live ticket, not just its `permissions.Policy`
+(ADR-0039's fourth caveat source). Asked the maintainer how to proceed given
+zero LOC headroom outside removable packages; the answer was "simplify
+first, then build" — the same move ADR-0050/ADR-0053 already established for
+this exact situation, so this is precedent, not an improvisation.
+
+Checked what the feature would actually cost first, and it turned out
+smaller than HANDOFF.md's estimate: `controller/`, `broker/` and their
+`Site`/`Gate`/`Narrowing`/`TicketGuard` types are *all* removable
+(`REMOVABLE_PATHS`), so `test_architecture.py`'s rule only forbids
+non-removable code importing them — one removable package importing
+another is fine, and every line of the actual feature (a `caveats: tuple[str,
+...]` field on `Narrowing`, `Site.broker`/`Gate.broker` fields, `TicketGuard.
+tighten()` reusing the same `attenuate()` `task` already calls, not a new
+merge function) landed inside `controller/` and `broker/` for free. The
+*only* non-removable line needed was `cli/setup.py`'s `_controller()` call
+gaining one keyword, `broker=rt.broker` — `ToolContext.broker`/`Runtime.
+broker` already existed from the earlier veto-stage work, so nothing new was
+threaded through `core/loop.py`. Both `broker.caveats.parse_scope` and
+`edgar.core.errors.ConfigError` are imported lazily inside `tighten.py`'s new
+`_caveats()` validator, wrapped in `try/except ModuleNotFoundError`, so a
+`controller/` with `broker/` deleted still imports cleanly and every other
+`tighten_policy` field keeps working — the same discipline `gate.py`'s
+`_synthesis()` already uses for `learning/`.
+
+That one line was one line more than the exhausted budget allowed, so it
+needed one line freed first: converted `cli/setup.py`'s own 3-line module
+docstring to `#` comments (docstrings count as lines of code, comments are
+free, ADR-0040) — the same move M14 made to clear its own last few lines,
+now used a second time. Net: -3 (docstring) +1 (the wiring line) = -2;
+`just loc` reads `9498 / 9500`, two lines of headroom rather than zero.
+
+Six new tests: `test_broker_guard.py` (`tighten()` narrows the live ticket in
+place), `test_controller_proposals.py` (a `caveats`-only proposal is not
+"nothing to tighten"; a malformed pair is rejected the same way a bad mode
+is), `test_controller_apply.py` (a caveats tightening attenuates the
+session's `TicketGuard`; asking to tighten caveats with no ticket this
+session is rejected and logged, not silently ignored), `test_controller_
+gate.py` (`attach()` wires `broker=` through to `Gate.broker`). All green;
+`just check` is 1188 passed, ruff and mypy clean; `just loc` unchanged in
+shape, just with the two lines of margin above.
+
+This closes M17's list. The capability broker (ADR-0039) is now fully built:
+intent, ticket, the pure veto, delegation attenuation, the controller's own
+attenuation, the signed receipt, `edgar receipt`, `[broker] enabled`, the
+confused-deputy acceptance test and the tour. `docs/HANDOFF.md` is deleted
+per its own instruction ("delete it when the list is done") — its content
+that still mattered (the `verify_chain()` caveat-comparison lesson, the
+`Broker.check()` nested-Protocol mypy gotcha) is preserved above and in
+earlier entries in this file, so nothing is lost by removing it.
+
+## 2026-09-23 — M17: tour delivery, `docs/tour/broker.html`
+
+Built HANDOFF's item 4, the last unblocked item on M17's list: the broker's
+tour page. `docs/ROADMAP.md`'s own M17 section names `docs/tour/broker.html`
+by name ("Tour delivery: `docs/tour/broker.html`, s29 turned into a link;
+`just map`"), which settled a question worth recording: whether to fold the
+whole module into `index.html`'s stop 35 (the way M15 folded the single-file
+`providers/escalation.py` in, ADR-0066 §8: "no dedicated page for one file")
+or give it a page of its own, the way `extensions/` and `memory/` got.
+`broker/` is 365 LOC across 7 files — closer to the multi-file precedent than
+the single-file exception — and the roadmap had already committed to the
+filename, so the dedicated page won. Also caught in passing: the roadmap's
+own "s29" was stale (it names "Extensions, hooks, plugins, embedding"); the
+real stop is `s35`, the way M14's handoff had already caught a similar stale
+id — worth remembering that a roadmap-quoted stop id is not authoritative
+until checked against `docs/tour/index.html` directly.
+
+Built `docs/tour/broker.html` with four stops — intent and the ticket
+(`intent.py`, `ticket.py`, `caveats.py`), the veto one step before
+permissions (`guard.py`, `authorize.py`), the signed receipt (`receipt.py`),
+and `edgar receipt` plus the wiring seam (`cli.py`, `__init__.py`) — a Sizes
+table, and the same header/footer/Mermaid structure `extensions.html` and
+`memory.html` use. Added a `<li><a href="broker.html">Capability broker</a>`
+nav entry to all 12 other tour pages, and narrowed `index.html`'s stop 35
+from an earlier, larger draft (which had folded all 7 files in directly) down
+to a short pointer stop that names only the three pure-core files and links
+to the new page — closer to what a reader who has not yet reached M17 needs.
+Ran `just map` to pick up the new page and the narrowed stop.
+
+`tests/unit/test_tour.py` and `test_tour_map.py`: 160 passed. `just check`:
+1182 passed, ruff and mypy clean. `just loc`: unchanged at
+`9500 / 9500` outside removable packages — docs never counted against the
+budget, so this item carried no cost against item 1's blocker. Only item 1,
+the controller's `tighten_policy` (CTRL-8), is left on M17's list, and it
+stays blocked on the maintainer's decision about that zero-headroom budget.
+
+## 2026-09-23 — M17: the confused-deputy integration test
+
+Built HANDOFF's item 3, the roadmap's M17 "Done when" acceptance test:
+`tests/integration/test_confused_deputy.py`. A ticket scoped
+`paths=reports/q3.md`; a `read` call on `reports/2024-salaries.md` refused;
+a `shell` call running `curl` toward an outside host refused too. The second
+refusal needed care: `authorize()` only checks `paths=`/`hosts=` against a
+tool whose `Subject` resolves to a path or a URL. `shell`'s `Subject` is
+neither (it carries the raw command text), so it lands in `authorize()`'s
+"unchecked" branch and is refused outright under `paths=` unless named in
+`tools=` — the deliberate cost of scoping to files, per ADR-0039's own
+comment in `authorize.py`. A `fetch`-style URL-shaped call would need a
+`hosts=` caveat to be refused; `paths=` alone would not touch it — worth
+remembering if this test is ever extended to cover a real network-fetch
+tool, since a `paths=`-only ticket does not, by itself, stop a URL-shaped
+tool from reaching an outside host.
+
+Two tests: one drives `execute()` directly (mirroring
+`tests/unit/test_broker_guard.py`'s pattern) and checks both refusals carry
+`ErrorKind == "out_of_scope"`, both show up as `ScopeRefused` events, and
+the resulting receipt chain still verifies; the other exercises the same
+scenario through `edgar receipt --refused` (both refusals print) and
+`--verify` (holds, then fails with exit 1 after a one-byte tamper). Two of
+the four sub-claims in the roadmap's "Done when" — that a subagent cannot
+drop a caveat, and that no chain verifies without one — were already
+covered by the existing hypothesis tests in `tests/property/test_broker_chain.py`,
+so this test only needed to prove the receipt/refusal/CLI-verify story.
+
+Pure test code: no non-removable file touched, `just loc` unchanged at
+`9500 / 9500` outside removable packages. `just check`'s non-tour suite is
+1168 passed (up from 1166); the five tour/map failures are the expected,
+already-documented gap (item 4, not yet built). `ruff format`, `ruff check`
+and `mypy --strict` clean.
+
+Only item 4 (tour delivery) is left on HANDOFF's list; item 1 (the
+controller's `tighten_policy`) stays blocked on the maintainer's budget
+decision.
+
+## 2026-09-23 — M17: `TARGET_TIER` bumped to `"v4"`
+
+One-line follow-up to the receipt entry below: `tests/support/budget.py`'s
+`TARGET_TIER` moved from `"v3"` to `"v4"`, per HANDOFF's item 2, ahead of the
+tour work so `just loc` reports against the right ceiling once that lands.
+`just loc` now reads `src/ total (v4 tier) 11533 / 13000` — the total-tier
+ceiling only, 12,000 → 13,000; "without removable packages" is unaffected
+and still reads `9500 / 9500`, so this does not unblock item 1 (the
+controller). Non-tour suite still 1166 passed; `ruff format`/`ruff check`
+clean.
+
+## 2026-09-23 — M17: the receipt, `edgar receipt`, and `[broker] enabled`
+
+Built HANDOFF's items 2–4 in one pass. `broker/receipt.py`: an append-only,
+hash-chained, HMAC-SHA256-signed JSONL log at `.edgar/sessions/<id>/receipt.jsonl`,
+keyed by 32 random bytes at `~/.edgar/receipt.key` (0600, made on first use).
+Each line signs its own `prev`/`kind`/`data`; `prev` is the SHA-256 of the
+previous line's exact text, so tampering with an earlier line breaks every
+hash after it and tampering with a line's own content breaks its own
+signature — `verify()` checks both and stops at the first `Break`. `Receipts`
+is a bus subscriber, the same "the boundary is the subscription" shape as
+`broker/intent.py`'s `Intents`: one line per depth-0 `PromptTyped` (`intent`),
+depth>0 `TurnStarted` (`delegate`), `ScopeRefused` (`refuse`) and
+`PermissionResolved` (`permission`); `record_ticket()` writes the `ticket`
+line once, directly, since no bus event announces a ticket's creation.
+`~/.edgar/receipt.key` was added to `permissions.matcher`'s hard-layer
+credential paths — a new `CREDENTIAL_FILES` tuple alongside the existing
+directory-based `CREDENTIALS`, since a single file needed membership rather
+than `inside()` — so the model's own tools are refused it outright.
+`broker/__init__.py` gained `attach()`, the receipt's own wiring seam,
+subscribing both `Intents` and `Receipts` and recording the session's ticket
+first if `--scope` set one; `cli/setup.py`'s `begin()` calls it unconditionally
+(not only with `--scope`) through a new `_broker()`, by name like
+`_escalation`/`_controller`.
+
+Then `edgar receipt [ID] [--refused] [--verify]`: real logic in the new,
+removable `broker/cli.py` (bare `ID` picks the latest session, same as
+`--resume`; `--refused` narrows to refusals; `--verify` walks the chain and
+exits 1 at the first break), reached from `cli/main.py` the same way
+`stats`/`history`/`controller` already are — one dict lookup added to the
+existing by-name dispatch, no new branch. Last, `[broker] enabled` (default
+`true`) in `config/schema.py`, and a line in `edgar doctor`; `false` turns
+off both the veto and the receipt through the same `_broker()` gate, since a
+key that reads fine and does nothing would be exactly the hidden behaviour
+this harness promises not to have.
+
+Tests: `tests/unit/test_broker_receipt.py` (11), `tests/unit/test_broker_cli.py`
+(6), `tests/integration/test_broker_setup.py` (2, `[broker] enabled` through
+`begin()`), one new case in `tests/unit/test_policy.py` for the credential
+file, two in `tests/unit/test_config.py` for the new section. All green;
+`ruff format`, `ruff check` and `mypy --strict` clean; `just check`'s
+non-tour suite is 1166 passed (up from 1157) — the same five tour/map
+failures as before, expected until item 7. `just loc` now reads
+**9500/9500 outside the removable packages — no headroom left**, up from
+9480 before this touch: `cli/main.py` cost 5 lines of code (the dispatch
+entry and an epilog string), `permissions/matcher.py` cost 4,
+`config/schema.py` cost 6 (the section, its `SECTIONS` entry, its `Config`
+field), `cli/setup.py` cost 2 (the enabled check) and `cli/doctor.py` cost 1.
+Anything M17 still touches outside `broker/`'s own modules — including
+item 1, the controller's `tighten_policy`, and item 5's `TARGET_TIER` bump
+to `"v4"` (which raises the total-tier ceiling but not this one) — needs a
+budget conversation with the maintainer first, not a squeeze; flagging this
+now rather than mid-item.
+
+## 2026-09-23 — M17: `task` attenuates the parent's ticket on delegation
+
+Built the delegation half of the next `HANDOFF.md` item: `TicketGuard.narrowed()`
+in `broker/guard.py` calls the already-built `attenuate()` with the subagent's own
+subject (`task:<agent>#<session id>`), the agent definition's `tools:` folded in
+as a `tools=` caveat, and any model-given `scope` argument merged in too — both
+only ever add caveats, never drop one [CAP-5]. `tools/base.py`'s structural
+`Broker` Protocol gained a matching `narrowed()` signature, following the same
+pattern as `check()`; `agents/spawn.py`'s `spawn()` calls it when `ctx.broker` is
+set and passes the result into the subagent's own `Runtime.broker`; `task`'s
+schema gained an optional `scope` array, threaded straight through. Two new
+integration-style tests in `tests/unit/test_spawn.py` exercise it through the
+real pipeline (a scoped parent, a subagent whose own `read` call lands outside
+`paths=`, refused on the child's own ticket one depth in) plus two direct unit
+tests on `narrowed()` itself in `tests/unit/test_broker_guard.py`. All green;
+`ruff format`, `ruff check` and `mypy --strict` clean; `just check`'s non-tour
+suite is 1144 passed (up from 1140); `just loc` reads 9480/9500 outside the
+removable packages, 20 lines of code of headroom left (down from 36 — this
+touch cost 16, split across the three non-removable files above).
+
+**Decided, not yet built:** ADR-0039's fourth caveat source, the controller's
+`tighten_policy` adding caveats to a live ticket, does not exist anywhere in
+`controller/proposals.py`, `controller/apply.py` or `controller/tighten.py` —
+`Narrowing`/`TightenPolicy` only ever touched `permissions.Policy` fields. That
+is a separate, materially larger feature (a new `Narrowing` field, `Site` needing
+broker access, `gate.py` validation), so it is split out as its own pending item
+rather than folded into this one. Not yet run past the maintainer.
+
+## 2026-09-23 — M17 started: caveats, tickets, pure authorize
+
+Started M17 (the capability broker, ADR-0039) on `feat/m17-capability-broker`
+after M15 landed. Built and tested the pure core: `broker/caveats.py`
+(`Caveat`, `parse_scope`), `broker/ticket.py` (`Ticket`, `attenuate`,
+`verify_chain`), `broker/authorize.py` (`authorize()`) [CAP-2, CAP-5, CAP-9].
+20 unit tests and 2 hypothesis property tests, all green; ruff and mypy
+clean.
+
+A hypothesis property test (`test_honest_attenuation_always_verifies`) caught
+a real bug on the first run: `verify_chain()` compared whole `Caveat` objects
+for set membership, but `attenuate()` legitimately rewrites a caveat's value
+string when it widens a list caveat or narrows `calls`/`until`, so an honest
+attenuation was flagged as a forgery. Fixed by comparing meaning per kind
+instead of raw object equality — see `docs/HANDOFF.md` for the detail, kept
+there rather than here because the next person to touch `ticket.py` needs it,
+not just a record that it happened.
+
+**Not done yet:** intent creation, `--scope`/`/scope`, `task` attenuation, the
+receipt module, the `edgar receipt` command, config, the tour page, and the
+confused-deputy integration test the roadmap names as M17's "done when". Full
+list in `HANDOFF.md`. `just check` currently fails on five tour/map tests
+because the new module has no tour stop yet — expected until the tour item
+lands in the same commit as the rest of the module, per the project's own
+rule that the tour changes with the code, not after it.
+
+## 2026-09-23 — M17: the `pre_tool` veto stage lands
+
+Wired the broker's pure core into the real tool pipeline. `tools/execute.py`
+now runs `validate → pre_tool hooks → ticket → permission → run → spill`; the
+new step calls a `TicketGuard` (`broker/guard.py`, a mutable adapter around
+`authorize()`) through a structural `Broker` Protocol on `ToolContext` and
+`Runtime` (both fields default to `None`, so a session with no `--scope` is
+unaffected). A refused call becomes a new `"out_of_scope"` `ErrorKind` and
+emits a new `ScopeRefused` event, mirroring `PermissionResolved`. The check
+reuses the same resolved `Subject` the permission engine already computes,
+rather than resolving the call's path or URL twice.
+
+One mypy surprise: `Broker.check()` first returned a second Protocol
+(`ScopeRefusal`) matching `authorize.Refusal`'s shape. mypy's Protocol
+matching does not follow a *nested* Protocol return type — it compared
+`Refusal | None` against `ScopeRefusal | None` nominally and failed even
+though the fields line up. Fixed by returning a plain `tuple[str, str] | None`
+instead. Worth remembering anywhere else a Protocol method's return value is
+itself meant to be duck-typed.
+
+6 new tests (`tests/unit/test_broker_guard.py`) exercise the stage through
+the real `execute()`, including that a refused call does not count toward a
+`calls=` cap. All 982 non-tour tests pass; ruff and mypy are clean
+project-wide. `just loc` reads 9422/9500 outside the removable packages —
+**78 lines of code left** for the CLI, config and receipt work still ahead,
+none of which lives inside `broker/` itself. Still not wired: intent
+creation, `--scope`/`/scope`, `task` attenuation, the receipt module, the
+CLI command, config, and the tour page.
+
+## 2026-09-23 — M17: intent creation lands
+
+Built `broker/intent.py`: `Intent` (id, text, an ISO instant for the receipt)
+and `Intents`, a subscriber mirroring `learning/learner.py`'s "the boundary
+is the subscription, not a check inside it" shape [CAP-1]. It reads exactly
+one event kind, `PromptTyped` at depth 0, and nothing else — every other
+source MEM-9 excludes (tool output, an `@path` body, piped stdin, model text,
+a subagent's own `task` argument) travels a different road and never reaches
+this subscriber, so there is nothing to filter inside it. `PromptSteered` is
+deliberately not read: a correction belongs to the run already open, the same
+reasoning the event's own docstring gives for not opening a fresh run for the
+recorder — this is my own extension of that reasoning to intent-opening, not
+an explicit ADR-0039 requirement, and worth confirming with the maintainer if
+it matters later.
+
+6 unit tests (`tests/unit/test_broker_intent.py`) plus a hypothesis property
+test (`tests/property/test_broker_intent_boundary.py`, modelled on
+`test_learning_boundary.py`'s `ACTIVE_FROM` check) assert that
+`Intents.current`'s text can never differ from some depth-0 `PromptTyped`
+event that was actually emitted, across arbitrary generated trajectories
+mixing typed lines, steers, model text and tool calls at various depths. All
+pass; ruff, mypy and the rest of the suite stay clean. `just loc` still reads
+9422/9500 outside the removable packages — `intent.py` lives entirely inside
+`broker/`, so it cost none of the 78-line headroom.
+
+Next: `--scope`/`/scope`, `task` attenuation, the receipt module, the CLI
+command, config, and the tour page. Full order in `HANDOFF.md`.
+
+## 2026-09-23 — M17: `--scope` and `/scope` land, wired end to end
+
+Built `--scope KEY=VALUE` (repeatable) on `-p` and `/scope` in the REPL
+(bare shows the ticket, `/scope KEY=VALUE...` sets a fresh one, `/scope
+clear` resets), both live: a call outside the scope is refused through the
+same `pre_tool` veto stage M17 built earlier. Centralised the wiring in
+`cli/setup.py` as two public functions, `broker_guard()` and
+`broker_describe()`, both reaching `edgar.broker` through `import_module`
+by name, the same pattern `_escalation()`/`_controller()` already use so
+that no non-removable file has to import a removable one [ADR-0015,
+NFR-12]. `begin()` gained a `scope` keyword that applies the guard right
+after building the `Runtime`; `/scope` swaps `shell.rt` the same way
+`/model` already does, with `dataclasses.replace`.
+
+This was originally two separate roadmap items (`--scope`/`/scope`, and a
+later "wiring seam" item for attaching the live guard to `Runtime.broker`).
+Built them together: a `--scope` flag with nothing behind it does nothing,
+so splitting them across two commits would have meant shipping a flag that
+silently no-ops for a while. The receipt subscriber and `Intents` still
+need attaching to a real bus — that is genuinely later work, since the
+receipt module does not exist yet.
+
+New tests: a oneshot integration test asserting a scoped `-p` run emits
+`ScopeRefused` and still completes the turn (the model is told the read
+failed, same as any other tool error), and five `/scope` cases in the
+REPL's parametrized command table plus one dedicated set/clear test. All
+pass; `just check`'s non-tour suite (1140 tests) is green.
+
+**Budget is now the binding constraint, not a warning.** `just loc` reads
+`9464/9500` outside the removable packages — **36 lines of code of
+headroom left**, down from 78, because the CLI/REPL surface and the
+`setup.py` seam are themselves non-removable and cost 42 lines of code
+between them. Everything left on M17's list that touches a non-removable
+file (the `edgar receipt` command, `[broker]` config, the `doctor` line)
+has to fit in what remains.
+
 ## Pick up here
 
 The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md),
@@ -37,10 +376,13 @@ In order:
    `TARGET_TIER` to `"v3"`. ~~**M13, the controller.**~~ Done 2026-09-18
    ([ADR-0064](adr/0064-m13-controller-as-built.md)). ~~**M14, skill
    synthesis.**~~ Done 2026-09-19
-   ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)). **M15, escalation and
-   route suggest, is next, and cannot start as planned**: only 5 lines of code
-   remain outside the removable packages. Read ADR-0065 §10 first and decide
-   what moves before writing anything.
+   ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)). ~~**M15, escalation and
+   route suggest.**~~ Done 2026-09-23 ([ADR-0066](adr/0066-m15-escalation-as-built.md)):
+   `providers/escalation.py`, capped and announced. ROUTE-11 (budget-aware
+   downgrade), ROUTE-12 (`edgar route suggest`) and OQ-8's Responses API adapter
+   are deferred, priced out — only 104 lines of code remain outside the
+   removable packages, for all of v2 and whatever else Core and v1 still need.
+   **v3's Must-have work is done; M17 and M16 (v4, unattended) are next.**
 5. **PRD §11's two human-verification criteria** stay open until an actual
    outside person does them; v2's done test (ADR-0057 decision 8) needs both.
 6. **A user manual and a real `/help`.** Requested 2026-09-17, not acted on
@@ -56,6 +398,40 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 `AGENTS.md` rule 10 and its size table still
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
+
+## 2026-09-23 · M15, escalation, built
+
+**Asked.** Build M15 (escalation, ROUTE-5/ROUTE-10 Must; ROUTE-11/ROUTE-12
+Should; OQ-8 due for resolution) on `feat/m15-escalation-route-suggest`,
+unattended, following M12–M14's pattern: TDD, size budgets, tour delivery.
+
+**Done.** `providers/escalation.py` (90 lines of code): `EscalationState`
+walks a declared model chain upward on a pattern of failure — tool-call
+errors, consecutive all-failed rounds, or schema violations read off
+`Usage.repairs` — capped by `max_escalations`, never moving back down.
+`core/loop.py` never imports it: a local `_Escalator` Protocol and a
+`Runtime.escalation` field let `EscalationState` satisfy the shape
+structurally, reached at session start only through `cli/setup.py`'s
+`importlib.import_module` seam, the same pattern `_controller()` and
+`_learning()` already used. Its module docstring became `#` comments (free
+under the LOC rule) to make room, landing at 196/200. `cli/render.py` and
+`cli/statusbar.py` now surface both `Escalation` and `Fallback` — the latter
+had been silent since M9, a pre-existing ROUTE-10 gap closed in passing.
+19 unit tests, 2 full-loop integration tests with the fake provider, 2
+notice/status-line tests. `just check` green at 1,105 tests; `just loc` reads
+9,396 of 9,500 outside the removable packages, 104 left. Tour: stop 34 in
+`docs/tour/index.html` turned from planned to built, `just map` rerun.
+
+**Decided.** ROUTE-11 and ROUTE-12 (both Should) are deferred rather than
+squeezed in: 104 lines of code is not enough headroom to spend on two
+optional items and still leave anything for v2 or a future v1 patch.
+OQ-8 is resolved as "not yet" — no eval set exists to show the Responses API
+adapter's absence actually costs anything on tool-heavy tasks — rather than
+built against a calendar deadline. No dedicated `docs/tour/escalation.html`:
+unlike M9, M13 and M14's multi-file packages, one file does not earn a
+second page to keep in sync. Full reasoning in
+[ADR-0066](adr/0066-m15-escalation-as-built.md). Not merged: waiting on the
+maintainer's go-ahead, per standing policy.
 
 ## 2026-09-23 · CI: a coincidental ULID substring failed the image-spill test
 

@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 
 # Credentials: never readable or writable by the model outside yolo.
 CREDENTIALS = (".ssh", ".aws", ".gnupg", ".kube", ".docker", ".netrc", ".config/gcloud")
+CREDENTIAL_FILES = (".edgar/receipt.key",)  # a single file, not a whole directory [ADR-0039]
 _SPLIT = re.compile(r"&&|\|\||;|\||\n")
 _SUBSTITUTION = re.compile(r"\$\(|`|<\(|>\(")
 CATASTROPHIC = ("rm -rf /", "rm -rf /*", "rm -rf ~", "rm -rf ~/*", "mkfs*", ":(){*")
@@ -73,7 +74,9 @@ def within(path: Path, cwd: Path, globs: Iterable[str]) -> bool:
 
 
 def credential(path: Path, home: Path) -> bool:
-    return any(inside(path, home / name) for name in CREDENTIALS)
+    return any(inside(path, home / name) for name in CREDENTIALS) or path in (
+        home / name for name in CREDENTIAL_FILES
+    )
 
 
 def link_local(url: str) -> bool:

@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 10886,
+    "loc": 11469,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6616,
+        "loc": 6726,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2152,
+            "loc": 2224,
             "status": "built",
             "children": [
               {
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 161,
+                "loc": 171,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -68,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 176,
+                "loc": 177,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -80,7 +80,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 143,
+                "loc": 149,
                 "summary": "What reaches the terminal [CLI-5, CLI-15, CLI-21, CLI-23].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 310,
+                "loc": 311,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 393,
+                "loc": 428,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "synthesis.html#k4",
                 "status": "built",
@@ -116,7 +116,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 357,
+                "loc": 372,
                 "summary": "Slash commands [CLI-14, CLI-22, CLI-25, CLI-27, CLI-28].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -128,7 +128,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 160,
+                "loc": 164,
                 "summary": "The status line, rebuilt from events alone [CLI-5, CLI-6, CLI-8].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -152,7 +152,7 @@ window.EDGAR_MAP = {
             "id": "core/config",
             "name": "config/",
             "kind": "package",
-            "loc": 411,
+            "loc": 416,
             "status": "built",
             "children": [
               {
@@ -173,7 +173,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "config",
-                "loc": 167,
+                "loc": 172,
                 "summary": "The config model (BLUEPRINT §14). The dataclasses are the schema.",
                 "stop": "index.html#s21",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 798,
+            "loc": 808,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 210,
+                "loc": 222,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -299,7 +299,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 200,
+                "loc": 197,
                 "summary": "The turn loop. Read this first.",
                 "stop": "index.html#s1",
                 "status": "built",
@@ -311,7 +311,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 87,
+                "loc": 88,
                 "summary": "The one message vocabulary. Nothing outside providers/ sees a provider-native shape.",
                 "stop": "media.html#m1",
                 "status": "built",
@@ -380,7 +380,7 @@ window.EDGAR_MAP = {
             "id": "core/permissions",
             "name": "permissions/",
             "kind": "package",
-            "loc": 284,
+            "loc": 287,
             "status": "built",
             "children": [
               {
@@ -413,7 +413,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "permissions",
-                "loc": 68,
+                "loc": 71,
                 "summary": "Turning a tool call into something a rule can match [PERM-3, PERM-4, PERM-5, PERM-14].",
                 "stop": "index.html#s8",
                 "status": "built",
@@ -632,7 +632,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 583,
+            "loc": 603,
             "status": "built",
             "children": [
               {
@@ -641,7 +641,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 80,
+                "loc": 90,
                 "summary": "The tool contract, MCP-shaped so MCP is a translation layer, not a second system [TOOL-1].",
                 "stop": "index.html#s5",
                 "status": "built",
@@ -665,7 +665,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 155,
+                "loc": 165,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -750,14 +750,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2241,
+        "loc": 2255,
         "status": "built",
         "children": [
           {
             "id": "v1/agents",
             "name": "agents/",
             "kind": "package",
-            "loc": 275,
+            "loc": 282,
             "status": "built",
             "children": [
               {
@@ -790,7 +790,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "agents",
-                "loc": 145,
+                "loc": 152,
                 "summary": "Spawning a subagent: the `task` tool re-enters the loop with a narrower",
                 "stop": "agents.html#a2",
                 "status": "built",
@@ -859,7 +859,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 228,
+            "loc": 229,
             "status": "built",
             "children": [
               {
@@ -868,7 +868,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 104,
+                "loc": 105,
                 "summary": "`edgar doctor`: what this machine and this project would do to a session",
                 "stop": "isolation.html#w2",
                 "status": "built",
@@ -1093,7 +1093,7 @@ window.EDGAR_MAP = {
             "id": "v1/tools/builtin",
             "name": "tools/builtin/",
             "kind": "package",
-            "loc": 182,
+            "loc": 188,
             "status": "built",
             "children": [
               {
@@ -1114,7 +1114,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "tools/builtin",
-                "loc": 54,
+                "loc": 60,
                 "summary": "The `task` tool: a subagent is this same loop, re-entered with a narrower",
                 "stop": "agents.html#a1",
                 "status": "built",
@@ -1363,14 +1363,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 1514,
+        "loc": 1632,
         "status": "built",
         "children": [
           {
             "id": "v3/controller",
             "name": "controller/",
             "kind": "package",
-            "loc": 853,
+            "loc": 881,
             "status": "built",
             "children": [
               {
@@ -1379,7 +1379,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 165,
+                "loc": 173,
                 "summary": "What actually happens when a proposal is accepted [CTRL-6, CTRL-7, CTRL-10, CTRL-12].",
                 "stop": "controller.html#c4",
                 "status": "built",
@@ -1403,7 +1403,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 232,
+                "loc": 235,
                 "summary": "Five numbers, sometimes one call, never a failed turn [CTRL-1, CTRL-3, CTRL-9, CTRL-11].",
                 "stop": "controller.html#c5",
                 "status": "built",
@@ -1439,7 +1439,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "controller",
-                "loc": 118,
+                "loc": 135,
                 "summary": "Policy may only tighten, never loosen [CTRL-8, PERM-8, ADR-0021].",
                 "stop": "controller.html#c3",
                 "status": "built",
@@ -1568,8 +1568,8 @@ window.EDGAR_MAP = {
             "id": "v3/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 90,
+            "status": "built",
             "children": [
               {
                 "path": "src/edgar/providers/escalation.py",
@@ -1577,10 +1577,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "providers",
-                "loc": 0,
-                "summary": "",
+                "loc": 90,
+                "summary": "The model that started this session is not capable enough? Walk a declared",
                 "stop": "index.html#s34",
-                "status": "planned",
+                "status": "built",
                 "port": false
               }
             ]
@@ -1593,15 +1593,15 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M17 then M16",
         "summary": "Runs while you are away. Removable.",
-        "loc": 0,
-        "status": "planned",
+        "loc": 341,
+        "status": "built",
         "children": [
           {
             "id": "v4/broker",
             "name": "broker/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 341,
+            "status": "built",
             "children": [
               {
                 "path": "src/edgar/broker/authorize.py",
@@ -1609,10 +1609,58 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "broker",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s35",
-                "status": "planned",
+                "loc": 72,
+                "summary": "1. authorize(): pure, like permissions.decide() beside it [CAP-9]. No",
+                "stop": "broker.html#b2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/broker/caveats.py",
+                "name": "caveats.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "broker",
+                "loc": 37,
+                "summary": "1. Caveat: one narrowing rule, a plain frozen value with no behaviour of its",
+                "stop": "broker.html#b1",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/broker/cli.py",
+                "name": "cli.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "broker",
+                "loc": 33,
+                "summary": "edgar receipt [ID] [--refused] [--verify]: the human-readable story behind",
+                "stop": "broker.html#b4",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/broker/guard.py",
+                "name": "guard.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "broker",
+                "loc": 37,
+                "summary": "TicketGuard: the mutable adapter tools/execute.py's pre_tool stage actually",
+                "stop": "broker.html#b2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/broker/intent.py",
+                "name": "intent.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "broker",
+                "loc": 27,
+                "summary": "An Intent: the why behind a ticket, from a line a human typed [CAP-1, ADR-0039].",
+                "stop": "broker.html#b1",
+                "status": "built",
                 "port": false
               },
               {
@@ -1621,10 +1669,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "broker",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s35",
-                "status": "planned",
+                "loc": 78,
+                "summary": "1. The key: 32 random bytes at ~/.edgar/receipt.key, made once, 0600, never",
+                "stop": "broker.html#b3",
+                "status": "built",
                 "port": false
               },
               {
@@ -1633,10 +1681,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "broker",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s35",
-                "status": "planned",
+                "loc": 57,
+                "summary": "1. Ticket: what one intent may do, carrying its own chain of custody.",
+                "stop": "broker.html#b1",
+                "status": "built",
                 "port": false
               }
             ]

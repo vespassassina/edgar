@@ -27,6 +27,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from edgar.controller.proposals import (
     Abort,
@@ -77,6 +78,7 @@ class Site:
     synthesis: str = "off"  # off | propose | auto
     verified: bool = False  # did the declared check actually pass this turn?
     trigger: str = ""  # which SKL-8 checks fired, comma-separated
+    broker: Any = None  # the session's TicketGuard, for tighten_policy's caveats
 
 
 def apply(proposal: Proposal, site: Site) -> Outcome:
@@ -126,13 +128,22 @@ def _switch_model(p: SwitchModel, site: Site) -> Outcome:
 
 
 def _tighten_policy(p: TightenPolicy, site: Site) -> Outcome:
-    # narrow() is the only judge. A string back means it tried to loosen something,
-    # and a refused tightening is logged in the rejected table, not the mutation log:
-    # nothing changed, so there is nothing to revert [CTRL-8].
+    # narrow() is the only judge of the four policy fields. A string back means it
+    # tried to loosen something, and a refused tightening is logged in the rejected
+    # table, not the mutation log: nothing changed, so there is nothing to revert
+    # [CTRL-8]. `caveats` is the fifth field, checked separately: it has no policy
+    # to compare against, only a ticket to attenuate, and there may not be one.
     tightened = narrow(site.policy, p.want)
     if isinstance(tightened, str):
         site.store.reject(p.want.to_json(), tightened)
         return Outcome("rejected", f"refused: {tightened}", "tighten_policy")
+    if p.want.caveats and site.broker is None:
+        site.store.reject(p.want.to_json(), "no ticket this session to tighten")
+        return Outcome("rejected", "refused: no ticket this session", "tighten_policy")
+    if p.want.caveats:
+        from edgar.broker.caveats import parse_scope
+
+        site.broker.tighten(parse_scope(p.want.caveats))
     detail = f"tightened policy: {p.want.to_json()}"
     mutation = _log(site, "tighten_policy", detail, "applied", p.reason)
     return Outcome("applied", detail, "tighten_policy", mutation, tightened)

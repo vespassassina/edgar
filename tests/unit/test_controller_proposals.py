@@ -96,6 +96,21 @@ def test_a_tighten_policy_proposal_that_asks_for_nothing_is_rejected() -> None:
     assert "nothing to tighten" in rejected.problem
 
 
+def test_a_tighten_policy_proposal_with_only_caveats_is_not_empty() -> None:
+    # caveats is the fifth field CTRL-8 added; asking for it alone is enough.
+    proposal = parse(fabricate(action="tighten_policy", caveats=["paths=reports/"]), models=MODELS)
+    assert isinstance(proposal, TightenPolicy)
+    assert proposal.want.caveats == ("paths=reports/",)
+
+
+def test_a_tighten_policy_proposal_with_a_malformed_caveat_is_rejected() -> None:
+    # Validated against the same parser --scope uses, so a bad pair never becomes a
+    # proposal at all, the same way a bad mode never does.
+    rejected = parse(fabricate(action="tighten_policy", caveats=["nonsense"]), models=MODELS)
+    assert isinstance(rejected, Rejected)
+    assert "KEY=VALUE" in rejected.problem
+
+
 def test_switch_model_naming_an_arbitrary_model_is_rejected_and_says_what_it_has() -> None:
     # ROUTE-8: the target set is what the project configured, not what a model names.
     rejected = parse(fabricate(action="switch_model", model="gpt-9-omni"), models=MODELS)

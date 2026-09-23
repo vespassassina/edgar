@@ -36,6 +36,11 @@ class TaskTool:
             {
                 "agent": {"type": "string", "enum": sorted(agents)},
                 "task": {"type": "string", "description": "what the subagent should do"},
+                "scope": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "extra KEY=VALUE caveats to narrow the ticket by, if live",
+                },
             },
             ["agent", "task"],
             category="agent",
@@ -58,4 +63,5 @@ class TaskTool:
             env=self.env,
             registry=self.registry,
             guard=self.guard,
+            scope=tuple(args.get("scope") or ()),
         )

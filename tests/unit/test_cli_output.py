@@ -9,10 +9,12 @@ from pathlib import Path
 from fixture_server import FixtureServer
 
 from edgar.cli.models import pick, remember
-from edgar.cli.render import Printer, event_line
+from edgar.cli.render import Printer, _notice, event_line
 from edgar.cli.statusbar import Status
 from edgar.config.schema import Config, ProviderSection
 from edgar.core.events import (
+    Escalation,
+    Fallback,
     InputQueued,
     RequestFinished,
     RequestStarted,
@@ -90,6 +92,21 @@ def test_concurrent_subagents_get_their_own_row_until_they_finish() -> None:  # 
     assert "helper-1" not in rows[1] and "helper-2" in rows[1]
     # A subagent's own events never touch the main row.
     assert status.line() == rows[0]
+
+
+def test_fallback_and_escalation_are_never_silent() -> None:  # [ROUTE-10]
+    fell_back = Fallback(from_model="a/one", to_model="b/two", reason="down")
+    escalated = Escalation(from_model="a/one", to_model="b/two", reason="failed repeatedly")
+    assert _notice(fell_back) == "a/one unreachable, falling back to b/two"
+    assert _notice(escalated) == "escalating from a/one to b/two: failed repeatedly"
+
+
+def test_the_status_line_shows_a_fallback_or_escalation_model() -> None:  # [ROUTE-10]
+    status = Status("a/one")
+    status(Fallback(from_model="a/one", to_model="b/two", reason="down"))
+    assert status.model == "b/two"
+    status(Escalation(from_model="b/two", to_model="c/three", reason="failed repeatedly"))
+    assert status.model == "c/three"
 
 
 def test_an_event_line_is_json_with_its_name() -> None:

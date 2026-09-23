@@ -77,6 +77,8 @@ def command(cwd: Path, home: Path | None = None, *, network: bool = False) -> in
     # instructions that future sessions follow without anyone reading them first.
     inert = "" if config.controller.enabled else "; inert: [controller] enabled is false"
     print(f"skills   {config.skills.synthesis:<11} {SYNTHESIS[config.skills.synthesis]}{inert}")
+    # `[broker] enabled` (v4): the ticket veto and the signed receipt log [ADR-0039].
+    print(f"broker   {config.broker.enabled!s:<11} the ticket veto and receipt log")
     _trust(cwd, config, home)
     _db(cwd, home)
     _mcp(config)

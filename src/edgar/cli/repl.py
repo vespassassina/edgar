@@ -260,6 +260,7 @@ async def interact(
     resume: str | None = None,
     plan: bool = False,
     no_history: bool = False,
+    scope: list[str] | None = None,
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
@@ -314,7 +315,7 @@ async def interact(
             if chosen is None:
                 return 3
             s.config = replace(config, model=replace(config.model, default=chosen))
-        session, rt = begin(s, bus, resume)
+        session, rt = begin(s, bus, resume, scope=tuple(scope or ()))
         status.model = rt.name
         shell = Shell(setup=s, session=session, rt=rt, renderer=renderer, status=status, ask=ask)
         shell_ref.append(shell)

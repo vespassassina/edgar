@@ -120,6 +120,12 @@ class SkillsSection:
     distill_after: int = 3  # observations before `skills distill` runs itself [SKL-14]
 
 
+# The capability broker (v4): the ticket veto and the receipt log [ADR-0039].
+@dataclass(frozen=True, slots=True)
+class BrokerSection:
+    enabled: bool = True
+
+
 @dataclass(frozen=True, slots=True)
 class BrowserSection:
     """What `/browser` connects [CLI-29, ADR-0036]: a command tool by name, or an MCP
@@ -191,6 +197,7 @@ SECTIONS: dict[str, type] = {
     "browser": BrowserSection,
     "controller": ControllerSection,
     "skills": SkillsSection,
+    "broker": BrokerSection,
 }
 
 # Sections made of named blocks, `[providers.NAME]`, `[pricing."a/b"]` and
@@ -228,6 +235,7 @@ class Config:
     browser: BrowserSection = field(default_factory=BrowserSection)
     controller: ControllerSection = field(default_factory=ControllerSection)
     skills: SkillsSection = field(default_factory=SkillsSection)
+    broker: BrokerSection = field(default_factory=BrokerSection)
     providers: dict[str, ProviderSection] = field(default_factory=dict)
     pricing: dict[str, PriceSection] = field(default_factory=dict)
     mcp: dict[str, McpSection] = field(default_factory=dict)

@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from edgar.config.schema import Config
 from edgar.controller.gate import Gate
@@ -32,6 +33,7 @@ def attach(
     guard: Guard,
     window: int = 0,
     session: str = "",
+    broker: Any = None,  # the session's TicketGuard; CTRL-8's tighten_policy seam
 ) -> Gate | None:
     """Subscribe the controller to one session's bus, if it is switched on [CTRL-2]."""
     if not config.controller.enabled:
@@ -45,6 +47,7 @@ def attach(
         bus=bus,
         window=window,
         session=session,
+        broker=broker,
     )
     bus.subscribe(gate)
     return gate

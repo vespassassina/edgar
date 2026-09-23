@@ -16,6 +16,8 @@ policy and a fresh transcript [SUB-3..SUB-10, ADR-0006].
 #   system prompt and the task text as its only turn               [SUB-3, SUB-4]
 #   turn a raised exception into a tool error, never a crash        [SUB-8]
 #   close the worktree either way, and say what became of it       [SUB-11]
+#   a live ticket narrows the same way: the agent's own `tools:` plus
+#   any model-given `scope`, never wider than the parent's [CAP-9, ADR-0039]
 
 from __future__ import annotations
 
@@ -85,6 +87,7 @@ async def spawn(
     env: Mapping[str, str] | None,
     registry: ToolRegistry,
     guard: Guard,
+    scope: tuple[str, ...] = (),
 ) -> ToolResult:
     if agent.name in ctx.chain:
         return ToolResult(
@@ -139,6 +142,11 @@ async def spawn(
         # The same walls the parent's `shell` runs in: a subagent never widens them.
         walls = getattr(registry.get("shell"), "sandbox", None)
         check = Check(agent.verify, config.verify.max_attempts, config.shell.program, walls)
+    broker = ctx.broker
+    if broker is not None:
+        broker = broker.narrowed(
+            subject=f"task:{agent.name}#{session.id}", tools=agent.tools, scope=scope
+        )
     rt = Runtime(
         provider=provider,
         model=model,
@@ -151,6 +159,7 @@ async def spawn(
         verify=check,
         budget=BudgetSection(session_cost_cap=_cap(agent, ctx)),
         fallback=fallback,
+        broker=broker,
     )
     try:
         if check is not None:  # authorised before the turn starts, like the main session [VER-4]

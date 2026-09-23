@@ -190,6 +190,15 @@ class Fallback(Event):
     reason: str
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Escalation(Event):
+    # providers/escalation.py, when repeated failure walks the chain upward (v3),
+    # never sideways or down [ROUTE-5, ROUTE-10].
+    from_model: str
+    to_model: str
+    reason: str
+
+
 # tools
 
 
@@ -213,6 +222,18 @@ class PermissionResolved(Event):
     tool: str = ""
     subject: str = ""
     reason: str = ""
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class ScopeRefused(Event):
+    """A ticket's own veto, one step before the permission engine [CAP-3, CAP-6]."""
+
+    # tools/execute.py, when the broker's authorize() refuses a call.
+
+    id: str
+    tool: str
+    caveat: str  # which caveat kind refused it: tools | paths | hosts | calls | until
+    reason: str
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

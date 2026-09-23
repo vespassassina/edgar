@@ -297,6 +297,9 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/skills", "no skills"),
         ("/agents", "no agents"),
         ("/tools", "tools:"),
+        ("/scope", "no scope set"),
+        ("/scope nonsense", "wants KEY=VALUE"),
+        ("/scope wat=1", "unknown --scope caveat"),
     ],
 )
 def test_commands(tmp_project: Path, line: str, expected: str) -> None:
@@ -304,6 +307,16 @@ def test_commands(tmp_project: Path, line: str, expected: str) -> None:
         await r.type(line)
 
     assert expected in play(tmp_project, scenario).text
+
+
+def test_scope_sets_a_live_ticket_and_clear_removes_it(tmp_project: Path) -> None:
+    async def scenario(r: Rig) -> None:
+        await r.type("/scope paths=a.txt")
+        await r.type("/scope clear")
+
+    r = play(tmp_project, scenario)
+    assert "scope: paths=a.txt" in r.text
+    assert "scope cleared" in r.text
 
 
 def test_agents_and_skills_list_what_this_session_loaded(tmp_project: Path) -> None:
