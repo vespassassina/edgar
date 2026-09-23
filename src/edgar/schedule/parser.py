@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,6 +51,47 @@ def load(cwd: Path) -> tuple[ScheduleEntry, ...]:
     if not isinstance(entries, list):
         raise ConfigError("schedules.toml: `entries` must be an array of tables")
     return tuple(_entry(raw) for raw in entries)
+
+
+def append(cwd: Path, raw: dict[str, object]) -> ScheduleEntry:
+    """Validate `raw` and add it to schedules.toml as a new [[entries]] block,
+    without touching anything already in the file [SCH-1]."""
+    entry = _entry(raw)  # fails before anything is written
+    file = path(cwd)
+    file.parent.mkdir(parents=True, exist_ok=True)
+    with file.open("a", encoding="utf-8") as f:
+        f.write(render(raw))
+    return entry
+
+
+def render(raw: dict[str, object]) -> str:
+    lines = ["\n[[entries]]\n"]
+    for key in ("name", "when", "prompt", "mode", "agent", "model", "verify", "catch_up"):
+        if raw.get(key):
+            lines.append(f"{key} = {json.dumps(raw[key])}\n")
+    allowlist = raw.get("allowlist")
+    if isinstance(allowlist, list | tuple) and allowlist:
+        lines.append(f"allowlist = {json.dumps(list(allowlist))}\n")
+    scope = raw.get("scope")
+    if isinstance(scope, dict) and scope:
+        lines.append("\n[entries.scope]\n")
+        lines += [f"{k} = {json.dumps(v)}\n" for k, v in scope.items()]
+    return "".join(lines)
+
+
+def remove(cwd: Path, name: str) -> bool:
+    """Drop the entry named `name`, rewriting the file. Unlike append(), this
+    is an explicit rewrite the human asked for, not a silent one."""
+    file = path(cwd)
+    if not file.exists():
+        return False
+    data = tomllib.loads(file.read_text(encoding="utf-8"))
+    entries = data.get("entries", [])
+    remaining = [e for e in entries if e.get("name") != name]
+    if len(remaining) == len(entries):
+        return False
+    file.write_text("".join(render(e) for e in remaining), encoding="utf-8")
+    return True
 
 
 def _entry(raw: dict[str, object]) -> ScheduleEntry:

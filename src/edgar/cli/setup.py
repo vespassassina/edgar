@@ -182,6 +182,7 @@ def setup(
     if agents.agents:
         limits = subagents_config(config.later)
         tools.add([TaskTool(agents.agents, tools, guard, config, env, limits)])
+    tools.add(_schedule_self(root, env))
     hooks = from_config(config.later) + tuple(
         h for manifest in ext.extensions.values() for h in from_extension(manifest.path)
     )
@@ -354,16 +355,22 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
     )
 
 
-def _escalation(config: Config, env: Mapping[str, str] | None) -> Any:
-    # v3's third seam, by name for the same reason as the other two [ADR-0015,
-    # NFR-12]: `providers/escalation.py` is removable, so this file never
-    # imports it, only reaches it through `import_module`, which the static
-    # layering test cannot follow. The `Any` return crosses into `Runtime`'s
-    # `_Escalator | None` field silently, since `ModuleType.__getattr__` is
-    # typed `Any` too [ADR-0015].
+def _lazy(name: str) -> Any:
+    # Every v3/v4 seam reaches its removable package this way: this file's own
+    # imports stay one-way [NFR-12], and None means the tier was deleted, which
+    # CI runs the suite exactly that way rather than treating as an error.
     try:
-        escalation = import_module("edgar.providers.escalation")
+        return import_module(name)
     except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return None
+
+
+def _escalation(config: Config, env: Mapping[str, str] | None) -> Any:
+    # v3's third seam [ADR-0015]. The `Any` return crosses into `Runtime`'s
+    # `_Escalator | None` field silently, since `ModuleType.__getattr__` is
+    # typed `Any` too.
+    escalation = _lazy("edgar.providers.escalation")
+    if escalation is None:
         return None
     plan = escalation.chain_from_config(config.later)
     if plan is None:
@@ -404,46 +411,33 @@ def begin(
 
 
 def broker_guard(scope: tuple[str, ...]) -> Any:
-    # v4's third seam, mirroring _escalation and _controller: edgar.broker is
-    # removable, so this file never imports it, only reaches it through
-    # import_module [ADR-0015, NFR-12]. cli/slash.py's /scope calls this too, so
-    # it stays public rather than underscore-prefixed like the others.
-    try:
-        broker = import_module("edgar.broker")
-    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
-        return None
-    return broker.from_scope(scope)
+    # v4's third seam, mirroring _escalation and _controller. cli/slash.py's
+    # /scope calls this too, so it stays public rather than underscore-prefixed
+    # like the others.
+    broker = _lazy("edgar.broker")
+    return broker.from_scope(scope) if broker else None
 
 
 def broker_describe(guard: Any) -> str:
-    try:
-        broker = import_module("edgar.broker")
-    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+    broker = _lazy("edgar.broker")
+    if broker is None:
         return "the capability broker is not in this build"
     return str(broker.describe(guard))
 
 
 def _broker(s: Setup, bus: EventBus, session: Session, rt: Runtime) -> None:
-    # The fourth v4 seam, by name for the same reason as `broker_guard` [ADR-0015].
-    # Runs with no `--scope` too: the receipt still records intents and permission
-    # decisions with no ticket at all [ADR-0039]. `[broker] enabled = false` turns
-    # off both the veto and the receipt, not just one of them.
-    if not s.config.broker.enabled:
-        return
-    try:
-        broker = import_module("edgar.broker")
-    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
-        return
-    broker.attach(bus, session=session, home=s.home, guard=rt.broker)
+    # The fourth v4 seam [ADR-0015]. Runs with no `--scope` too: the receipt
+    # still records intents and permission decisions with no ticket at all
+    # [ADR-0039]. `[broker] enabled = false` turns off both the veto and the
+    # receipt, not just one of them.
+    broker = _lazy("edgar.broker") if s.config.broker.enabled else None
+    if broker is not None:
+        broker.attach(bus, session=session, home=s.home, guard=rt.broker)
 
 
 def _learning(s: Setup, bus: EventBus, session: Session) -> None:
-    # v3 attaches by name, so no Core, v1 or v2 module imports edgar.learning and
-    # the import graph stays one-way [NFR-12, ADR-0015]. A missing package is the
-    # deleted tier, not an error: CI runs the suite exactly that way.
-    try:
-        learning = import_module("edgar.learning")
-    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+    learning = _lazy("edgar.learning")
+    if learning is None:
         return
     learning.attach(
         bus,
@@ -465,13 +459,11 @@ AUTO_SYNTHESIS = (
 
 
 def _controller(s: Setup, bus: EventBus, rt: Runtime, session: str = "") -> None:
-    # The second v3 seam, by name for the same reason as the first [ADR-0015]. It
-    # subscribes nothing at all unless [controller] enabled is true, which is the
-    # default: a harness promising no hidden calls does not start making one per
-    # turn because you upgraded [CTRL-2].
-    try:
-        controller = import_module("edgar.controller")
-    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+    # The second v3 seam. It subscribes nothing at all unless [controller]
+    # enabled is true, which is the default: a harness promising no hidden
+    # calls does not start making one per turn because you upgraded [CTRL-2].
+    controller = _lazy("edgar.controller")
+    if controller is None:
         return
     # SKL-13, printed before anything can be written rather than after: `auto`
     # writes instructions future sessions obey, and the cost of that is a sentence
@@ -490,14 +482,19 @@ def _controller(s: Setup, bus: EventBus, rt: Runtime, session: str = "") -> None
     )
 
 
+def _schedule_self(root: Path, env: Mapping[str, str] | None) -> list[Tool]:
+    # v4's fifth seam: the `schedule_self` tool, its own depth read from an
+    # env marker only `runner_for()` sets, never from the model [SCH-11].
+    schedule = _lazy("edgar.schedule")
+    depth = int((env or {}).get("EDGAR_SCHEDULE_SELF_DEPTH", "0"))
+    return list(schedule.self_tools(root, depth)) if schedule else []
+
+
 def _overrides(root: Path) -> dict[str, str]:
     # What an earlier session's approved proposals ask this one to run under. A
     # deleted v3 means no overrides, which is the same answer as an empty log.
-    try:
-        found: dict[str, str] = import_module("edgar.controller").overrides(root)
-    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
-        return {}
-    return found
+    controller = _lazy("edgar.controller")
+    return dict(controller.overrides(root)) if controller else {}
 
 
 def spending(home: Path) -> Store:

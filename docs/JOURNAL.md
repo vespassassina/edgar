@@ -5,6 +5,57 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M16 closes: `schedule_self`'s guardrails, the delivery hook, v4.0
+
+Continued the "next" instruction after M17: M16 was the last milestone
+standing between here and the v4.0 release, and its two remaining items were
+SCH-11 (`schedule_self`) and SCH-10 (the delivery hook).
+
+`schedule_self` needed a harness-enforced depth ceiling the model cannot
+talk its way past: depth flows through a process environment variable,
+`EDGAR_SCHEDULE_SELF_DEPTH`, set only by `schedule/run.py`'s `runner_for()`
+when it is running an entry that came from `self_schedules`, never from a
+tool argument. `cli/setup.py` reads it in a new `_schedule_self()` seam and
+hands `ScheduleSelfTool` the right depth. Its two other guardrails reuse
+mechanisms M9 and M17 already built: `agents.spawn.narrow_mode()` for "never
+wider than the caller's mode" [PERM-8], and `broker.guard.TicketGuard.
+narrowed()` for "never wider than the caller's ticket" [CAP-5] — the same
+attenuation `task` already does on delegation. `schedule/store.py`'s
+`SelfSchedules` backs the pending cap and the daily rate limit with **two**
+tables, not one: `self_schedules` (what `remove()` deletes from) and a
+separate, append-only `self_schedule_log` (what `created_since()` reads).
+A first draft used one table for both and let "create ten, delete ten,
+create ten more" bypass the daily limit entirely — caught by a failing test
+before it shipped, fixed by giving the rate limit its own log that deletion
+never touches.
+
+The budget was at zero headroom (9500/9500 outside removable packages)
+before any of this. Freed room the honest way: `cli/setup.py` had seven
+near-identical `try/except ModuleNotFoundError` blocks (one per v3/v4 seam
+— `_escalation`, `broker_guard`, `_broker`, `_learning`, `_controller`,
+`_overrides`, and now `_schedule_self`); collapsed them onto one `_lazy(name)`
+helper, netting about nine lines, enough for the new wiring plus four to
+spare. Final: 9496/9500.
+
+SCH-10 turned out to be free: `examples/extensions/` already had the shape
+from M10 (`audit-log/`, `git-trail/` — a manifest, a `hooks.toml`, one script
+reading the event as JSON off stdin), so `examples/extensions/schedule-notify/`
+follows it exactly. `session_end`'s payload only carries `session_id`, so the
+script reads that session's own `.edgar/sessions/<id>.jsonl` for the last
+assistant reply, then posts it to `EDGAR_NOTIFY_WEBHOOK` if set, or the OS
+notifier (`osascript` on macOS, `notify-send` on Linux) otherwise. Zero
+`src/` lines, as the roadmap asked.
+
+`just check` is green (1278 passed, 1 skipped). M16 is done, v4.0's success
+criteria (PRD §11) hold, and that closes every milestone in the roadmap.
+Nothing has been merged or pushed — `feat/m16-scheduling` sits beside the
+still-unmerged `feat/m17-capability-broker`; both need the maintainer's
+go-ahead.
+
+**Still pending:** whether and when to merge/push M17 and M16; whether the
+"past v4" ideas at the bottom of `ROADMAP.md` are worth doing at all now that
+every planned tier is built.
+
 ## 2026-09-23 — M17: `tighten_policy`'s caveats, CTRL-8, and M17 closes
 
 The one item HANDOFF.md left blocked: the controller's `tighten_policy` can

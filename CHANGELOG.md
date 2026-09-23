@@ -9,6 +9,24 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **`edgar schedule` runs unattended, on `schedules.toml` entries or ones the
+  model schedules for itself (v4, M16, the release).** `edgar schedule add`
+  appends a template entry with its own mode, agent, model, allowlist and
+  verify check; `install` wires it into cron, launchd or Task Scheduler;
+  `tick` runs every due entry once, preventing overlap and applying its
+  catch-up policy (`once`, `skip` or `all`) for time the machine was asleep.
+  Every run is non-interactive, writes its own transcript, and fires a
+  `session_end` hook when it ends — `examples/extensions/schedule-notify/`
+  posts the last reply to a webhook or the desktop notifier, so an unattended
+  run can actually say it finished [SCH-1..SCH-10]. The model itself can call
+  `schedule_self` to schedule its own future run: entries land in a separate
+  `self_schedules` table, never `schedules.toml`, tagged `[self]` by `schedule
+  list`, and are capped by a pending-entry limit, a daily rate limit and a
+  nesting-depth ceiling a self-schedule cannot talk its way past [SCH-11].
+  Every scheduled and self-scheduled run carries a broker ticket scoped to
+  its entry's allowlist, actor `schedule:NAME`; a self-schedule's ticket is
+  attenuated from the run that created it, never wider [CAP-1, CAP-4, CAP-5,
+  ADR-0039].
 - **`--scope KEY=VALUE` and `/scope` open a ticket that narrows what a session
   may do (v4, M17).** `paths=`, `hosts=`, `tools=`, `calls=` and `until=`
   caveats are checked one step before the permission engine, on every tool

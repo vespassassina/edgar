@@ -80,8 +80,9 @@ PLANNED = _stops(planned=True)
 
 def test_the_pages_have_their_stops() -> None:
     # A regex that silently matches nothing would pass every test below.
+    # PLANNED is legitimately empty once every milestone in the roadmap is built
+    # (v4 is the last tier), so it is not asserted non-empty here.
     assert len(BUILT) >= 18
-    assert PLANNED
     assert len(PAGES) >= 1
 
 

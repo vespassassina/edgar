@@ -26,7 +26,11 @@ def runner_for(
     *,
     home: Path | None = None,
     env: Mapping[str, str] | None = None,
+    depths: Mapping[str, int] | None = None,
 ) -> Callable[[Entry, datetime], None]:
+    """`depths` names the entries that came from `self_schedules`, not
+    schedules.toml: their run gets `EDGAR_SCHEDULE_SELF_DEPTH` set, the marker
+    schedule_self reads to enforce its own nesting ceiling [SCH-11]."""
     by_name = {e.name: e for e in entries}
 
     def run(tick_entry: Entry, at: datetime) -> None:
@@ -34,13 +38,16 @@ def runner_for(
         scope = list(entry.scope)
         if entry.allowlist:
             scope.append("tools=" + ",".join(entry.allowlist))
+        run_env = dict(env or {})
+        if depths and tick_entry.name in depths:
+            run_env["EDGAR_SCHEDULE_SELF_DEPTH"] = str(depths[tick_entry.name])
         run_prompt(
             entry.prompt,
             cwd=cwd,
             model=entry.model,
             mode=entry.mode,
             home=home,
-            env=env,
+            env=run_env or None,
             output="text",
             quiet=True,
             verify=entry.verify,
