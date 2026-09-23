@@ -32,10 +32,14 @@ GitHub release binaries for all three platforms. **v2, the daily driver, is
 complete in code** (M18 to M22, ADR-0057; only the 2.0 release itself and its
 two human criteria are left), and **v3, learning, is underway**: M12 learning
 foundations (ADR-0063), M13 the controller (ADR-0064) and M14 skill synthesis
-(ADR-0065) are done, **M15 escalation and route suggest is next**. `just loc`
-reads 11,073 of the v3 budget of 12,000 — but only **9,495 of 9,500 outside the
-removable packages**, which is the number that actually constrains M15: read
-ADR-0065 §10 and `docs/HANDOFF.md` before anything else. M7 is done: facts,
+(ADR-0065) are done, **M15 escalation and route suggest is next**. M14 had left
+only 5 lines of code of headroom outside the removable packages; on 2026-09-23
+that was cleared by moving narrative docstrings in six non-removable files to
+`#` comments (free under ADR-0040), the same treatment `core/loop.py` already
+had — no behaviour changed. `just loc` now reads 10,952 of the v3 budget of
+12,000, and **9,374 of 9,500 outside the removable packages**, which is the
+number that actually constrains M15: read `docs/HANDOFF.md` before anything
+else. M7 is done: facts,
 `recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
 `/history`, the daily cap and `edgar cost` (ADR-0046). M8 is done: MCP servers over stdio and
 Streamable HTTP, started only when a tool is called, deferred schemas through

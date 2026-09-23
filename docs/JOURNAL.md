@@ -57,6 +57,29 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
 
+## 2026-09-23 · M15's LOC overflow, cleared
+
+**Asked.** Check the M14 merge commit's CI, then decide how to free the five
+lines of code the M14 entry below left for M15.
+
+**Done.** CI on `8e8f2f4` (the M14 merge) failed once on `windows-latest`:
+`test_trivial_run_starts_fast` missed its 0.5 s budget by 2.8 ms, a shared-
+runner flake, not a regression — the same job passed clean on rerun.
+
+Converted narration docstrings to `#` comments (free under the LOC rule,
+ADR-0040) in six files outside the removable packages that had never had the
+`core/loop.py` treatment applied to them: `context/compact.py`,
+`permissions/policy.py`, `storage/transcript.py`, `providers/routing.py`,
+`providers/http.py`, `tools/registry.py`. No behaviour changed; `just check`
+stayed green at 1,082 tests, ruff and mypy clean. Two tour pages
+(`agents.html`, `memory.html`) and `media.html`'s per-file LOC row for
+`compact.py` updated to match; `just map` rerun.
+
+**Decided.** Simplify existing non-removable code before moving anything to a
+later tier or raising a budget, per the standing rule: this recovered 121
+lines (9,495 → 9,374 of 9,500) without touching a single line of behaviour, so
+neither was needed. M15 (escalation and route suggest) can start.
+
 ## 2026-09-19 · M14, skill synthesis
 
 **Asked.** Build M14: verified procedures become skills, with the tour page and

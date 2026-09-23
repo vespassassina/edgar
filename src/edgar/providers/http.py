@@ -1,9 +1,8 @@
-"""What the two HTTP adapters share: the request with its retries, server-sent
-events, error mapping, token counting and tool-call assembly.
-
-Imported only by the adapters, which load only when a model string names them, so
-httpx never loads on a run that does not reach a provider [PRV-4, NFR-1].
-"""
+# What the two HTTP adapters share: the request with its retries, server-sent
+# events, error mapping, token counting and tool-call assembly.
+#
+# Imported only by the adapters, which load only when a model string names them, so
+# httpx never loads on a run that does not reach a provider [PRV-4, NFR-1].
 
 from __future__ import annotations
 
@@ -40,7 +39,7 @@ _OVERFLOW = re.compile(r"context.length|context window|too long|maximum context"
 
 @dataclass(frozen=True, slots=True)
 class Retry:
-    """Exponential backoff with full jitter on 429 and 5xx; Retry-After wins [PRV-7]."""
+    # Exponential backoff with full jitter on 429 and 5xx; Retry-After wins [PRV-7].
 
     attempts: int = 4
     base_s: float = 1.0
@@ -53,8 +52,8 @@ class Retry:
 
 
 class HttpAdapter:
-    """State an adapter keeps between requests: one client per event loop, and
-    the token-count correction learned from what the provider reports [OQ-3]."""
+    # State an adapter keeps between requests: one client per event loop, and
+    # the token-count correction learned from what the provider reports [OQ-3].
 
     name: str
     family: str
@@ -106,9 +105,9 @@ class HttpAdapter:
         return self._client
 
     def count_tokens(self, messages: Sequence[Message]) -> int:
-        """Characters over four, scaled by the last observed ratio of the provider's
-        own count to ours. Exact where usage is returned, close enough before
-        [CTX-9, OQ-3]; the ratio also absorbs the tool schemas sent alongside."""
+        # Characters over four, scaled by the last observed ratio of the provider's
+        # own count to ours. Exact where usage is returned, close enough before
+        # [CTX-9, OQ-3]; the ratio also absorbs the tool schemas sent alongside.
         return round(approx_message_tokens(messages, self.family) * self._ratio)
 
     def observe(self, messages: Sequence[Message], usage: Usage) -> None:
@@ -117,7 +116,7 @@ class HttpAdapter:
             self._ratio = usage.input_tokens / approx
 
     async def models(self) -> list[str]:
-        """GET the provider's model list; the adapter says where (`listing`)."""
+        # GET the provider's model list; the adapter says where (`listing`).
         where = self.listing()
         if where is None:
             return []
@@ -140,8 +139,8 @@ class HttpAdapter:
     async def post(
         self, url: str, body: dict[str, Any], headers: dict[str, str], bus: EventBus
     ) -> AsyncIterator[httpx.Response]:
-        """POST and hand back the streaming response, retrying before the first byte.
-        Once the body starts streaming there is no retry: deltas already went out."""
+        # POST and hand back the streaming response, retrying before the first byte.
+        # Once the body starts streaming there is no retry: deltas already went out.
         attempt = 0
         while True:
             attempt += 1
@@ -219,7 +218,7 @@ def _retry_after(value: str | None) -> float | None:
 
 
 async def events(response: httpx.Response) -> AsyncIterator[tuple[str, Any]]:
-    """Server-sent events as (event name, decoded JSON data). `[DONE]` ends it."""
+    # Server-sent events as (event name, decoded JSON data). [DONE] ends it.
     name, data = "", []
     async for line in response.aiter_lines():
         if line.startswith(":"):
@@ -248,8 +247,8 @@ def _decode(data: list[str]) -> Any:
 
 
 def encoded(block: ImageBlock) -> str:
-    """The spilled bytes, base64 for the wire. Read at send time, because the block
-    holds the reference and never the picture [ADR-0052]."""
+    # The spilled bytes, base64 for the wire. Read at send time, because the block
+    # holds the reference and never the picture [ADR-0052].
     try:
         return base64.b64encode(Path(block.ref).read_bytes()).decode("ascii")
     except OSError as exc:  # the session's blobs were cleared under a resumed session
@@ -267,8 +266,8 @@ def tool_calls(
     native: bool,
     bus: EventBus,
 ) -> tuple[list[ToolUseBlock], str, int]:
-    """(id, name, raw arguments) → tool-use blocks, the text left over, and how
-    many calls needed repair [PRV-16]."""
+    # (id, name, raw arguments) -> tool-use blocks, the text left over, and how
+    # many calls needed repair [PRV-16].
     calls, repairs = [], 0
     for call_id, name, arguments in raw:
         args, fixed = repair.arguments(arguments)
