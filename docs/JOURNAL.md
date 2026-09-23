@@ -5,6 +5,34 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17: `task` attenuates the parent's ticket on delegation
+
+Built the delegation half of the next `HANDOFF.md` item: `TicketGuard.narrowed()`
+in `broker/guard.py` calls the already-built `attenuate()` with the subagent's own
+subject (`task:<agent>#<session id>`), the agent definition's `tools:` folded in
+as a `tools=` caveat, and any model-given `scope` argument merged in too — both
+only ever add caveats, never drop one [CAP-5]. `tools/base.py`'s structural
+`Broker` Protocol gained a matching `narrowed()` signature, following the same
+pattern as `check()`; `agents/spawn.py`'s `spawn()` calls it when `ctx.broker` is
+set and passes the result into the subagent's own `Runtime.broker`; `task`'s
+schema gained an optional `scope` array, threaded straight through. Two new
+integration-style tests in `tests/unit/test_spawn.py` exercise it through the
+real pipeline (a scoped parent, a subagent whose own `read` call lands outside
+`paths=`, refused on the child's own ticket one depth in) plus two direct unit
+tests on `narrowed()` itself in `tests/unit/test_broker_guard.py`. All green;
+`ruff format`, `ruff check` and `mypy --strict` clean; `just check`'s non-tour
+suite is 1144 passed (up from 1140); `just loc` reads 9480/9500 outside the
+removable packages, 20 lines of code of headroom left (down from 36 — this
+touch cost 16, split across the three non-removable files above).
+
+**Decided, not yet built:** ADR-0039's fourth caveat source, the controller's
+`tighten_policy` adding caveats to a live ticket, does not exist anywhere in
+`controller/proposals.py`, `controller/apply.py` or `controller/tighten.py` —
+`Narrowing`/`TightenPolicy` only ever touched `permissions.Policy` fields. That
+is a separate, materially larger feature (a new `Narrowing` field, `Site` needing
+broker access, `gate.py` validation), so it is split out as its own pending item
+rather than folded into this one. Not yet run past the maintainer.
+
 ## 2026-09-23 — M17 started: caveats, tickets, pure authorize
 
 Started M17 (the capability broker, ADR-0039) on `feat/m17-capability-broker`

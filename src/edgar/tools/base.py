@@ -29,6 +29,9 @@ class Broker(Protocol):
     def check(
         self, *, tool: str, read_only: bool, subject: Subject, cwd: Path
     ) -> tuple[str, str] | None: ...
+    def narrowed(
+        self, *, subject: str, tools: tuple[str, ...], scope: tuple[str, ...]
+    ) -> Broker: ...
 
 
 @dataclass(frozen=True, slots=True)

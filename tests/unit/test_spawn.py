@@ -12,9 +12,12 @@ from scripted import ScriptedResponse
 
 from edgar.agents.definition import AgentBudget, AgentDefinition
 from edgar.agents.spawn import HARD_DEPTH, SpawnLimits, _cap, narrow_mode, spawn, subagents_config
+from edgar.broker.caveats import parse_scope
+from edgar.broker.guard import TicketGuard
+from edgar.broker.ticket import Ticket
 from edgar.config.schema import Config, ModelSection
 from edgar.core.errors import ConfigError
-from edgar.core.events import TurnStarted
+from edgar.core.events import ScopeRefused, TurnStarted
 from edgar.permissions.guard import Guard
 from edgar.providers.base import Capabilities
 from edgar.storage.transcript import sessions_dir
@@ -290,6 +293,80 @@ def test_task_tool_fans_out_two_consecutive_calls(tmp_project: Path, recorder: R
 
     # Each got its own logged session.
     assert len(list(sessions_dir(tmp_project).glob("*.jsonl"))) == 2
+
+
+def test_task_narrows_a_live_ticket_for_the_subagent(tmp_project: Path, recorder: Recorder) -> None:
+    # tools=task lets the delegation itself through; the child still inherits
+    # paths=a.txt and gains its own tools= from the agent's registry subset,
+    # via TicketGuard.narrowed() -- so its own "read" call outside a.txt is
+    # refused on the child's ticket, not the parent's.
+    (tmp_project / "src" / "b.txt").write_text("other\n", encoding="utf-8")
+    g = guard(tmp_project, mode="auto")
+    ticket = Ticket(intent_id="i1", caveats=parse_scope(["paths=a.txt", "tools=task,read"]))
+    tool = TaskTool(
+        {"helper": _agent()},
+        core_registry(),
+        g,
+        Config(model=ModelSection(default="fake/test")),
+        None,
+        SpawnLimits(),
+    )
+    provider = scripted(
+        ScriptedResponse(
+            tool_calls=[tool_use("task", {"agent": "helper", "task": "read src/b.txt"})]
+        ),
+        ScriptedResponse(text="done"),
+    )
+    rt = replace(
+        runtime(provider, recorder, tools=ToolRegistry([tool])),
+        guard=g,
+        broker=TicketGuard(ticket),
+    )
+    session = new_session(tmp_project, mode="auto")
+    run_turn_sync(session, "have the helper read src/b.txt", rt)
+
+    (refused,) = recorder.of(ScopeRefused)
+    assert refused.caveat == "paths"
+    assert refused.agent_id == "helper"  # the subagent's own ticket, one depth in
+    assert refused.depth == 1
+
+
+def test_task_passes_scope_through_to_narrow_further(tmp_project: Path, recorder: Recorder) -> None:
+    g = guard(tmp_project, mode="auto")
+    ticket = Ticket(intent_id="i1", caveats=parse_scope(["tools=task"]))
+    tool = TaskTool(
+        {"helper": _agent()},
+        core_registry(),
+        g,
+        Config(model=ModelSection(default="fake/test")),
+        None,
+        SpawnLimits(),
+    )
+    provider = scripted(
+        ScriptedResponse(
+            tool_calls=[
+                tool_use(
+                    "task",
+                    {"agent": "helper", "task": "read src/b.txt", "scope": ["paths=a.txt"]},
+                )
+            ]
+        ),
+        ScriptedResponse(text="done"),
+    )
+    rt = replace(
+        runtime(provider, recorder, tools=ToolRegistry([tool])),
+        guard=g,
+        broker=TicketGuard(ticket),
+    )
+    (tmp_project / "src" / "b.txt").write_text("other\n", encoding="utf-8")
+    session = new_session(tmp_project, mode="auto")
+    run_turn_sync(session, "have the helper read src/b.txt, scoped to a.txt", rt)
+
+    (refused,) = recorder.of(ScopeRefused)
+    # tools=task still holds (the parent's caveat carries forward unchanged), so
+    # read itself is refused before paths=a.txt is even reached -- the model's
+    # `scope` argument narrowed the child, it never widened what it inherited.
+    assert refused.caveat == "tools"
 
 
 # TaskTool itself: what the model sees, and what a bad call looks like [TOOL-12]

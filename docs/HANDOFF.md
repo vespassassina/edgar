@@ -1,6 +1,6 @@
 # Handoff — start here
 
-For the session picking up M17. Written 2026-09-19, updated 2026-09-23;
+For the session picking up M17. Written 2026-09-19, updated 2026-09-23 (twice);
 replace it each time work stops, delete it when the list is done. Read it
 first, then the three documents under "Read".
 
@@ -69,16 +69,32 @@ first, then the three documents under "Read".
     and four `/scope` cases in `tests/integration/test_repl.py`. All pass;
     `just check`'s non-tour suite (1140 tests) is green; `ruff format`,
     `ruff check` and `mypy --strict` are clean project-wide.
+  - **`task` attenuates the parent's ticket on delegation**: `TicketGuard.narrowed()`
+    in `broker/guard.py` calls `ticket.attenuate()` with the subagent's own
+    subject (`task:<agent>#<session id>`), the agent's `tools:` folded in as a
+    `tools=` caveat, and any model-given `scope` argument merged in — both only
+    ever add caveats [CAP-5]. `tools/base.py`'s `Broker` Protocol gained a
+    matching `narrowed()` signature; `agents/spawn.py`'s `spawn()` calls it
+    when `ctx.broker` is set and passes the result into the subagent's own
+    `Runtime.broker`; `task`'s schema gained an optional `scope` array,
+    threaded straight through in `tools/builtin/task.py`. Tests:
+    `tests/unit/test_spawn.py` (two new cases through the real pipeline) and
+    `tests/unit/test_broker_guard.py` (two direct on `narrowed()`). **The
+    controller's `tighten_policy`, ADR-0039's fourth caveat source, is not
+    built** — `Narrowing`/`TightenPolicy` only ever touched `permissions.Policy`
+    fields, nothing ticket-shaped. It is a separate, larger feature (a new
+    `Narrowing` field, `Site` needing broker access, `gate.py` validation) —
+    see item 1 below, split out on purpose rather than folded into this one.
   - **Budget is now the binding constraint.** `just loc` reads
-    `9464 / 9500` outside the removable packages — **36 lines of code of
-    headroom left**, down from 78, because `--scope`'s CLI/REPL surface and
-    `cli/setup.py`'s seam are themselves non-removable and cost 42 lines of
-    code between them. Everything still on the list below that touches a
-    non-removable file (the `edgar receipt` command, `config/schema.py`'s
-    `[broker]` section, the `doctor` line, `task`'s attenuation call) must
-    fit in what is left — keep the real logic inside `broker/receipt.py`
-    itself and let each call site stay one or two lines, the way
-    `broker_guard()`/`broker_describe()` do for `--scope`.
+    `9480 / 9500` outside the removable packages — **20 lines of code of
+    headroom left**, down from 36, because the three non-removable files
+    `task`'s delegation touched (`tools/base.py`, `agents/spawn.py`,
+    `tools/builtin/task.py`) cost 16 lines of code between them. Everything
+    still on the list below that touches a non-removable file (the controller
+    item, the `edgar receipt` command, `config/schema.py`'s `[broker]`
+    section, the `doctor` line) must fit in what is left — keep the real
+    logic inside `broker/`'s own modules and let each call site stay one or
+    two lines, the way `broker_guard()`/`broker_describe()` do for `--scope`.
 - **v2 is complete in code.** The 2.0 release itself and its two human criteria
   (a two-week dogfood period, an outside person's PRD §11 checks) are still
   open, and the release needs the maintainer's explicit authorisation, as every
@@ -111,15 +127,21 @@ instant), since no real caveat reaches a `Ticket` except through
 
 Everything below is unbuilt. Roadmap order, from
 [`ROADMAP.md`](ROADMAP.md) "M17 — Capability broker". Items 1 (the veto
-stage), 2 (intent creation) and 3 (`--scope`/`/scope`, with the wiring seam
-pulled forward into it) are now done — see "Where things stand" above;
-renumbered from there.
+stage), 2 (intent creation), 3 (`--scope`/`/scope`, with the wiring seam
+pulled forward into it) and 4 (`task` attenuation on delegation) are now
+done — see "Where things stand" above; renumbered from there.
 
-1. **`task` attenuates the parent's ticket** on delegation; the
-   controller's `tighten_policy` adds caveats to a live ticket. Both call
-   `ticket.attenuate()`, already built. The parent's `TicketGuard` is on
-   `Runtime.broker`; a subagent's narrowed one is what its own `Runtime`
-   needs on `ToolContext.broker` when its turn runs.
+1. **The controller's `tighten_policy` adds caveats to a live ticket**
+   (ADR-0039's fourth caveat source, CTRL-8) — split out from the item above
+   because it does not exist yet at all, not even partially: `Narrowing` and
+   `TightenPolicy` in `controller/proposals.py` only carry `permissions.Policy`
+   fields (`mode`, `shell_deny`, `write_paths`, `rules`); `controller/apply.py`'s
+   `_tighten_policy()` only ever calls `permissions.narrow()`. This needs a new
+   `Narrowing` field for ticket caveats, `Site` (wherever it lives today) to
+   reach the broker the way `ToolContext`/`Runtime` do, and `gate.py` to
+   validate and apply it — call `ticket.attenuate()` the same way `task` now
+   does, not a new merge function. Bigger than the other items on this list;
+   budget it as its own pass, not a line or two.
 2. **`broker/receipt.py`**: append-only, hash-chained, HMAC-SHA256-signed
    JSONL at `.edgar/sessions/<id>/receipt.jsonl` (`Session.dir` already
    exists structurally). Key at `~/.edgar/receipt.key`, 32 random bytes
@@ -147,18 +169,21 @@ renumbered from there.
     roadmap row — check it against `docs/tour/index.html` directly, the way
     M14's handoff caught a stale id) into a link, then `just map`.
 
-Only **36 lines of code of headroom** remain outside the removable
-packages (see "Where things stand" above) — items 2–4 above each touch a
+Only **20 lines of code of headroom** remain outside the removable
+packages (see "Where things stand" above) — items 2–4 each touch a
 non-removable file and must be kept to a line or two each, real logic
 inside `broker/receipt.py` and the admin command's own removable-tier
-module.
+module. Item 1 (the controller) is the exception: it is genuinely bigger
+than what is left, so it may need its own budget conversation with the
+maintainer rather than a squeeze.
 
 `just check` currently fails with five tour/map test failures
-(`test_tour.py`, `test_tour_map.py`) because `broker/caveats.py` exists with
-no tour stop and the committed `map.json`/`map.data.js` are stale against the
-new LOC count. That is expected and will clear once item 11 above is done —
-do not try to make the tour tests pass before the rest of the module is
-built; the tour describes what shipped, not what is half-built.
+(`test_tour.py`, `test_tour_map.py`) because `broker/caveats.py`,
+`broker/guard.py` and `broker/intent.py` exist with no tour stop and the
+committed `map.json`/`map.data.js` are stale against the new LOC count.
+That is expected and will clear once item 7 above is done — do not try to
+make the tour tests pass before the rest of the module is built; the tour
+describes what shipped, not what is half-built.
 
 ## Read, in this order
 

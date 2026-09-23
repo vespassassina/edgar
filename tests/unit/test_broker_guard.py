@@ -83,6 +83,23 @@ def test_the_calls_cap_refuses_once_reached(tmp_project: Path) -> None:
     assert second.is_error and second.error and second.error.kind == "out_of_scope"
 
 
+def test_narrowed_adds_a_tools_caveat_from_the_agent_definition() -> None:
+    ticket = Ticket(intent_id="i1", caveats=parse_scope(["paths=a.txt"]))
+    child = TicketGuard(ticket).narrowed(subject="task:helper#s1", tools=("read",), scope=())
+    by_kind = {c.kind: c.value for c in child.ticket.caveats}
+    assert by_kind["tools"] == "read"
+    assert by_kind["paths"] == "a.txt"  # the parent's caveat still holds
+    assert child.ticket.subject == "task:helper#s1"
+    assert child.ticket.parent is ticket
+
+
+def test_narrowed_merges_in_the_model_given_scope() -> None:
+    ticket = Ticket(intent_id="i1")
+    child = TicketGuard(ticket).narrowed(subject="task:helper#s1", tools=(), scope=("paths=a.txt",))
+    by_kind = {c.kind: c.value for c in child.ticket.caveats}
+    assert by_kind["paths"] == "a.txt"
+
+
 def test_ticket_guard_check_matches_the_subject_it_is_given(tmp_project: Path) -> None:
     ticket = Ticket(intent_id="i1", caveats=parse_scope(["hosts=api.github.com"]))
     ticket_guard = TicketGuard(ticket)

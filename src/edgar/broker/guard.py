@@ -4,6 +4,9 @@
 # 1. check() runs the pure authorize() against the live ticket and clock.
 # 2. A call the ticket allows counts toward `calls=`; a refused one does not,
 #    since it never happened as far as the ticket's own budget is concerned.
+# 3. narrowed() is `task`'s delegation seam: agents/spawn.py calls it with the
+#    agent definition's own `tools:` and any `scope` argument the model gave.
+#    Both can only add caveats, via attenuate(), never drop one [CAP-5].
 
 from __future__ import annotations
 
@@ -12,7 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from edgar.broker.authorize import authorize
-from edgar.broker.ticket import Ticket
+from edgar.broker.caveats import Caveat, parse_scope
+from edgar.broker.ticket import Ticket, attenuate
 from edgar.permissions.matcher import Subject
 
 
@@ -37,3 +41,11 @@ class TicketGuard:
             self.calls_so_far += 1
             return None
         return (refusal.caveat, refusal.reason)
+
+    def narrowed(
+        self, *, subject: str, tools: tuple[str, ...], scope: tuple[str, ...]
+    ) -> TicketGuard:
+        extra = parse_scope(scope)
+        if tools:
+            extra = (*extra, Caveat(kind="tools", value=",".join(tools)))
+        return TicketGuard(attenuate(self.ticket, subject=subject, extra=extra))
