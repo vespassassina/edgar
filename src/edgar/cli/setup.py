@@ -396,6 +396,7 @@ def begin(
         session.mode, session.model = mode, rt.name
     if scope:
         rt = replace(rt, broker=broker_guard(scope))
+    _broker(s, bus, session, rt)
     _learning(s, bus, session)
     _controller(s, bus, rt, session.id)
     bus.emit(SessionStarted(session_id=session.id))  # drives a `session_start` hook [EXT-4]
@@ -420,6 +421,20 @@ def broker_describe(guard: Any) -> str:
     except ModuleNotFoundError:  # pragma: no cover - the tier was removed
         return "the capability broker is not in this build"
     return str(broker.describe(guard))
+
+
+def _broker(s: Setup, bus: EventBus, session: Session, rt: Runtime) -> None:
+    # The fourth v4 seam, by name for the same reason as `broker_guard` [ADR-0015].
+    # Runs with no `--scope` too: the receipt still records intents and permission
+    # decisions with no ticket at all [ADR-0039]. `[broker] enabled = false` turns
+    # off both the veto and the receipt, not just one of them.
+    if not s.config.broker.enabled:
+        return
+    try:
+        broker = import_module("edgar.broker")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return
+    broker.attach(bus, session=session, home=s.home, guard=rt.broker)
 
 
 def _learning(s: Setup, bus: EventBus, session: Session) -> None:

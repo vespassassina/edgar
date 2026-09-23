@@ -5,6 +5,59 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17: the receipt, `edgar receipt`, and `[broker] enabled`
+
+Built HANDOFF's items 2–4 in one pass. `broker/receipt.py`: an append-only,
+hash-chained, HMAC-SHA256-signed JSONL log at `.edgar/sessions/<id>/receipt.jsonl`,
+keyed by 32 random bytes at `~/.edgar/receipt.key` (0600, made on first use).
+Each line signs its own `prev`/`kind`/`data`; `prev` is the SHA-256 of the
+previous line's exact text, so tampering with an earlier line breaks every
+hash after it and tampering with a line's own content breaks its own
+signature — `verify()` checks both and stops at the first `Break`. `Receipts`
+is a bus subscriber, the same "the boundary is the subscription" shape as
+`broker/intent.py`'s `Intents`: one line per depth-0 `PromptTyped` (`intent`),
+depth>0 `TurnStarted` (`delegate`), `ScopeRefused` (`refuse`) and
+`PermissionResolved` (`permission`); `record_ticket()` writes the `ticket`
+line once, directly, since no bus event announces a ticket's creation.
+`~/.edgar/receipt.key` was added to `permissions.matcher`'s hard-layer
+credential paths — a new `CREDENTIAL_FILES` tuple alongside the existing
+directory-based `CREDENTIALS`, since a single file needed membership rather
+than `inside()` — so the model's own tools are refused it outright.
+`broker/__init__.py` gained `attach()`, the receipt's own wiring seam,
+subscribing both `Intents` and `Receipts` and recording the session's ticket
+first if `--scope` set one; `cli/setup.py`'s `begin()` calls it unconditionally
+(not only with `--scope`) through a new `_broker()`, by name like
+`_escalation`/`_controller`.
+
+Then `edgar receipt [ID] [--refused] [--verify]`: real logic in the new,
+removable `broker/cli.py` (bare `ID` picks the latest session, same as
+`--resume`; `--refused` narrows to refusals; `--verify` walks the chain and
+exits 1 at the first break), reached from `cli/main.py` the same way
+`stats`/`history`/`controller` already are — one dict lookup added to the
+existing by-name dispatch, no new branch. Last, `[broker] enabled` (default
+`true`) in `config/schema.py`, and a line in `edgar doctor`; `false` turns
+off both the veto and the receipt through the same `_broker()` gate, since a
+key that reads fine and does nothing would be exactly the hidden behaviour
+this harness promises not to have.
+
+Tests: `tests/unit/test_broker_receipt.py` (11), `tests/unit/test_broker_cli.py`
+(6), `tests/integration/test_broker_setup.py` (2, `[broker] enabled` through
+`begin()`), one new case in `tests/unit/test_policy.py` for the credential
+file, two in `tests/unit/test_config.py` for the new section. All green;
+`ruff format`, `ruff check` and `mypy --strict` clean; `just check`'s
+non-tour suite is 1166 passed (up from 1157) — the same five tour/map
+failures as before, expected until item 7. `just loc` now reads
+**9500/9500 outside the removable packages — no headroom left**, up from
+9480 before this touch: `cli/main.py` cost 5 lines of code (the dispatch
+entry and an epilog string), `permissions/matcher.py` cost 4,
+`config/schema.py` cost 6 (the section, its `SECTIONS` entry, its `Config`
+field), `cli/setup.py` cost 2 (the enabled check) and `cli/doctor.py` cost 1.
+Anything M17 still touches outside `broker/`'s own modules — including
+item 1, the controller's `tighten_policy`, and item 5's `TARGET_TIER` bump
+to `"v4"` (which raises the total-tier ceiling but not this one) — needs a
+budget conversation with the maintainer first, not a squeeze; flagging this
+now rather than mid-item.
+
 ## 2026-09-23 — M17: `task` attenuates the parent's ticket on delegation
 
 Built the delegation half of the next `HANDOFF.md` item: `TicketGuard.narrowed()`

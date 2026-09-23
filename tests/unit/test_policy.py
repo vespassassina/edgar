@@ -104,6 +104,11 @@ def test_credentials_are_denied_outside_yolo() -> None:
         assert isinstance(decision, Deny) and decision.source == "hard"
 
 
+def test_the_receipt_key_is_denied_outside_yolo() -> None:  # [ADR-0039]
+    decision = decide(READ, at(str(HOME / ".edgar" / "receipt.key")), policy("auto"))
+    assert isinstance(decision, Deny) and decision.source == "hard"
+
+
 @pytest.mark.parametrize(
     "url",
     ["http://169.254.169.254/latest/meta-data/", "http://[fe80::1]/", "http://169.254.1.1:80/"],
