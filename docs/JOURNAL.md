@@ -5,6 +5,33 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17 started: caveats, tickets, pure authorize
+
+Started M17 (the capability broker, ADR-0039) on `feat/m17-capability-broker`
+after M15 landed. Built and tested the pure core: `broker/caveats.py`
+(`Caveat`, `parse_scope`), `broker/ticket.py` (`Ticket`, `attenuate`,
+`verify_chain`), `broker/authorize.py` (`authorize()`) [CAP-2, CAP-5, CAP-9].
+20 unit tests and 2 hypothesis property tests, all green; ruff and mypy
+clean.
+
+A hypothesis property test (`test_honest_attenuation_always_verifies`) caught
+a real bug on the first run: `verify_chain()` compared whole `Caveat` objects
+for set membership, but `attenuate()` legitimately rewrites a caveat's value
+string when it widens a list caveat or narrows `calls`/`until`, so an honest
+attenuation was flagged as a forgery. Fixed by comparing meaning per kind
+instead of raw object equality — see `docs/HANDOFF.md` for the detail, kept
+there rather than here because the next person to touch `ticket.py` needs it,
+not just a record that it happened.
+
+**Not done yet, and not wired into anything at runtime:** the `pre_tool` veto
+stage, intent creation, `--scope`/`/scope`, `task` attenuation, the receipt
+module, the `edgar receipt` command, config, the tour page, and the
+confused-deputy integration test the roadmap names as M17's "done when". Full
+list in `HANDOFF.md`. `just check` currently fails on five tour/map tests
+because the new module has no tour stop yet — expected until the tour item
+lands in the same commit as the rest of the module, per the project's own
+rule that the tour changes with the code, not after it.
+
 ## Pick up here
 
 The plan after 1.0 is re-tiered ([ADR-0057](adr/0057-daily-driver-before-learning.md),

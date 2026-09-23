@@ -58,7 +58,8 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M13 Controller | Done 2026-09-18 ([ADR-0064](adr/0064-m13-controller-as-built.md)) | 3.0 |
 | M14 Skill synthesis | Done 2026-09-19 ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)) | 3.0 |
 | M15 Escalation, route suggest | Done 2026-09-23 ([ADR-0066](adr/0066-m15-escalation-as-built.md)); ROUTE-11, ROUTE-12 and OQ-8's adapter deferred, priced out at 104 LOC remaining | 3.0 |
-| M17, M16 Broker, scheduling | Planned | 4.0 |
+| M17 Capability broker | In progress on `feat/m17-capability-broker` — `broker/caveats.py`, `broker/ticket.py`, `broker/authorize.py` built and tested [CAP-2, CAP-5, CAP-9]; the veto stage, receipt, `--scope`/`/scope`, CLI, config and tour are not started, see `docs/HANDOFF.md` | 4.0 |
+| M16 Scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
 milestone is complete when its IDs are implemented, its tests pass on all three

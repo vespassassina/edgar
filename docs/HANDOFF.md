@@ -1,170 +1,140 @@
 # Handoff — start here
 
-For the session picking up M15. Written 2026-09-19, updated 2026-09-23;
+For the session picking up M17. Written 2026-09-19, updated 2026-09-23;
 replace it each time work stops, delete it when the list is done. Read it
 first, then the three documents under "Read".
 
 ## Where things stand
 
-- **M14, skill synthesis, is done, merged and pushed to `main`**
-  (`8e8f2f4`, [ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)). New
-  files: `learning/synthesis.py`, `learning/observations.py`,
-  `learning/distill.py`, `docs/tour/synthesis.html`. `just check` green at
-  1,082 tests, ruff and mypy clean; CI on the merge commit is green on all
-  platforms (one `windows-latest` run flaked on the NFR-1 timing test by
-  2.8 ms and passed clean on rerun — not a regression).
-- **v3 order so far:** M12 done 2026-09-17 ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)),
-  M13 done 2026-09-18 ([ADR-0064](adr/0064-m13-controller-as-built.md)), M14
-  done 2026-09-19. **M15, escalation and route suggest, is next, and its LOC
-  blocker (below) is cleared** — read it anyway, it explains why the numbers
-  moved.
+- **M15, escalation and route suggest, is done, committed, not pushed**
+  (`f5bbc67` on `feat/m15-escalation-route-suggest`). CI on the prior merge
+  commit `475a791` had failed and was already fixed by the very next commit
+  `93915e1` (a ULID collision in the image-spill test), which is green on
+  `main`.
+- **M17, the capability broker, is in progress** on
+  `feat/m17-capability-broker`. Not merged, not pushed. Built so far:
+  `broker/caveats.py` (`Caveat`, `parse_scope`), `broker/ticket.py` (`Ticket`,
+  `attenuate`, `verify_chain`), `broker/authorize.py` (the pure `authorize()`
+  check) [CAP-2, CAP-5, CAP-9], with `tests/unit/test_broker_caveats.py` (20
+  tests) and `tests/property/test_broker_chain.py` (2 hypothesis tests, CAP-5).
+  All pass; `ruff format`, `ruff check` and `mypy --strict` are clean on all
+  five files. **Nothing outside `src/edgar/broker/` has been touched yet** —
+  the module is not wired into the tool pipeline, so it currently does
+  nothing at runtime.
 - **v2 is complete in code.** The 2.0 release itself and its two human criteria
   (a two-week dogfood period, an outside person's PRD §11 checks) are still
   open, and the release needs the maintainer's explicit authorisation, as every
   push, tag and release in this project does.
 
-## M15's LOC blocker, cleared 2026-09-23
+## A bug worth knowing about if you touch `ticket.py` again
 
-M14 left only five lines of code outside the removable packages for all of
-M15. Rather than move `edgar route suggest` to a later tier or raise the
-budget, the fix was to apply the project's own standing rule that narration
-belongs in `#` comments, not docstrings, because comments are free and
-docstrings count (ADR-0040) — the treatment `core/loop.py`, the message types
-and the events already had, extended to six more non-removable files that
-still carried narrative docstrings: `context/compact.py`,
-`permissions/policy.py`, `storage/transcript.py`, `providers/routing.py`,
-`providers/http.py`, `tools/registry.py`. No behaviour changed anywhere; only
-comments moved. See [`docs/JOURNAL.md`](JOURNAL.md), 2026-09-23.
+The first version of `verify_chain()` compared whole `Caveat` objects with
+`set(parent.caveats) <= set(child.caveats)`. That is wrong: `attenuate()`
+legitimately *rewrites* a caveat's value string when it widens a list
+(`tools=a` + `tools=b` → `tools=a,b`) or narrows `calls`/`until` (min of the
+two). A rewritten value is a different object, so the naive set check flags
+even an honest attenuation as a forgery. A hypothesis property test caught it
+immediately (`test_honest_attenuation_always_verifies`). The fix,
+`_at_least_as_strict()`, compares *meaning* per kind: list caveats need the
+parent's comma-separated items to be a subset of the child's; `calls` and
+`until` need the child's number/instant to be no larger than the parent's.
+The lesson for `authorize.py` or anywhere else that reads a caveat's value:
+never compare `Caveat` values as opaque strings once more than one kind can
+hold a value that legitimately changes shape.
 
-`just loc` now reads:
+The property test's own generator had a matching bug: it drew arbitrary
+strings ("a", "b", "c") for every kind including `calls` and `until`, which
+`int()` and `datetime.fromisoformat()` then choked on. Fixed by generating
+kind-appropriate values (`calls` → an int string, `until` → a real ISO
+instant), since no real caveat reaches a `Ticket` except through
+`parse_scope()`, which already validates both.
 
-```
-src/ total (v3 tier)            10952 / 12000
-src/ without removable packages  9374 / 9500
-core/loop.py                      200 / 200
-```
+## What M17 still needs
 
-**121 lines of code of real headroom outside the removable packages.** M15's
-roadmap items are mostly removable — `providers/escalation.py` is in the v3
-list in `AGENTS.md` rule 10 — but `edgar route suggest` is not, and neither is
-whatever the status bar needs to announce an escalation; budget carefully, and
-if this headroom still runs out, the same trick (docstring to comment, in a
-file `git log` shows M15 has not already touched) is the first thing to try
-again before moving anything to a later tier.
+Everything below is unbuilt. Roadmap order, from
+[`ROADMAP.md`](ROADMAP.md) "M17 — Capability broker":
+
+1. **The `pre_tool` veto stage does not exist yet in the shape ADR-0039
+   describes.** What exists today (`extensions/hooks.py`'s `veto()`, called
+   from `tools/execute.py`) is the M10 subprocess-based `[[hooks]]` mechanism
+   — a different thing. M17 needs a new in-process, Python-callable veto
+   check in the tool pipeline: read `subject()` from
+   `permissions/matcher.py` (already resolves a call's path/command/URL into
+   a `Subject` — reuse it, do not reimplement), call `broker.authorize.authorize()`
+   with the session's live `Ticket`, and on refusal return
+   `_failed(call, "out_of_scope", ...)`. `"out_of_scope"` is a new
+   `ErrorKind` value in `core/message.py`. `ToolContext` in `tools/base.py`
+   needs a field to carry the ticket (a `Protocol`-typed field on `Runtime`
+   too, mirroring `Runtime.escalation`, so `core/loop.py` never imports
+   `edgar.broker`).
+2. **Intent creation**, restricted to the same call sites that emit
+   `PromptTyped`/`PromptSteered` (`cli/repl.py`'s `submit()`,
+   `cli/oneshot.py`'s `run_prompt()`) — never from tool output, fetched
+   content, or model text, mirroring the MEM-8 boundary. Needs its own
+   property test analogous to `store.py`'s `ACTIVE_FROM` allowlist test.
+3. **`--scope KEY=VALUE`** (repeatable) on `-p` (`cli/main.py`), and
+   **`/scope`** in the REPL (`cli/slash.py` — bare shows the current ticket,
+   `/scope clear` resets). Both build on `caveats.parse_scope()`, already
+   built.
+4. **`task` attenuates the parent's ticket** on delegation; the
+   controller's `tighten_policy` adds caveats to a live ticket. Both call
+   `ticket.attenuate()`, already built.
+5. **`broker/receipt.py`**: append-only, hash-chained, HMAC-SHA256-signed
+   JSONL at `.edgar/sessions/<id>/receipt.jsonl` (`Session.dir` already
+   exists structurally). Key at `~/.edgar/receipt.key`, 32 random bytes
+   created on first use, added to the hard layer's credential paths so the
+   agent's own tools cannot read it. Entry kinds: `intent`, `ticket`,
+   `delegate`, `allow`/`refuse`, `permission`. Nothing here exists yet —
+   wholly new code, no hash-chain/HMAC precedent anywhere else in the repo.
+6. **`edgar receipt [ID] [--refused] [--verify]`** CLI command; `--verify`
+   checks the chain/signatures and exits 1 at the first break.
+7. **`[broker] enabled` config section** (`config/schema.py`), default
+   `True`, plus an `edgar doctor` report line.
+8. **`cli/setup.py`'s `_broker(...)`** `import_module`-by-name seam,
+   mirroring `_escalation`/`_controller`/`_learning` — both an event-bus
+   subscriber for the receipt writer and the `Runtime`-carried ticket field.
+9. **Bump `tests/support/budget.py`'s `TARGET_TIER`** from `"v3"` to
+   `"v4"`. Not done yet — `just check` currently fails on the tour tests
+   below, not on budget, but do this before the tour work so `just loc`
+   reports against the right ceiling.
+10. **The confused-deputy integration test** named in the roadmap's "Done
+    when": a session scoped `paths=reports/q3.md`, injected content tries to
+    read `reports/2024-salaries.md` and fetch an outside host, both refused,
+    `edgar receipt --refused` shows both, `--verify` catches a one-byte
+    tamper.
+11. **Tour delivery**: `docs/tour/broker.html`, turn stop `s29` (per the
+    roadmap row — check it against `docs/tour/index.html` directly, the way
+    M14's handoff caught a stale id) into a link, then `just map`.
+
+`just check` currently fails with five tour/map test failures
+(`test_tour.py`, `test_tour_map.py`) because `broker/caveats.py` exists with
+no tour stop and the committed `map.json`/`map.data.js` are stale against the
+new LOC count. That is expected and will clear once item 11 above is done —
+do not try to make the tour tests pass before the rest of the module is
+built; the tour describes what shipped, not what is half-built.
 
 ## Read, in this order
 
-1. [ADR-0065](adr/0065-m14-skill-synthesis-as-built.md), then
-   [ADR-0064](adr/0064-m13-controller-as-built.md) and
-   [ADR-0063](adr/0063-m12-learning-foundations-as-built.md): how v3 is actually
-   built, and the ten decisions M14 flagged.
-2. [`ROADMAP.md`](ROADMAP.md), section "M15 — Escalation and route suggest".
-   Every item names its files, requirement IDs, test and size.
+1. [ADR-0039](adr/0039-capability-broker.md): the accepted design — Intent,
+   Ticket, the five caveats, Option C (checked in the tool pipeline, not
+   bound handles or a policy language), the receipt shape.
+2. [`ROADMAP.md`](ROADMAP.md), section "M17 — Capability broker" (quoted
+   above). Every item names its files, requirement IDs, and the confused-deputy
+   acceptance test.
 3. [`AGENTS.md`](../AGENTS.md): the standing rules. Lines mean lines of code;
    pseudocode comments in every file you touch; shallow functions; the tour
    changes in the same commit as the code; `just check` before every commit;
    journal, changelog, roadmap status and an ADR when a decision could go
    another way.
 
-## What M14 leaves for whoever comes next
-
-- **The seam between the two removable packages is function-level imports in
-  both directions**, each wrapped in `try/except ModuleNotFoundError`. A v1 or
-  v2 module reaching v3 must use `importlib.import_module` by name: the static
-  import graph in `tests/unit/test_architecture.py` catches a guarded `from`
-  import too. Genuinely shared code goes into a non-removable module — that is
-  why `archive()`, `LEARNED` and `BODY_SECTIONS` live in `skills/discovery.py`.
-- **`learning/synthesis.py` spells its own `UNSAFE` regex** rather than
-  importing it from `error_facts.py`, because that module reaches
-  `memory/store.py` and `tests/unit/test_controller_boundary.py` forbids any
-  controller module from reaching the code that writes a fact. Do not "tidy"
-  that duplication away; the comment above it says so.
-- **`Turn` is the security boundary.** Adding a field to it is an ADR. If M15
-  wants escalation context in a skill, that is the conversation to have first.
-- **The property test is the one to run when any of this changes:**
-  `tests/property/test_synthesis_boundary.py` generates both the trajectory and
-  the synthesiser's answer and asserts, in `auto` mode, that every file a person
-  wrote is byte-identical afterwards.
-- **SKL-15 is unbuilt and has no config keys.** Whoever picks it up starts from
-  `archive()` in `skills/discovery.py`, which already does the dangerous part.
-- **M12's gap is still open.** `tools/execute.py`'s `_failed()` returns before
-  emitting `ToolFinished`, so the controller's `error_streak` and the
-  synthesiser's error list count *executed* tool failures only: a session failing
-  every call on a permission denial trips nothing. Fixing it is a Core change
-  that alters what every existing subscriber sees. Whoever takes it should say so
-  in an ADR — and it costs non-removable lines, so it collides with the blocker
-  above.
-- **Check tour stop ids against `docs/tour/index.html`, not the roadmap.** The
-  M14 row said `s27`; the stop is `s33` (`s27` is MCP). Fixed on this branch.
-  M15's row says `s28`; the escalation stop is `s34`.
-- **Four documentation gaps** found during M20 are still open, listed in
-  `JOURNAL.md`'s M20 entry: no `edgar tools validate`; an HTTP tool's `{slot}`
-  missing from `[input].properties` loads silently; `edgar trust` lists a tool
-  file by its first comment line; `EXTENDING.md` never gives the HTTP-tool
-  grammar in full.
-
-## Proposed diff to `AGENTS.md` (maintainer applies by hand)
-
-`AGENTS.md` is hand-authored (ADR-0007, ADR-0008). Rule 10 and the size table
-still describe the removable tier as "v2". Proposed wording:
-
-```diff
--10. **Tier isolation.** Core and v1 code never imports `edgar.controller`,
--    `edgar.learning`, `edgar.schedule`, `edgar.broker` or
--    `edgar.providers.escalation`. v2 attaches
--    through the post-turn gate and the event bus. [NFR-12, ADR-0015]
-+10. **Tier isolation.** Core, v1 and v2 code never imports `edgar.controller`,
-+    `edgar.learning`, `edgar.schedule`, `edgar.broker` or
-+    `edgar.providers.escalation`. v3 and v4 attach through the post-turn gate
-+    and the event bus; v2, the daily driver, extends Core and v1 packages and
-+    is not removable. [NFR-12, ADR-0015, ADR-0057]
-```
-
-```diff
--| `src/` total | Core ≤ 5,000 · v1.0 ≤ 8,000 · v2.0 ≤ 11,000 LOC |
-+| `src/` total | Core ≤ 5,000 · v1.0 ≤ 8,000 · v2.0 ≤ 9,500 · v3.0 ≤ 12,000 · v4.0 ≤ 13,000 LOC |
-```
-
-`CLAUDE.md` is already updated.
-
-## Proposed diff to `src/edgar/templates/config.toml` (maintainer applies by hand)
-
-The shipped config template is hand-authored under the same rule as
-`config.toml` itself (ADR-0008). Two blocks are missing. First, `[shell]
-sandbox`, read and honoured by the code since M21 but never mentioned by a fresh
-`edgar init`:
-
-```diff
- [shell]
- program = "auto"
-+# The walls a shell call, a command tool and the verify command run inside.
-+# "none" (the default) is a plain subprocess; "bwrap" needs bubblewrap on Linux,
-+# "seatbelt" uses macOS's sandbox-exec. A backend you name but do not have ends
-+# the session with an error rather than running unconfined. It confines writes
-+# and the network, not reads. `edgar doctor` says which is best here. [PERM-15]
-+# sandbox = "none"
-```
-
-Second, `[skills]`, new in M14. It does nothing unless `[controller] enabled` is
-true:
-
-```diff
-+# [skills]
-+# What happens when edgar notices a run worth remembering. "propose" (the
-+# default) writes the skill to .edgar/proposals/ for you to read and move
-+# yourself; "auto" writes it straight into .edgar/skills/learned/, only after
-+# your declared check has passed, and says so every session; "off" never calls
-+# a model for this at all. Nothing here fires unless [controller] enabled is
-+# true. [SKL-10, SKL-13]
-+# synthesis = "propose"
-+# min_tool_calls = 5     # a verified run at least this long is worth a skill
-+# min_repeats = 3        # the same shape of job this often, with no skill for it
-+# distill_after = 3      # bad turns recorded before edgar proposes a better body
-```
-
 ## Resume commands
 
-M14 is committed on `feat/m14-skill-synthesis`, not pushed. From that branch:
+M17 is committed so far only in working tree, not yet committed on
+`feat/m17-capability-broker`. From that branch:
+
+```bash
+uv run pytest tests/property/test_broker_chain.py tests/unit/test_broker_caveats.py -q
+```
 
 ```bash
 just check
