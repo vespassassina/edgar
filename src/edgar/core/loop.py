@@ -1,17 +1,18 @@
-"""The turn loop. Read this first.
-
-Every concern lives in a collaborator: the context builder assembles the prompt,
-the provider translates, the tool pipeline validates, decides and runs. What is
-left here is the shape of a turn: ask the model, run what it asks for, feed the
-results back, and stop when it stops asking. A subagent is this same loop with a
-different session (ADR-0006).
-
-Before each request the cost caps are checked and the context compacted if it
-has grown too big (context/compact.py). Cancelling the task that runs a turn
-(Ctrl-C, `/stop`) seals the transcript first (core/cancel.py). When the model
-stops after changing something, the verify gate runs the declared check
-(core/verify.py). Still to join: the post-turn gate for v2.
-"""
+# The turn loop. Read this first.
+#
+# Every concern lives in a collaborator: the context builder assembles the prompt,
+# the provider translates, the tool pipeline validates, decides and runs. What is
+# left here is the shape of a turn: ask the model, run what it asks for, feed the
+# results back, and stop when it stops asking. A subagent is this same loop with a
+# different session (ADR-0006).
+#
+# Before each request the cost caps are checked and the context compacted if it
+# has grown too big (context/compact.py). Cancelling the task that runs a turn
+# (Ctrl-C, `/stop`) seals the transcript first (core/cancel.py). When the model
+# stops after changing something, the verify gate runs the declared check
+# (core/verify.py). Escalation (providers/escalation.py) walks the model chain
+# upward on repeated failure; fallback (providers/fallback.py) moves sideways on
+# a provider outage. Neither is the other [ADR-0013].
 
 # The whole turn, as pseudocode:
 #
@@ -39,6 +40,7 @@ import asyncio
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Protocol
 
 from edgar.config.schema import BudgetSection, ContextSection
 from edgar.context.builder import build
@@ -73,6 +75,13 @@ Texts = Sequence[str]
 Shots = Sequence[ImageBlock]
 
 
+class _Escalator(Protocol):
+    # v3's shape, not its import: `providers/escalation.py` is removable [NFR-12],
+    # so this file never names it. `EscalationState` matches this structurally.
+    def current(self, rt: Runtime) -> tuple[Provider, str, str]: ...
+    def after_round(self, rt: Runtime, turn: _Turn) -> None: ...
+
+
 @dataclass(frozen=True, slots=True)
 class Runtime:
     """Everything a turn needs besides the session, resolved once by the caller."""
@@ -90,6 +99,7 @@ class Runtime:
     budget: BudgetSection = field(default_factory=BudgetSection)  # cost caps [BUD-2]
     compactor: tuple[Provider, str] | None = None  # None: the main model writes summaries
     fallback: tuple[tuple[str, Provider, str], ...] = ()  # (name, provider, its model) [ROUTE-7]
+    escalation: _Escalator | None = None  # v3, upward on repeated failure [ROUTE-5]
     hooks: tuple[object, ...] = ()  # `[[hooks]]` rules; opaque here, typed in tools/base.py [EXT-4]
 
 
@@ -153,6 +163,8 @@ async def run_turn(
             # 6. It asked for tools: run them, then go round again with the results.
             if answer.tool_calls:
                 await _run_tools(answer.tool_calls, session, rt, turn)
+                if rt.escalation:
+                    rt.escalation.after_round(rt, turn)
                 continue
 
             # 7. It stopped, but the user steered in the meantime: go round again.
@@ -218,7 +230,8 @@ async def _ask(session: Session, rt: Runtime, turn: _Turn) -> Message:
     # 3. Stream the answer, falling back sideways on a ProviderError [ROUTE-7].
     #    Retries and backoff already ran inside stream(); reaching here means
     #    that is exhausted, or the failure was never retryable.
-    provider, model, name = rt.provider, rt.model, rt.name
+    default = (rt.provider, rt.model, rt.name)
+    provider, model, name = rt.escalation.current(rt) if rt.escalation else default
     while True:
         tokens = provider.count_tokens(messages)
         rt.bus.emit(RequestStarted(provider=provider.name, model=name, input_tokens=tokens))

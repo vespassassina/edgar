@@ -51,6 +51,7 @@ def runtime(
     max_output_tokens: int = 8000,
     name: str = "",
     fallback: tuple[tuple[str, Any, str], ...] = (),
+    escalation: Any | None = None,
 ) -> Runtime:
     bus = EventBus()
     if recorder is not None:
@@ -64,6 +65,7 @@ def runtime(
         max_output_tokens=max_output_tokens,
         name=name,
         fallback=fallback,
+        escalation=escalation,
     )
 
 

@@ -90,7 +90,7 @@
     <li><a href="#s31"><span class="n">31</span>Learning (M12)</a></li>
     <li><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
     <li><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
-    <li class="planned"><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
+    <li><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
     <li class="planned"><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
     <li class="planned"><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
   </ol>
@@ -1003,13 +1003,29 @@ flowchart LR
   <p>Choose <code>auto</code> and edgar says so at the start of every session.</p>
 </article>
 
-<article class="stop planned" id="s34" data-files="src/edgar/providers/escalation.py">
+<article class="stop" id="s34" data-files="src/edgar/providers/escalation.py">
   <h4><span class="n">34</span>Escalation</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M15 · planned</span> <code>providers/escalation.py</code></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/escalation.py"><code>providers/escalation.py</code></a></p>
+  <p class="look">Look for: <code>EscalationState</code> <code>Triggers</code> <code>_due</code> <code>chain_from_config</code></p>
   <p>A weak model that fails gets help from a stronger one, visibly: upward only,
   capped, and announced so you can see it happened. Compare it with routing
   (stop 14) and fallback (stop 28) — the point of this whole page is keeping the
-  three apart, never letting one quietly become another.
+  three apart, never letting one quietly become another.</p>
+  <ul class="points">
+    <li>Escalation reacts to a pattern, not one failure: tool-call errors,
+    consecutive rounds where every call fails, or the model losing the
+    tool-call format (read straight off <code>Usage.repairs</code>), each with
+    its own threshold.</li>
+    <li><code>core/loop.py</code> never imports this file — it declares an
+    <code>_Escalator</code> protocol locally and calls it structurally, so the
+    removable tier stays removable (NFR-12). <code>cli/setup.py</code> is the
+    only place that reaches in, through <code>import_module</code>.</li>
+    <li>The chain only ever moves up: once a model is reached it is never
+    tried again in that session, and crossing model families drops reasoning
+    for the rest of the turn (stop 6's <code>ThinkingBlock</code> origin rule).</li>
+  </ul>
+  <p><code>edgar route suggest</code> (ROUTE-12) and the Responses API adapter
+  (OQ-8) stay open questions past M15 — see the ADR for why.
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m15--escalation-and-route-suggest">Roadmap: M15</a></p>
 </article>
 

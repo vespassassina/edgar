@@ -9,6 +9,18 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **A weak model that fails gets help from a stronger one, visibly (v3, M15).**
+  When the same round of tool calls fails twice in a row, or a model keeps
+  losing the tool-call format, `[model.escalation]` walks a declared chain
+  of models upward, capped by `max_escalations`. It only ever moves up — a
+  model already tried is never tried again in that session — and it always
+  announces the switch: on the event bus and in the status line, never
+  silently. Crossing model families drops reasoning for the rest of the turn,
+  the same rule fallback already followed [ROUTE-5, ROUTE-10, PRV-13,
+  ADR-0066].
+- **A sideways fallback now shows in the status line too.** `Fallback`
+  (v1, M9) had been silent there since it shipped; fixed alongside
+  `Escalation`, since both are the same "never silent" promise [ROUTE-10].
 - **edgar can write its own skills, and by default asks you first (v3, M14).**
   When a turn ends, four plain checks ask whether it was worth remembering: it
   used a lot of tools and **the project's own check passed**; something failed,

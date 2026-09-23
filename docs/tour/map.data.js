@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 10886,
+    "loc": 10998,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6616,
+        "loc": 6638,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2152,
+            "loc": 2173,
             "status": "built",
             "children": [
               {
@@ -80,7 +80,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 143,
+                "loc": 149,
                 "summary": "What reaches the terminal [CLI-5, CLI-15, CLI-21, CLI-23].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 393,
+                "loc": 404,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "synthesis.html#k4",
                 "status": "built",
@@ -128,7 +128,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 160,
+                "loc": 164,
                 "summary": "The status line, rebuilt from events alone [CLI-5, CLI-6, CLI-8].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -242,7 +242,7 @@ window.EDGAR_MAP = {
             "id": "core/core",
             "name": "core/",
             "kind": "package",
-            "loc": 798,
+            "loc": 799,
             "status": "built",
             "children": [
               {
@@ -287,7 +287,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 210,
+                "loc": 215,
                 "summary": "The event bus: the only output path [ADR-0011].",
                 "stop": "media.html#m7",
                 "status": "built",
@@ -299,7 +299,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "core",
-                "loc": 200,
+                "loc": 196,
                 "summary": "The turn loop. Read this first.",
                 "stop": "index.html#s1",
                 "status": "built",
@@ -1363,7 +1363,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M12 to M15",
         "summary": "Learns from verified work. Removable.",
-        "loc": 1514,
+        "loc": 1604,
         "status": "built",
         "children": [
           {
@@ -1568,8 +1568,8 @@ window.EDGAR_MAP = {
             "id": "v3/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 90,
+            "status": "built",
             "children": [
               {
                 "path": "src/edgar/providers/escalation.py",
@@ -1577,10 +1577,10 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v3",
                 "package": "providers",
-                "loc": 0,
-                "summary": "",
+                "loc": 90,
+                "summary": "The model that started this session is not capable enough? Walk a declared",
                 "stop": "index.html#s34",
-                "status": "planned",
+                "status": "built",
                 "port": false
               }
             ]

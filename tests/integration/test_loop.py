@@ -10,8 +10,9 @@ from harness import Recorder, new_session, run_turn_sync, runtime, scripted, too
 from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.core.errors import ProviderError
-from edgar.core.events import Event, Fallback, SteerApplied, TextDelta, ToolProposed
+from edgar.core.events import Escalation, Event, Fallback, SteerApplied, TextDelta, ToolProposed
 from edgar.core.units import pairing_violations
+from edgar.providers.escalation import EscalationState, Triggers
 
 
 class _OtherFamily(ScriptedProvider):
@@ -176,6 +177,44 @@ def test_fallback_is_exhausted_when_nothing_covers_the_turn(tmp_project: Path) -
     rt = runtime(primary, name="a/test", fallback=(("a/test", already_tried, "test"),))
     with pytest.raises(ProviderError, match="rate limited"):
         run_turn_sync(new_session(tmp_project), "hi", rt)
+
+
+def test_escalation_moves_up_the_chain_on_repeated_tool_failure(
+    tmp_project: Path, recorder: Recorder
+) -> None:  # [ROUTE-5, ROUTE-10]
+    weak = scripted(
+        ScriptedResponse(tool_calls=[tool_use("no-such-tool", {})]),
+        ScriptedResponse(tool_calls=[tool_use("no-such-tool", {})]),
+    )
+    stronger = scripted(ScriptedResponse(text="done by the stronger model"))
+    state = EscalationState(
+        chain=(("b/test", stronger, "b-model"),),
+        max_escalations=1,
+        on=Triggers(consecutive_failures=2),
+    )
+    rt = runtime(weak, recorder, name="a/test", escalation=state)
+    result = run_turn_sync(new_session(tmp_project), "hi", rt)
+
+    assert result.text == "done by the stronger model"
+    assert stronger.call_count == 1
+    escalated = recorder.of(Escalation)
+    assert len(escalated) == 1
+    assert escalated[0].from_model == "a/test"
+    assert escalated[0].to_model == "b/test"
+
+
+def test_escalation_never_runs_past_max_escalations(tmp_project: Path, recorder: Recorder) -> None:
+    weak = scripted(
+        ScriptedResponse(tool_calls=[tool_use("no-such-tool", {})]),
+        ScriptedResponse(tool_calls=[tool_use("no-such-tool", {})]),
+        ScriptedResponse(tool_calls=[tool_use("no-such-tool", {})]),
+        ScriptedResponse(text="gave up trying"),
+    )
+    state = EscalationState(chain=(), max_escalations=0, on=Triggers(consecutive_failures=1))
+    rt = runtime(weak, recorder, name="a/test", escalation=state)
+    run_turn_sync(new_session(tmp_project), "hi", rt)
+
+    assert recorder.of(Escalation) == []
 
 
 def test_the_rule_based_test_model_reads_a_file(tmp_project: Path) -> None:

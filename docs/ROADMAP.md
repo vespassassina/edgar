@@ -57,7 +57,7 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M12 Learning foundations | Done 2026-09-17 ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)) | 3.0 |
 | M13 Controller | Done 2026-09-18 ([ADR-0064](adr/0064-m13-controller-as-built.md)) | 3.0 |
 | M14 Skill synthesis | Done 2026-09-19 ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)) | 3.0 |
-| M15 Escalation, route suggest | Planned; blocked on budget (ADR-0065 §10) | 3.0 |
+| M15 Escalation, route suggest | Done 2026-09-23 ([ADR-0066](adr/0066-m15-escalation-as-built.md)); ROUTE-11, ROUTE-12 and OQ-8's adapter deferred, priced out at 104 LOC remaining | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A
@@ -941,16 +941,39 @@ generated trajectories shows no hand-authored skill file ever changes.
 
 - `providers/escalation.py` — upward only, capped, announced [ROUTE-5, ROUTE-10]
 - Reasoning off after a family switch [PRV-13]
-- Budget-aware downgrade before abort [ROUTE-11]
-- `edgar route suggest` over experience telemetry, print-only [ROUTE-12]
-- Responses API adapter if the eval set shows the gap (OQ-8)
+- ~~Budget-aware downgrade before abort [ROUTE-11]~~ *(Should; **deferred** for budget, ADR-0066 §5)*
+- ~~`edgar route suggest` over experience telemetry, print-only [ROUTE-12]~~ *(Should; **deferred** for budget, ADR-0066 §6)*
+- ~~Responses API adapter if the eval set shows the gap (OQ-8)~~ *(resolved as "not yet"; no eval evidence, ADR-0066 §7)*
 
-- **Tour delivery:** `docs/tour/escalation.html`, s28 turned into a link; `just map`
+- **Tour delivery:** stop 34 in `docs/tour/index.html` turned into a link; no
+  dedicated page for one file (ADR-0066 §8); `just map`
 
 **Done when:** an escalation is visible in the status bar when a weak model fails
 twice, never moves down the chain, and never exceeds `max_escalations`.
 
-**Resolves:** OQ-8.
+**Resolves:** OQ-8 — resolved as "not yet built"; revisit once an eval set shows
+tool-heavy tasks losing to the missing adapter (ADR-0066 §7).
+
+**Built 2026-09-23** at 90 lines of code in `providers/escalation.py`, plus
+`Runtime.escalation` and the `_Escalator` protocol and its hook in
+`core/loop.py`, `Escalation` in `core/events.py`, the `_escalation()` seam in
+`cli/setup.py`, and the `Fallback`/`Escalation` notices in `cli/render.py` and
+`cli/statusbar.py` (the latter closing a pre-existing ROUTE-10 gap for
+`Fallback`, found while adding `Escalation`). `just loc` reads
+11,064 of 12,000 for v3, and 9,396 of 9,500 for `src/` without the removable
+packages — the binding number, leaving **104 lines of code** for the rest of
+Core, v1 and v2. `core/loop.py` is at 196 of 200, four lines of slack, freed by
+converting its module docstring to `#` comments. Four decisions a reasonable
+person could make differently, including the two Should-item deferrals and the
+OQ-8 resolution, are in [ADR-0066](adr/0066-m15-escalation-as-built.md).
+
+All three "done when" observations hold: `tests/integration/test_loop.py`
+scripts a weak model failing two consecutive rounds, asserts exactly one
+`Escalation` event and the correct `from_model`/`to_model`, and a second test
+asserts a zero-length chain with `max_escalations = 0` never escalates no
+matter how many rounds fail; `tests/unit/test_cli_output.py` asserts the
+status line's model updates on both `Fallback` and `Escalation`, not just that
+an event fires.
 
 ---
 

@@ -190,6 +190,15 @@ class Fallback(Event):
     reason: str
 
 
+@dataclass(frozen=True, slots=True, kw_only=True)
+class Escalation(Event):
+    # providers/escalation.py, when repeated failure walks the chain upward (v3),
+    # never sideways or down [ROUTE-5, ROUTE-10].
+    from_model: str
+    to_model: str
+    reason: str
+
+
 # tools
 
 

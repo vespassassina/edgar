@@ -349,8 +349,27 @@ def runtime(s: Setup, bus: EventBus, *, choice: Selection | None = None) -> Runt
         budget=config.budget,
         compactor=resolve(role, config, env=s.env) if role else None,
         fallback=fallback,
+        escalation=_escalation(config, s.env),
         hooks=s.hooks,
     )
+
+
+def _escalation(config: Config, env: Mapping[str, str] | None) -> Any:
+    # v3's third seam, by name for the same reason as the other two [ADR-0015,
+    # NFR-12]: `providers/escalation.py` is removable, so this file never
+    # imports it, only reaches it through `import_module`, which the static
+    # layering test cannot follow. The `Any` return crosses into `Runtime`'s
+    # `_Escalator | None` field silently, since `ModuleType.__getattr__` is
+    # typed `Any` too [ADR-0015].
+    try:
+        escalation = import_module("edgar.providers.escalation")
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return None
+    plan = escalation.chain_from_config(config.later)
+    if plan is None:
+        return None
+    chain = tuple((name, *resolve(name, config, env=env)) for name in plan.models)
+    return escalation.EscalationState(chain, plan.max_escalations, plan.on)
 
 
 def begin(s: Setup, bus: EventBus, resume: str | None = None) -> tuple[Session, Runtime]:

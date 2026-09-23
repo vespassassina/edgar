@@ -21,7 +21,9 @@ from typing import TextIO
 from edgar.core.events import (
     AsideFinished,
     Compacted,
+    Escalation,
     Event,
+    Fallback,
     InputQueued,
     Paused,
     RequestFinished,
@@ -89,6 +91,8 @@ class Status:
         elif isinstance(event, TodoUpdated):
             done = sum(1 for i in event.items if i.get("status") == "done")
             self.todo = f"todo {done}/{len(event.items)}" if event.items else ""
+        elif isinstance(event, Fallback | Escalation):  # never silent [ROUTE-10]
+            self.model = event.to_model
 
     def _subagent(self, event: Event) -> None:
         # A row per running agent_id; consecutive `task` calls fan out [TOOL-12],
