@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 11469,
+    "loc": 12087,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6726,
+        "loc": 6724,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2224,
+            "loc": 2222,
             "status": "built",
             "children": [
               {
@@ -44,7 +44,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 171,
+                "loc": 173,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 428,
+                "loc": 424,
                 "summary": "What `-p` and the REPL share: config, tools, the permission guard, the verify",
                 "stop": "synthesis.html#k4",
                 "status": "built",
@@ -1593,7 +1593,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M17 then M16",
         "summary": "Runs while you are away. Removable.",
-        "loc": 341,
+        "loc": 961,
         "status": "built",
         "children": [
           {
@@ -1693,19 +1693,31 @@ window.EDGAR_MAP = {
             "id": "v4/schedule",
             "name": "schedule/",
             "kind": "package",
-            "loc": 0,
-            "status": "planned",
+            "loc": 620,
+            "status": "built",
             "children": [
+              {
+                "path": "src/edgar/schedule/cli.py",
+                "name": "cli.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "schedule",
+                "loc": 95,
+                "summary": "`edgar schedule list|add NAME|remove NAME|run NAME`, `edgar tick`,",
+                "stop": "schedule.html#sc4",
+                "status": "built",
+                "port": false
+              },
               {
                 "path": "src/edgar/schedule/due.py",
                 "name": "due.py",
                 "kind": "file",
                 "tier": "v4",
                 "package": "schedule",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s36",
-                "status": "planned",
+                "loc": 73,
+                "summary": "When and due(): pure. No I/O, no clock read — the caller passes `now` [SCH-4].",
+                "stop": "schedule.html#sc1",
+                "status": "built",
                 "port": false
               },
               {
@@ -1714,10 +1726,58 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "schedule",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s36",
-                "status": "planned",
+                "loc": 68,
+                "summary": "install.py: one host scheduler entry that runs `edgar tick` every minute for",
+                "stop": "schedule.html#sc4",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/schedule/parser.py",
+                "name": "parser.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "schedule",
+                "loc": 107,
+                "summary": "parser.py: schedules.toml -> tuple[ScheduleEntry, ...], validated once at load",
+                "stop": "schedule.html#sc3",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/schedule/run.py",
+                "name": "run.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "schedule",
+                "loc": 43,
+                "summary": "run.py: the impure edge between a validated ScheduleEntry and a real turn.",
+                "stop": "schedule.html#sc3",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/schedule/state.py",
+                "name": "state.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "schedule",
+                "loc": 32,
+                "summary": "FileState: tick.py's State protocol backed by disk, so overlap prevention",
+                "stop": "schedule.html#sc2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/schedule/store.py",
+                "name": "store.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "schedule",
+                "loc": 83,
+                "summary": "SelfSchedules: the `self_schedules` table of the project's edgar.db, the same",
+                "stop": "schedule.html#sc5",
+                "status": "built",
                 "port": false
               },
               {
@@ -1726,10 +1786,22 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "schedule",
-                "loc": 0,
-                "summary": "",
-                "stop": "index.html#s36",
-                "status": "planned",
+                "loc": 48,
+                "summary": "tick(): one pass over every entry, applying due(), the catch-up policy and",
+                "stop": "schedule.html#sc2",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/schedule/tool.py",
+                "name": "tool.py",
+                "kind": "file",
+                "tier": "v4",
+                "package": "schedule",
+                "loc": 71,
+                "summary": "schedule_self: the model's own way to schedule a future run of this project",
+                "stop": "schedule.html#sc5",
+                "status": "built",
                 "port": false
               }
             ]

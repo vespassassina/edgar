@@ -1,0 +1,10 @@
+# `session_end` is observation only: fired and forgotten, its exit code and
+# output never read, so a broken or unreachable webhook can never affect the
+# run it is reporting on [EXT-6, EXT-7]. It fires for every session, not only
+# scheduled ones; that is fine, an interactive session ending is worth a quiet
+# notification too. Swap in `python3` if your platform has no bare `python`
+# on PATH.
+[[hooks]]
+event = "session_end"
+command = ["python", "notify.py"]
+timeout_s = 15

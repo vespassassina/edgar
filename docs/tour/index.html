@@ -36,6 +36,7 @@
       <li><a href="controller.html">The controller</a></li>
       <li><a href="synthesis.html">Skill synthesis</a></li>
       <li><a href="broker.html">Capability broker</a></li>
+      <li><a href="schedule.html">Scheduling</a></li>
       <li><a href="map.html">The map</a></li>
     </ul>
   </div>
@@ -93,7 +94,7 @@
     <li><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
     <li><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
     <li><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
-    <li class="planned"><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
+    <li><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
   </ol>
 </nav>
 
@@ -163,6 +164,7 @@ totals.</p>
     <tr data-package="controller"><td><code>controller/</code></td><td class="loc">~892</td><td>Deterministic triggers, eight whitelisted actions, policy that only tightens (v3)</td></tr>
     <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
     <tr data-package="broker"><td><code>broker/</code></td><td class="loc">~365</td><td>Intents, tickets and caveats, the pure veto, the signed receipt, <code>edgar receipt</code> (v4)</td></tr>
+    <tr data-package="schedule"><td><code>schedule/</code></td><td class="loc">~624</td><td>Due dates as a pure function, overlap-safe ticks, the host installer, <code>edgar tick</code>, <code>schedule_self</code> (v4)</td></tr>
   </tbody>
 </table>
 </div>
@@ -1048,15 +1050,21 @@ flowchart LR
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m17--capability-broker">Roadmap: M17</a></p>
 </article>
 
-<article class="stop planned" id="s36" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/install.py">
+<article class="stop" id="s36" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/state.py src/edgar/schedule/parser.py src/edgar/schedule/run.py src/edgar/schedule/install.py src/edgar/schedule/cli.py src/edgar/schedule/store.py src/edgar/schedule/tool.py">
   <h4><span class="n">36</span>Scheduling</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M16 · planned</span> <code>schedule/due.py</code> <code>schedule/tick.py</code> <code>schedule/install.py</code></p>
-  <p>Unattended runs that can't run away on their own. Working out what's due to
-  run is a pure function, tested against a frozen clock so it's fully
-  deterministic. A run the harness schedules for itself never gets more authority
-  than the run that first created it — a scheduled job can't grant itself
-  permissions nobody gave it.
-  <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m16--scheduling--v20-release">Roadmap: M16</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/due.py"><code>schedule/due.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/tick.py"><code>schedule/tick.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/state.py"><code>schedule/state.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/parser.py"><code>schedule/parser.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/run.py"><code>schedule/run.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/install.py"><code>schedule/install.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/cli.py"><code>schedule/cli.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/store.py"><code>schedule/store.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/schedule/tool.py"><code>schedule/tool.py</code></a></p>
+  <p class="look">Look for: <code>due</code> <code>parse_when</code> <code>tick</code>
+  <code>catch_up</code> <code>FileState</code> <code>load</code> <code>append</code>
+  <code>runner_for</code> <code>install</code> <code>command</code>
+  <code>SelfSchedules</code> <code>ScheduleSelfTool</code></p>
+  <p>M16 has a tour of its own: <a href="schedule.html">Scheduling</a>, five
+  stops on unattended runs that cannot run away — due dates as a pure function,
+  the overlap-safe tick, append-only <code>schedules.toml</code>, the host
+  installer behind <code>edgar tick</code>, and <code>schedule_self</code>,
+  the model's own way to schedule a future run, guarded so that run never
+  holds more authority than the one that created it. What to carry from here:
+  a scheduled run's <code>scope</code> and <code>allowlist</code> become the
+  same <code>--scope</code> caveats a human turn would pass (invariant 2).</p>
 </article>
 
 <footer class="ak-footer">

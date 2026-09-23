@@ -22,6 +22,7 @@ until you copy it.
 | [`agents/code-reviewer.md`](agents/code-reviewer.md) | A subagent: one flat file, `read-only` mode, four tools | `.edgar/agents/` |
 | [`extensions/audit-log/`](extensions/audit-log/) | An extension: a manifest plus one observation-only hook | `.edgar/extensions/` |
 | [`extensions/git-trail/`](extensions/git-trail/) | An extension: a `post_tool` hook matched to one tool, logging every commit | `.edgar/extensions/` |
+| [`extensions/schedule-notify/`](extensions/schedule-notify/) | An extension: a `session_end` hook delivering the last reply to a webhook or the desktop notifier — pairs with `schedule add` [SCH-10] | `.edgar/extensions/` |
 
 Project folders (`.edgar/…`) apply to one project; the same folders under
 `~/.edgar/` apply everywhere. A project's tools run only after `edgar trust`; a
