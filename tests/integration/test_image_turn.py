@@ -8,6 +8,7 @@ and is still there after the JSONL record is replayed.
 from __future__ import annotations
 
 import asyncio
+import base64
 from pathlib import Path
 
 from harness import new_session, runtime
@@ -53,6 +54,9 @@ def test_the_image_is_still_there_after_a_resume(tmp_project: Path) -> None:
     resumed, turns = replay(path)
     assert turns == 1
     assert [i for m in resumed.transcript for i in m.images] == [shot]
-    # The bytes never entered the record: only the reference did [ADR-0052].
+    # The bytes never entered the record: only the reference did [ADR-0052]. A
+    # substring check for the word "PNG" is not safe here: session and call ids
+    # are ULIDs drawn from Crockford base32 (0-9A-HJKMNPQRSTVWXYZ), so a ulid
+    # spelling out "PNG" is a ~1-in-1300 coincidence, not a leak.
     record = path.read_text(encoding="utf-8")
-    assert "base64" not in record and "PNG" not in record
+    assert base64.b64encode(PNG).decode("ascii") not in record

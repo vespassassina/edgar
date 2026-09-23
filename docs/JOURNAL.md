@@ -57,6 +57,29 @@ except `edgar.testing.contract` [PRV-14], which was dropped to v3 for budget
 say "v2" for the removable tier; the proposed diff is in the handoff and waits
 for the maintainer's hand.
 
+## 2026-09-23 · CI: a coincidental ULID substring failed the image-spill test
+
+**Asked.** Merge and push the LOC-overflow fix (above), then confirm CI is
+green before starting M15.
+
+**Done.** CI on `475a791` (the merge push) failed on `macos-latest`:
+`test_the_image_is_still_there_after_a_resume` asserted `"PNG" not in record`
+over the whole JSONL record, and the run's session id — a ULID drawn from
+Crockford base32 (`0-9A-HJKMNPQRSTVWXYZ`) — happened to be
+`01M36GAVGPNGTV6VCCPZCF9P8Y`, which spells "PNG". A ~1-in-1,300 coincidence,
+not a leak: `core/session.py`'s `new_id()` was untouched, and 20 local runs
+plus a full local `just check` pass never hit it.
+
+Rewrote the assertion in `tests/integration/test_image_turn.py` to check for
+the actual base64 encoding of the image bytes rather than scanning the raw
+file for the word "PNG" or "base64" — the real property ADR-0052 promises,
+and one no random id can collide with. `just check` green at 1,082 tests.
+
+**Decided.** A flaky assertion gets fixed at the source, not reran past, even
+when the underlying feature was never broken — the same rule already applied
+to the Seatbelt and Windows-timing flakes. CI is confirmed green; M15
+(escalation and route suggest) starts next.
+
 ## 2026-09-23 · M15's LOC overflow, cleared
 
 **Asked.** Check the M14 merge commit's CI, then decide how to free the five
