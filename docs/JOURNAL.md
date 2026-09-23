@@ -5,6 +5,42 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-23 — M17: tour delivery, `docs/tour/broker.html`
+
+Built HANDOFF's item 4, the last unblocked item on M17's list: the broker's
+tour page. `docs/ROADMAP.md`'s own M17 section names `docs/tour/broker.html`
+by name ("Tour delivery: `docs/tour/broker.html`, s29 turned into a link;
+`just map`"), which settled a question worth recording: whether to fold the
+whole module into `index.html`'s stop 35 (the way M15 folded the single-file
+`providers/escalation.py` in, ADR-0066 §8: "no dedicated page for one file")
+or give it a page of its own, the way `extensions/` and `memory/` got.
+`broker/` is 365 LOC across 7 files — closer to the multi-file precedent than
+the single-file exception — and the roadmap had already committed to the
+filename, so the dedicated page won. Also caught in passing: the roadmap's
+own "s29" was stale (it names "Extensions, hooks, plugins, embedding"); the
+real stop is `s35`, the way M14's handoff had already caught a similar stale
+id — worth remembering that a roadmap-quoted stop id is not authoritative
+until checked against `docs/tour/index.html` directly.
+
+Built `docs/tour/broker.html` with four stops — intent and the ticket
+(`intent.py`, `ticket.py`, `caveats.py`), the veto one step before
+permissions (`guard.py`, `authorize.py`), the signed receipt (`receipt.py`),
+and `edgar receipt` plus the wiring seam (`cli.py`, `__init__.py`) — a Sizes
+table, and the same header/footer/Mermaid structure `extensions.html` and
+`memory.html` use. Added a `<li><a href="broker.html">Capability broker</a>`
+nav entry to all 12 other tour pages, and narrowed `index.html`'s stop 35
+from an earlier, larger draft (which had folded all 7 files in directly) down
+to a short pointer stop that names only the three pure-core files and links
+to the new page — closer to what a reader who has not yet reached M17 needs.
+Ran `just map` to pick up the new page and the narrowed stop.
+
+`tests/unit/test_tour.py` and `test_tour_map.py`: 160 passed. `just check`:
+1182 passed, ruff and mypy clean. `just loc`: unchanged at
+`9500 / 9500` outside removable packages — docs never counted against the
+budget, so this item carried no cost against item 1's blocker. Only item 1,
+the controller's `tighten_policy` (CTRL-8), is left on M17's list, and it
+stays blocked on the maintainer's decision about that zero-headroom budget.
+
 ## 2026-09-23 — M17: the confused-deputy integration test
 
 Built HANDOFF's item 3, the roadmap's M17 "Done when" acceptance test:

@@ -193,26 +193,26 @@ also done — see "Where things stand" above. Renumbered again from there.
    and `--verify`, including a one-byte tamper turning `--verify`'s exit
    code from 0 to 1. Pure test code, no non-removable touch; `just loc` is
    unchanged at `9500 / 9500`.
-4. **Tour delivery**: `docs/tour/broker.html`, turn stop `s29` (per the
+4. ~~**Tour delivery**: `docs/tour/broker.html`, turn stop `s29` (per the
    roadmap row — check it against `docs/tour/index.html` directly, the way
-   M14's handoff caught a stale id) into a link, then `just map`. Also
-   covers the four current orphans `just check` already names:
-   `broker/caveats.py`, `broker/cli.py`, `broker/guard.py`, `broker/intent.py`
-   (`broker/receipt.py` and `broker/ticket.py` land on `s35`, already
-   planned, once that stop is built).
+   M14's handoff caught a stale id) into a link, then `just map`.~~ Done, but
+   not quite as first written: the real stop was `s35`, not `s29` (`s29` is
+   "Extensions, hooks, plugins, embedding"), and `broker/` at 365 LOC across
+   7 files was closer to the dedicated-page precedent (`extensions.html`,
+   `memory.html`) than to the single-file-exception one ADR-0066 §8 records
+   for `providers/escalation.py` — ROADMAP.md's own M17 section names
+   `docs/tour/broker.html` by name, so that is what got built: four stops
+   (intent and the ticket, the veto, the receipt, `edgar receipt` and the
+   wiring), a Sizes table, and a nav entry added to all 12 other pages.
+   `index.html`'s `s35` is now a short pointer stop into it. `just map` re-run
+   clean; `tests/unit/test_tour.py` and `test_tour_map.py` both green
+   (160 passed); `just check` green (1182 passed); `just loc` unchanged at
+   `9500 / 9500` (docs never counted against it).
 
 There is **no budget headroom left** outside the removable packages (see
-"Where things stand" above) — item 1 needs the maintainer's decision before
-any further non-removable touch; item 4 (the only one left) does not touch
-a non-removable file either.
-
-`just check` currently fails with five tour/map test failures
-(`test_tour.py`, `test_tour_map.py`) because `broker/caveats.py`,
-`broker/cli.py`, `broker/guard.py` and `broker/intent.py` exist with no tour
-stop and the committed `map.json`/`map.data.js` are stale against the new LOC
-count. That is expected and will clear once item 4 above is done — do not try
-to make the tour tests pass before the rest of the module is built; the tour
-describes what shipped, not what is half-built.
+"Where things stand" above). **Only item 1 (the controller's
+`tighten_policy`) is left on this list**, and it needs the maintainer's
+decision before any further non-removable touch — see item 1 above.
 
 ## Read, in this order
 
@@ -230,13 +230,12 @@ describes what shipped, not what is half-built.
 
 ## Resume commands
 
-M17's work through the confused-deputy test is committed on
-`feat/m17-capability-broker`. Only item 4 (tour delivery) is left, and item 1
-(the controller) is blocked on the maintainer's budget decision. From that
-branch:
+M17's work through the tour delivery is committed on
+`feat/m17-capability-broker`. Only item 1 (the controller) is left, and it is
+blocked on the maintainer's budget decision. From that branch:
 
 ```bash
-uv run pytest tests/integration/test_confused_deputy.py -q
+uv run pytest tests/integration/test_confused_deputy.py tests/unit/test_tour.py tests/unit/test_tour_map.py -q
 ```
 
 ```bash

@@ -35,6 +35,7 @@
       <li><a href="learning.html">Learning</a></li>
       <li><a href="controller.html">The controller</a></li>
       <li><a href="synthesis.html">Skill synthesis</a></li>
+      <li><a href="broker.html">Capability broker</a></li>
       <li><a href="map.html">The map</a></li>
     </ul>
   </div>
@@ -91,7 +92,7 @@
     <li><a href="#s32"><span class="n">32</span>The controller (M13)</a></li>
     <li><a href="#s33"><span class="n">33</span>Skill synthesis (M14)</a></li>
     <li><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
-    <li class="planned"><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
+    <li><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
     <li class="planned"><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
   </ol>
 </nav>
@@ -161,6 +162,7 @@ totals.</p>
     <tr data-package="learning"><td><code>learning/</code></td><td class="loc">~686</td><td>Telemetry, autolearn from typed text, error facts, <code>history.md</code>, skill synthesis (v3)</td></tr>
     <tr data-package="controller"><td><code>controller/</code></td><td class="loc">~892</td><td>Deterministic triggers, eight whitelisted actions, policy that only tightens (v3)</td></tr>
     <tr data-package="extensions"><td><code>extensions/</code></td><td class="loc">~330</td><td>An extension folder's manifest, discovery, observe-or-veto hooks, and the gate <code>ext add</code> passes (v1, v2)</td></tr>
+    <tr data-package="broker"><td><code>broker/</code></td><td class="loc">~365</td><td>Intents, tickets and caveats, the pure veto, the signed receipt, <code>edgar receipt</code> (v4)</td></tr>
   </tbody>
 </table>
 </div>
@@ -1029,15 +1031,21 @@ flowchart LR
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m15--escalation-and-route-suggest">Roadmap: M15</a></p>
 </article>
 
-<article class="stop planned" id="s35" data-files="src/edgar/broker/authorize.py src/edgar/broker/ticket.py src/edgar/broker/receipt.py">
+<article class="stop" id="s35" data-files="src/edgar/broker/caveats.py src/edgar/broker/ticket.py src/edgar/broker/authorize.py">
   <h4><span class="n">35</span>The capability broker</h4>
-  <p class="files"><span class="ak-pill ak-pill-warn">M17 · planned</span> <code>broker/authorize.py</code> <code>broker/ticket.py</code> <code>broker/receipt.py</code></p>
-  <p>Every tool call has to answer to what the human actually asked for. A typed
-  request becomes a ticket carrying caveats — conditions on what it may do — and a
-  subagent spawned under that ticket can only narrow those caveats, never loosen
-  them. A pure <code>authorize()</code> function vetoes calls at the
-  <code>pre_tool</code> stage, and every decision it makes is written into a
-  signed receipt. <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m17--capability-broker">Roadmap: M17</a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/caveats.py"><code>broker/caveats.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/ticket.py"><code>broker/ticket.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/broker/authorize.py"><code>broker/authorize.py</code></a></p>
+  <p class="look">Look for: <code>Caveat</code> <code>parse_scope</code> <code>Ticket</code>
+  <code>attenuate</code> <code>verify_chain</code> <code>authorize</code></p>
+  <p>M17 has a tour of its own: <a href="broker.html">Capability broker</a>, four
+  stops on the ticket a typed request opens, the pure veto one step before the
+  permission engine, the signed receipt, and <code>edgar receipt</code>. What to
+  carry from here: a subagent spawned under a ticket can only narrow its
+  caveats through <code>attenuate()</code>, never loosen them (ADR-0039), the
+  same "humans widen, machines tighten" rule (invariant 2) applied to what a
+  session is scoped to rather than to its permission mode.</p>
+  <p>The controller's <code>tighten_policy</code> (CTRL-8), ADR-0039's fourth
+  caveat source, is not built yet — see the roadmap for why.
+  <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m17--capability-broker">Roadmap: M17</a></p>
 </article>
 
 <article class="stop planned" id="s36" data-files="src/edgar/schedule/due.py src/edgar/schedule/tick.py src/edgar/schedule/install.py">
