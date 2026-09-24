@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12087,
+    "loc": 12088,
     "status": "built",
     "children": [
       {
@@ -16,7 +16,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6724,
+        "loc": 6725,
         "status": "built",
         "children": [
           {
@@ -599,7 +599,7 @@ window.EDGAR_MAP = {
             "id": "core/storage",
             "name": "storage/",
             "kind": "package",
-            "loc": 269,
+            "loc": 270,
             "status": "built",
             "children": [
               {
@@ -620,7 +620,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "storage",
-                "loc": 187,
+                "loc": 188,
                 "summary": "The session record: .edgar/sessions/<id>.jsonl, append-only [CTX-14, ADR-0010].",
                 "stop": "memory.html#m4",
                 "status": "built",

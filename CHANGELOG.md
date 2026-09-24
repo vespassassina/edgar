@@ -8,6 +8,11 @@ extension formats freeze.
 
 ## Unreleased
 
+### Fixed
+- **A session whose last line was cut short by a crash opens again.** Resume,
+  forks and `save` used to fail on the torn line; they now drop it and keep
+  everything before it. Damage anywhere else still stops with an error.
+
 ### Added
 - **`edgar schedule` runs unattended, on `schedules.toml` entries or ones the
   model schedules for itself (v4, M16, the release).** `edgar schedule add`

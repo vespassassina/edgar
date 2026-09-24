@@ -139,7 +139,11 @@ def replay(path: Path) -> tuple[Session, int]:
 
 
 def entries(path: Path) -> list[dict[str, Any]]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    # Every line ends in "\n" once written whole, so whatever follows the last
+    # "\n" is a line a crash tore mid-write: drop it, keep the rest. A bad line
+    # anywhere else is real damage and still raises [ADR-0010, BLUEPRINT §3.4].
+    lines = path.read_text(encoding="utf-8").split("\n")[:-1]
+    return [json.loads(line) for line in lines if line]
 
 
 def conversation(path: Path) -> list[Message]:
