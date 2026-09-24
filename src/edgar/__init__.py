@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 # Kept in step with pyproject.toml by tests/unit/test_version.py. Reading it from
 # importlib.metadata instead would cost startup time on every run (NFR-1).
-__version__ = "1.0.0"
+__version__ = "3.0.0"
 
 
 async def run(

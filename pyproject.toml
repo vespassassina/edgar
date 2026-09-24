@@ -1,6 +1,6 @@
 [project]
 name = "edgar-harness"
-version = "1.0.0"
+version = "3.0.0"
 description = "The agent harness you can read in an afternoon. Any model. No hidden calls. Nothing is done until it's verified."
 readme = "README.md"
 license = "AGPL-3.0-or-later"

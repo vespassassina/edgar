@@ -53,11 +53,11 @@ capability broker comes before scheduling, which carries the 4.0 release
 | M19 Working state | Done ([ADR-0059](adr/0059-m19-working-state-as-built.md)) | 2.0 |
 | M20 Seeing and searching | Done ([ADR-0060](adr/0060-m20-seeing-and-searching-as-built.md)) | 2.0 |
 | M21 Isolation | Done ([ADR-0061](adr/0061-m21-isolation-as-built.md)) — the sandbox confines writes and the network, **not reads**; see ADR-0061 §2 | 2.0 |
-| M22 Inspection, 2.0 release | Code done ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)) — **the 2.0 release is not started**, `edgar.testing.contract` [PRV-14] dropped to v3 for budget, and the two human "Done when" criteria are open | 2.0 |
+| M22 Inspection, 2.0 release | Code done ([ADR-0062](adr/0062-m22-inspection-commands-as-built.md)) — released as **2.0.0** on 2026-09-24, `edgar.testing.contract` [PRV-14] dropped to v3 for budget, and the two human "Done when" criteria are open | 2.0 |
 | M12 Learning foundations | Done 2026-09-17 ([ADR-0063](adr/0063-m12-learning-foundations-as-built.md)) | 3.0 |
 | M13 Controller | Done 2026-09-18 ([ADR-0064](adr/0064-m13-controller-as-built.md)) | 3.0 |
 | M14 Skill synthesis | Done 2026-09-19 ([ADR-0065](adr/0065-m14-skill-synthesis-as-built.md)) | 3.0 |
-| M15 Escalation, route suggest | Done 2026-09-23 ([ADR-0066](adr/0066-m15-escalation-as-built.md)); ROUTE-11, ROUTE-12 and OQ-8's adapter deferred, priced out at 104 LOC remaining | 3.0 |
+| M15 Escalation, route suggest | Done 2026-09-23 ([ADR-0066](adr/0066-m15-escalation-as-built.md)); ROUTE-11, ROUTE-12 and OQ-8's adapter deferred, priced out at 104 LOC remaining; released as **3.0.0** on 2026-09-24 | 3.0 |
 | M17, M16 Broker, scheduling | Planned | 4.0 |
 
 Milestones reference PRD requirement IDs; PRD §5.1 maps every ID to its tier. A

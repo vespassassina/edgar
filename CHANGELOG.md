@@ -6,7 +6,12 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
-## Unreleased
+## 3.0.0 — 2026-09-24
+
+v3, learning: facts from what you type and from what breaks, the controller
+(off until you turn it on), skill synthesis (asks first by default) and
+escalation. All of it is removable. ROUTE-11, ROUTE-12 and OQ-8's adapter are
+deferred. 11,064 of 12,000 lines of code.
 
 ### Added
 - **A weak model that fails gets help from a stronger one, visibly (v3, M15).**
@@ -103,6 +108,29 @@ extension formats freeze.
 - All of it is removable. `edgar.learning` is v3: nothing in Core, v1 or v2
   imports it, it attaches by name through the event bus, and CI deletes the
   package and runs the suite without it [NFR-12].
+
+### Docs
+- **[Skill synthesis](docs/tour/synthesis.html)**, a new tour page: five stops on
+  when edgar decides a run is worth a skill, what the writer is allowed to see,
+  the one function that creates a skill file, who says yes, and how a skill gets
+  better from being watched. The M14 stop on the index links to it.
+- Every tour stop rewritten for clarity: dense paragraphs are now bullet lists
+  where they were really a list of facts or rules, small pseudocode boxes and
+  per-stop diagrams replace one big diagram per page, and vocabulary is
+  simpler throughout. No change to `src/`.
+- Removed the "Start the clock" self-timer widget from `index.html` and the
+  `.check` "Before you go" comprehension-question boxes at the end of every
+  tour page, with their now-dead CSS and JS. No change to `src/`.
+
+## 2.0.0 — 2026-09-24
+
+v2, the daily driver, whole: a tour page for every v1 feature and the map,
+`@path`, plan mode and `todo`, images, web search and git as extensions,
+worktrees and sandboxes, and the inspection commands. `edgar.testing.contract`
+moved to v3. M22's two human "done when" criteria are still open. 9,306 of
+9,500 lines of code.
+
+### Added
 - **`edgar doctor` finished, and it no longer reaches the network unasked.** It
   now also reports whether this project is trusted, runs `PRAGMA integrity_check`
   on the project and user databases, says whether each stdio MCP server's command
@@ -230,10 +258,6 @@ extension formats freeze.
   [NFR-6].
 
 ### Docs
-- **[Skill synthesis](docs/tour/synthesis.html)**, a new tour page: five stops on
-  when edgar decides a run is worth a skill, what the writer is allowed to see,
-  the one function that creates a skill file, who says yes, and how a skill gets
-  better from being watched. The M14 stop on the index links to it.
 - The tour covers all of v1 and now has a map. Four new pages —
   [memory](docs/tour/memory.html), [MCP and signing in](docs/tour/mcp.html),
   [subagents](docs/tour/agents.html) and [extensions](docs/tour/extensions.html)
@@ -246,13 +270,6 @@ extension formats freeze.
   stop anywhere now fails the test suite (M18,
   [ADR-0058](docs/adr/0058-m18-the-tour-pages-and-the-map-as-built.md)). No
   change to `src/`.
-- Every tour stop rewritten for clarity: dense paragraphs are now bullet lists
-  where they were really a list of facts or rules, small pseudocode boxes and
-  per-stop diagrams replace one big diagram per page, and vocabulary is
-  simpler throughout. No change to `src/`.
-- Removed the "Start the clock" self-timer widget from `index.html` and the
-  `.check` "Before you go" comprehension-question boxes at the end of every
-  tour page, with their now-dead CSS and JS. No change to `src/`.
 
 ## 1.0.0 — 2026-09-16
 
