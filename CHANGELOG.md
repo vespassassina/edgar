@@ -9,7 +9,7 @@ extension formats freeze.
 ## 4.0.0 — 2026-09-24
 
 v4, unattended: the capability broker and scheduling. Runs unattended under
-a signed scope; removable. 12,188 of 13,000 lines of code.
+a signed scope; removable. 12,191 of 13,000 lines of code.
 
 ### Added
 - **`edgar schedule` runs unattended, on `schedules.toml` entries or ones the

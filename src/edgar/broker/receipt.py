@@ -1,4 +1,4 @@
-# 1. The key: 32 random bytes at ~/.edgar/receipt.key, made once, 0600, never
+# 1. The key: 32 random bytes at ~/.edgar/receipt.key, made once, 0600 from its first byte, never
 #    read by anything the model can reach -- `permissions.matcher.CREDENTIALS`
 #    lists it so the hard layer refuses it outright [ADR-0039].
 # 2. Each line is {"prev", "kind", "data", "hmac"}. `prev` is the SHA-256 of
@@ -16,6 +16,7 @@ from __future__ import annotations
 import hashlib
 import hmac as hmac_lib
 import json
+import os
 import secrets
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -37,8 +38,11 @@ def load_or_create_key(home: Path) -> bytes:
         return path.read_bytes()
     path.parent.mkdir(parents=True, exist_ok=True)
     key = secrets.token_bytes(32)
-    path.write_bytes(key)
-    path.chmod(0o600)
+    # Created 0600 in one call, never written wider and narrowed after. On
+    # Windows the mode is ignored and the user profile's ACL guards the file.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as f:
+        f.write(key)
     return key
 
 

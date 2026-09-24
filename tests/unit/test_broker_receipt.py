@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
+
+import pytest
 
 from edgar.broker.receipt import Receipts, append, key_path, load_or_create_key, verify
 from edgar.broker.ticket import Ticket
@@ -22,7 +25,21 @@ def test_load_or_create_key_makes_one_32_byte_key_readable_by_the_user_only(
     assert len(key) == 32
     path = key_path(tmp_path)
     assert path.exists()
-    assert oct(path.stat().st_mode)[-3:] == "600"
+    if os.name == "posix":  # Windows has no mode bits; the profile's ACL guards ~ there
+        assert oct(path.stat().st_mode)[-3:] == "600"
+
+
+def test_the_key_is_private_from_its_first_byte_not_chmod_ed_after(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Write-then-chmod leaves the key readable by others for a moment.
+    def no_chmod(self: Path, mode: int) -> None:
+        raise AssertionError("the key was created wider, then narrowed")
+
+    monkeypatch.setattr(Path, "chmod", no_chmod)
+    load_or_create_key(tmp_path)
+    if os.name == "posix":
+        assert oct(key_path(tmp_path).stat().st_mode)[-3:] == "600"
 
 
 def test_load_or_create_key_returns_the_same_key_on_a_second_call(tmp_path: Path) -> None:

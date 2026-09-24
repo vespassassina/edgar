@@ -148,7 +148,8 @@ flowchart TD
   checks both, in order, and stops at the first <code>Break</code>.</p>
   <ul class="points">
     <li>The key lives at <code>~/.edgar/receipt.key</code>, 32 random bytes
-    made once, mode 0600 — a hard-layer credential path the model's own
+    made once, mode 0600 from the first byte (on Windows, which has no modes,
+    the user profile's own permissions guard it) — a hard-layer credential path the model's own
     tools can never read, the same protection <code>permissions.matcher</code>
     already gives real credentials.</li>
     <li><code>Receipts</code> is a bus subscriber, the same shape as

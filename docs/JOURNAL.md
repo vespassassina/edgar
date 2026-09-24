@@ -38,8 +38,17 @@ version from the code it names:
 `main`'s changelog carries all three sections; each entry sits under the
 release that first shipped it.
 
-Pending: push the tags and publish the GitHub releases, in order 2.0, 3.0, 4.0
-(the maintainer's go). Everything still open in the entry below.
+Published after the maintainer's go. Before publishing 4.0, CI turned out to
+have been red on Windows since the M17 merge: `test_broker_receipt.py` asserted
+mode 0600 on the receipt key, and Windows has no mode bits. The code also wrote
+the key and chmod-ed it after, so on POSIX it was briefly readable by others.
+Now it is created 0600 in one `os.open`; the mode is asserted on POSIX only,
+and a new test fails if the key is ever narrowed after creation. On Windows
+the user profile's ACL is the guard, as for every other file under `~`. The
+`v4.0.0` tag was pushed before this was found and moved to the fixed commit
+before its release was published. 12,191 of 13,000 lines of code.
+
+Pending: nothing for the releases. Everything still open in the entry below.
 
 ## 2026-09-24 — v5 backlog, under discussion
 

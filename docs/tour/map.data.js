@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12088,
+    "loc": 12090,
     "status": "built",
     "children": [
       {
@@ -1593,14 +1593,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M17 then M16",
         "summary": "Runs while you are away. Removable.",
-        "loc": 961,
+        "loc": 963,
         "status": "built",
         "children": [
           {
             "id": "v4/broker",
             "name": "broker/",
             "kind": "package",
-            "loc": 341,
+            "loc": 343,
             "status": "built",
             "children": [
               {
@@ -1669,8 +1669,8 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v4",
                 "package": "broker",
-                "loc": 78,
-                "summary": "1. The key: 32 random bytes at ~/.edgar/receipt.key, made once, 0600, never",
+                "loc": 80,
+                "summary": "1. The key: 32 random bytes at ~/.edgar/receipt.key, made once, 0600 from its first byte, never",
                 "stop": "broker.html#b3",
                 "status": "built",
                 "port": false
