@@ -5,6 +5,48 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-24 — Olivia: the v5 fork named and interviewed
+
+Asked: "we can go for V5, name is sound. interview me for the open points."
+Ran four rounds of questions covering the fork's open design points; every
+one is now decided and written down.
+
+**Decided, in [ADR-0068](adr/0068-olivia-design-answers.md); ADR-0067 moves
+to Accepted alongside it:**
+
+- Name: **Olivia**. `olivia-agent` on PyPI, `olivia` command, `olivia-v*` tags.
+- Inputs arrive through an inbox the scheduler's tick drains, never a
+  listener.
+- The trigger strategy has five outcomes, not four: BUFFER, QUEUE, STEER,
+  REFUSE, and a new RUN_NOW that jumps the queue under its own policy rule,
+  granted to nothing by default.
+- Home routines may be learned and acted on fully, including presence —
+  confirmed twice, after a challenge, because it is the largest single
+  amendment to edgar's Never list this fork makes. The governor still denies
+  every physical actuator by default regardless of what is learned.
+- The governor is both a local sealed process and a remote service, one
+  protocol, pluggable; its policy language is Cedar.
+- Jev splits into two independent Decider interfaces, trigger and strategy;
+  a user may enable either, both, or neither.
+- Memory: embedded by default, server-backed stores (Redis, Postgres/
+  pgvector) allowed as plugins.
+- The self-learning strategy is fully pluggable — sources and destinations
+  both, bounded by the governor rather than by code. This supersedes
+  ADR-0067's original "never what it reads or where it writes."
+- Observability ships with both a JSONL event tap and an OpenTelemetry
+  exporter.
+- The line lives on a branch named `olivia` in this repository (created
+  today, off `main`, per ADR-0067 item 1); `main` merges into it, never the
+  reverse. Budget: 20,000 lines of code, the removable-package rule kept.
+- First milestone: the governor and fail-closed autonomy, before anything
+  else on the line.
+
+**Still open, per ADR-0067's own closing requirement:** a v5 tier ADR
+(milestone breakdown against the 20,000-line budget), a PRD with acceptance
+criteria, and a plan — none written yet. No Olivia code before they exist.
+`AGENTS.md` on the `olivia` branch still needs the maintainer's own hand-edit
+(ADR-0007, ADR-0008).
+
 ## 2026-09-24 — Housekeeping after the v5 merge
 
 Asked: merge the v5 docs branch, push, delete it, then "next". Merged as

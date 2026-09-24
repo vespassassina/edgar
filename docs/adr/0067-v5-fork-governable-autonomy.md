@@ -1,6 +1,8 @@
 # ADR-0067 — Fork v5 into a governable, fully autonomous agent
 
-**Status:** Proposed · 2026-09-24
+**Status:** Accepted · 2026-09-24 · Named Olivia and its open questions
+settled in [ADR-0068](0068-olivia-design-answers.md), which this ADR now
+matches throughout.
 
 ## Context
 
@@ -51,12 +53,13 @@ permission path.
 
 **C.** Chosen by the maintainer on 2026-09-24.
 
-1. **The line.** A long-lived branch, `v5`, cut from `main` once v4.0 is
-   released. `main` keeps edgar's rules. Merges go `main` → `v5`, never back.
-2. **The name.** The v5 line ships under a new name, to be chosen. It has its
-   own PyPI distribution and a tag prefix of its own (`<name>-v*`), so its
-   versions cannot collide with edgar's `v*` tags or trigger edgar's release
-   workflow.
+1. **The line.** A long-lived branch, `olivia`, cut from `main` once v4.0 is
+   released. `main` keeps edgar's rules. Merges go `main` → `olivia`, never
+   back; Olivia-only docs live under `docs/olivia/`.
+2. **The name.** The v5 line ships as **Olivia**: PyPI distribution
+   `olivia-agent`, Python package `olivia`, command `olivia`, tag prefix
+   `olivia-v*`, so its versions cannot collide with edgar's `v*` tags or
+   trigger edgar's release workflow.
 3. **Autonomy.** No human prompt at run time. A human writes policy up front;
    an external governor decides every action the policy covers; anything
    uncovered is denied and recorded. Fail closed: a governor that is
@@ -68,16 +71,23 @@ permission path.
      the organisation, running under an identity the agent cannot act as.
    - **One loop (ADR-0006).** Orchestration and reasoning strategies may be
      plugged in, including a System 1 decider.
-   - **The line-of-code budget.** A new budget for the v5 line, set in the tier
-     ADR that opens it.
+   - **The line-of-code budget.** 20,000 for the Olivia line (ADR-0068 item
+     12), the removable-package rule kept: Core, v1 and v2 stay at ≤ 9,500
+     outside them.
+   - **User modelling, on the home-automation use case only (ADR-0068 item
+     4).** A learned household routine may be applied automatically, not
+     only proposed, and presence may be stored and used. Gated by the
+     governor, which denies every physical actuator by default regardless of
+     what the routine learner proposes.
 5. **Rules kept on the v5 line, because they make autonomy governable:**
    - **No hidden behaviour.** A governor can only rule on what it can see.
      Every decider, strategy and learner call is an event.
    - **Machines tighten, never widen.** "Humans widen" becomes "policy written
      by a human widens". No model, strategy, decider, learner or plugin may
      widen it.
-   - **The learning boundary (ADR-0017, ADR-0065).** A swappable self-learning
-     strategy may change how it learns, never what it reads or where it writes.
+   - **The learning boundary (ADR-0017, ADR-0065), amended by ADR-0068 item 9.**
+     A swappable self-learning strategy may declare its own sources and
+     destinations, bounded by the governor's policy rather than by code.
    - **Nothing on the authorisation path is a model.** A System 1 decider
      advises routing, strategy choice and learning triggers; it never feeds
      `decide()`, a ticket or the governor.
@@ -97,25 +107,30 @@ permission path.
   run. If a strategy, plugin or learner can grant itself a tool call the
   governor did not see, the design is broken.
 - Load-bearing: fail closed. A governor timeout that allows is a hole.
-- The in-process broker (ADR-0039) becomes one adapter on the v5 line, and the
-  external governor is another. The `capability-broker` prototype, whose
+- The in-process broker (ADR-0039) becomes one adapter on the Olivia line,
+  behind the same governor protocol as the external, and possibly remote,
+  governor (ADR-0068 item 5). The `capability-broker` prototype, whose
   DESIGN.md already names Ed25519 and distribution as next steps, is the
-  natural home of the governor.
-- Merges from `main` into `v5` will conflict on `AGENTS.md`, `docs/PRD.md`,
-  `docs/ROADMAP.md` and `tests/support/budget.py`. The v5 line's versions of
-  those files win.
+  natural home of the local adapter; its policy is written in Cedar
+  (ADR-0068 item 8).
+- Merges from `main` into `olivia` will conflict on `AGENTS.md`,
+  `docs/PRD.md`, `docs/ROADMAP.md` and `tests/support/budget.py`. The
+  Olivia line's versions of those files win.
 - Sealing edgar governs edgar only. A person with a shell can run other tools;
   real enforcement in a regulated environment also needs OS and network
-  controls. The v5 line's job is to not be the gap, and to leave a record
+  controls. The Olivia line's job is to not be the gap, and to leave a record
   someone else can verify.
-- Open: how inputs arrive. A listener (webhook, socket) makes the agent itself
-  a service, which item 4 does not yet allow; only the governor is allowed. The
-  alternative needs no amendment: an inbox directory drained by the scheduler's
-  tick (ADR-0039's v4 machinery). Each trigger decision is an event and a
-  receipt line; a decision the strategy cannot make with confidence falls back
-  to a fixed rule, and the default rule refuses.
+- Resolved (was open): inputs arrive through an inbox directory drained by
+  the scheduler's tick (ADR-0039's v4 machinery), never a listener — so
+  nothing beyond item 4 needs amending for input to arrive. The trigger
+  strategy has five outcomes, not four: BUFFER, QUEUE, STEER, REFUSE, and
+  RUN_NOW, which jumps the queue under its own policy rule (ADR-0068 item 3).
+  Each trigger decision is an event and a receipt line; a decision the
+  strategy cannot make with confidence falls back to a fixed rule, and the
+  default rule refuses.
 - The enterprise use cases the design is tested against, and what they change
-  in it, are in [`docs/v5/use-cases.md`](../v5/use-cases.md).
+  in it, are in [`docs/v5/use-cases.md`](../v5/use-cases.md) (path kept;
+  Olivia-only docs going forward live under `docs/olivia/`).
 - Before any v5 code: a tier ADR (budget, milestone order), a v5 PRD with
   acceptance criteria, and a plan, per the maintainer's design, spec, plan,
   test order.
@@ -124,7 +139,7 @@ permission path.
 
 - **A, amend `main`.** Revisit only if edgar 4.x stops being maintained as the
   readable harness.
-- **B, a new repository.** Revisit if merges from `main` into `v5` cost more
+- **B, a new repository.** Revisit if merges from `main` into `olivia` cost more
   than porting fixes by hand, or once the two rulesets have drifted so far that
   shared history no longer helps.
 - **D, a dependent package.** Revisit if edgar's core grows ports for strategies
