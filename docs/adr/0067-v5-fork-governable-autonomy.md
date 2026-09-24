@@ -114,6 +114,8 @@ permission path.
   tick (ADR-0039's v4 machinery). Each trigger decision is an event and a
   receipt line; a decision the strategy cannot make with confidence falls back
   to a fixed rule, and the default rule refuses.
+- The enterprise use cases the design is tested against, and what they change
+  in it, are in [`docs/v5/use-cases.md`](../v5/use-cases.md).
 - Before any v5 code: a tier ADR (budget, milestone order), a v5 PRD with
   acceptance criteria, and a plan, per the maintainer's design, spec, plan,
   test order.

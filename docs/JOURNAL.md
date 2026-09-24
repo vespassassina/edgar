@@ -39,6 +39,23 @@ service), one loop (strategies), the budget. Kept: no hidden behaviour,
 machines never widen, the learning boundary, no model on the authorisation
 path, done means verified.
 
+Asked for a doc of enterprise use cases for a fully autonomous agent, from
+an Algo Insights article the maintainer pasted. Wrote `docs/v5/use-cases.md`:
+the article's five workflows (lead qualification, support resolution, voice
+reception, document processing, onboarding) mapped onto the v5 parts, in
+our own words, its statistics left as its unchecked claims. What it changed:
+hand-off is an action (a draft a person approves elsewhere), not a prompt;
+the governor needs caveats on the subject, which ADR-0039's five do not
+have; voice needs a listener and is out of scope for the first milestone;
+document processing is the recommended first workload. Then asked to add
+home use: Home Assistant and Hue, Siemens, SmartThings and HomeKit, acting on
+events by writing automations, scripts or one-off actions. Added: Home
+Assistant as the one hub; reflexes in automations, judgement in the agent;
+an automation the agent writes is standing authority, so it is written
+disabled in a machine-owned place and a person switches it on; learning a
+household's routines is user modelling, on the Never list and not amended
+by ADR-0067 (open).
+
 Still pending: accept ADR-0067; choose the name; a v5 tier ADR (budget,
 milestone order), a v5 PRD and a plan before any code; the maintainer's
 hand edit of `AGENTS.md` on the v5 line. `docs/adr/README.md`'s index skips
