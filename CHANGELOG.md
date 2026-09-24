@@ -6,7 +6,13 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
-## Unreleased
+## 2.0.0 — 2026-09-24
+
+v2, the daily driver, whole: a tour page for every v1 feature and the map,
+`@path`, plan mode and `todo`, images, web search and git as extensions,
+worktrees and sandboxes, and the inspection commands. `edgar.testing.contract`
+moved to v3. M22's two human "done when" criteria are still open. 9,306 of
+9,500 lines of code.
 
 ### Added
 - **`edgar doctor` finished, and it no longer reaches the network unasked.** It
