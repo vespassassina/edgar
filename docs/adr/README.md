@@ -78,7 +78,8 @@ that did not need an ADR.
 | [0064](0064-m13-controller-as-built.md) | M13 as built: the controller | Accepted · supersedes ADR-0008 on two points |
 | [0065](0065-m14-skill-synthesis-as-built.md) | M14 as built: skill synthesis | Accepted · resolves OQ-6 |
 | [0066](0066-m15-escalation-as-built.md) | M15 as built: escalation | Accepted · follows ADR-0013 |
-| [0067](0067-v5-fork-governable-autonomy.md) | v5 forks onto a long-lived branch under a new name: a governable, fully autonomous agent, with amended rules on that line only; `main` stays edgar 4.x | Proposed |
+| [0067](0067-v5-fork-governable-autonomy.md) | v5 forks onto a long-lived `olivia` branch: a governable, fully autonomous agent, with amended rules on that line only; `main` stays edgar 4.x | Accepted |
+| [0068](0068-olivia-design-answers.md) | Olivia's design interview: name, inbox input, five trigger outcomes, a pluggable governor and Cedar policy, Jev split into two Decider interfaces, pluggable memory and self-learning, the home-routine learning amendment, budget and branch topology | Accepted · amends ADR-0067 |
 
 ## Writing a new ADR
 

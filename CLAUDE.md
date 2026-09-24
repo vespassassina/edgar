@@ -23,68 +23,35 @@ afternoon. Any model. No hidden calls. Nothing is done until it's verified."**
 
 ## Current state
 
-M0 to M6 are done (https://github.com/vespassassina/edgar): Core is built at
-5,000 lines of code. **0.1.0 is released**: cut from `main` on 2026-09-14 with M0
-to M8 in it, published to PyPI by the `v0.1.0` GitHub release, so
-`uvx edgar-harness` now runs it. **v1.0 is tagged and released** (M7 to M11,
-ADR-0056) at exactly 8,000 of 8,000 lines of code, on PyPI, `ghcr.io` and as
-GitHub release binaries for all three platforms. **v2, the daily driver, is
-complete in code** (M18 to M22, ADR-0057; only the 2.0 release itself and its
-two human criteria are left), and **v3, learning, is underway**: M12 learning
-foundations (ADR-0063), M13 the controller (ADR-0064) and M14 skill synthesis
-(ADR-0065) are done, **M15 escalation and route suggest is next**. M14 had left
-only 5 lines of code of headroom outside the removable packages; on 2026-09-23
-that was cleared by moving narrative docstrings in six non-removable files to
-`#` comments (free under ADR-0040), the same treatment `core/loop.py` already
-had — no behaviour changed. `just loc` now reads 10,952 of the v3 budget of
-12,000, and **9,374 of 9,500 outside the removable packages**, which is the
-number that actually constrains M15: read `docs/HANDOFF.md` before anything
-else. M7 is done: facts,
-`recall` and session search (`memory/`, ADR-0045); forks, `/save`, `--load`,
-`/history`, the daily cap and `edgar cost` (ADR-0046). M8 is done: MCP servers over stdio and
-Streamable HTTP, started only when a tool is called, deferred schemas through
-`tool_search`, `edgar mcp list|test` and `/browser` (`tools/mcp/`, ADR-0047); and
-signing in (`auth/`, ADR-0048): `edgar login PROVIDER` and `edgar mcp login NAME`,
-OAuth 2.1 with PKCE on a loopback port, tokens in the OS keyring through the
-optional `keyring` extra, and a turn that never opens a browser. M9 is **done**
-(ADR-0054): subagents (`agents/`, the `task` tool re-entering the loop with a fresh
-session, a narrowed policy and an inherited budget), consecutive `task` calls
-fanning out through `tools/execute.py`'s `execute_many()` [TOOL-12], declarative
-routing rules and sideways fallback (`providers/fallback.py`), the multi-row
-status bar for concurrent subagents [SUB-9], an example agent
-(`examples/agents/code-reviewer.md`), and a model with no tool support refused
-where it is chosen rather than mid-turn [ROUTE-6]. `edgar route explain` and
-`edgar agents list|validate` are cut from 1.0 (ADR-0053), not planned work left
-undone. The
-budget test measures v1, 7,374 of 8,000 after closing M9 — 626 lines of code for
-all of M10 and all of M11, so read [ADR-0050](docs/adr/0050-trim-should-items-from-v1.md)
-before planning anything, and then
-[ADR-0053](docs/adr/0053-what-1-0-actually-ships.md), which is that second trim:
-plan mode and the `todo` tool, `edgar route explain`, `edgar agents list|validate`,
-`ext validate` and `ext add`, the `edgar.testing.contract` kit, `config show
---resolved`, `edgar context show` and most of `edgar doctor` are **not in 1.0**.
-Do not build them; the extension *formats* still freeze, which is what 1.0 is.
-ADR-0037 and ADR-0038 had moved
-plan mode and `todo`, `/save`, `/history`, `edgar login`, `edgar cost`,
-`edgar context show` and the daily cap to v1 so Core fits in 5,000 lines; ADR-0053
-has since moved plan mode, `todo` and `context show` on to v2. `edgar` opens an
-interactive REPL (`cli/repl.py`: a `Shell` class holding the logic, prompt_toolkit
-for the terminal) and `edgar -p` runs one turn, with `--json` or `--events`, against
-OpenAI, Azure, OpenRouter, Ollama, Anthropic or any `[providers.NAME]` server, with a key
-from the environment or a token from `api_key_command` (keyless cloud sign-in, ADR-0044).
-Built so far: the message types and pairing invariant (`core/units.py`), the event
-bus, the loop with cancellation (`core/cancel.py`) and pause, `/btw`
-(`core/aside.py`), sessions recorded as JSONL and replayed on `--resume`
-(`storage/transcript.py`), staged compaction as pure functions over the view
-(`context/compact.py`), cost caps, eight built-in tools plus command and HTTP tools, the tool
-pipeline with spill, the permission engine (`permissions/`: pure `decide()`, the
-guard, grants, trust), the verify gate (`core/verify.py`), skills (`skills/discovery.py` and the
-`skill` tool, ADR-0041), the prompt file with profiles, memory (`memory/store.py`: facts, undo, FTS5 recall),
-layered config with provenance, and the model picker. Provider decisions that
-differ from the Blueprint's first sketch are in ADR-0031; the REPL's in ADR-0035;
-context and sessions' in ADR-0038. Releases go out through trusted
-publishing when a `v*` GitHub release is published; bump the version in both
-`pyproject.toml` and `src/edgar/__init__.py`.
+All five tiers are built and released (https://github.com/vespassassina/edgar):
+Core and v1 as 0.1.0 and 1.0.0, then on 2026-09-24 **2.0.0** (v2, the daily
+driver, M18–M22), **3.0.0** (v3, learning, M12–M15) and **4.0.0** (v4,
+unattended: M17 the capability broker, M16 scheduling). Each is on PyPI
+(`uvx edgar-harness`), `ghcr.io` and as GitHub release binaries for all three
+platforms. 2.0 and 3.0 were cut on `release/2.0` and `release/3.0`, where their
+tier was whole; `main` carries 4.x. The "as built" ADRs are 0054–0066; the
+roadmap's status table has what each milestone deferred.
+
+The budget is nearly spent where it matters: `just loc` reads 12,191 of the
+v4 budget of 13,000, but **9,497 of 9,500 outside the removable packages**.
+Anything that touches Core, v1 or v2 code must free lines first (narration to
+`#` comments is free under ADR-0040) or move to a later tier. Read the latest
+entry of `docs/JOURNAL.md` and its pending list before starting; there is no
+`docs/HANDOFF.md` unless a session stopped mid-task.
+
+**A fifth line, Olivia, is accepted but not started**: ADR-0067 forks a
+governable, fully autonomous agent onto a long-lived `olivia` branch (cut from
+`main` on 2026-09-24), with amended rules on that line only; ADR-0068 records
+the design interview (governor, Jev's two Decider interfaces, memory and
+observability plugins, the home-routine learning amendment, a 20,000 LOC
+budget) and `docs/v5/use-cases.md` has the workloads. No Olivia code until its
+own tier ADR, PRD and plan exist.
+
+Releases go out through trusted publishing when a `v*` GitHub release is
+published: bump the version in `pyproject.toml` and `src/edgar/__init__.py`,
+run `uv lock`, move CHANGELOG's "Unreleased" under the version, and check CI on
+`main` is green on all three platforms first (it was red on Windows for a day
+unnoticed before 4.0).
 
 Tests drive the loop through `tests/support/harness.py` (`scripted()`, `runtime()`,
 `Recorder`, `SlowTool`); assert on `recorder.names` for event sequences. REPL tests

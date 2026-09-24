@@ -1,7 +1,9 @@
 # v5 use cases: what a governable autonomous agent is for
 
-Working notes for [ADR-0067](../adr/0067-v5-fork-governable-autonomy.md). Not a
-spec. They test the v5 design against the work an enterprise actually pays an
+Working notes for [ADR-0067](../adr/0067-v5-fork-governable-autonomy.md), the
+fork now named **Olivia** ([ADR-0068](../adr/0068-olivia-design-answers.md)).
+Kept at this path; new Olivia-only docs go under `docs/olivia/`. Not a spec.
+They test the design against the work an enterprise actually pays an
 autonomous agent to do, and against the same agent running a home.
 
 The five workflows come from Algo Insights, "The 5 Most Valuable AI Automations

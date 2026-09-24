@@ -12,16 +12,21 @@ git diff | edgar -p "review this" --mode read-only
 edgar -p "bump httpx and fix what breaks" --mode auto --verify "just check"
 ```
 
-> **Status:** **1.0 is released and on PyPI.** Core is built (M0 to M6): the REPL
-> and one-shot runs against real models, with file, shell and web tools behind the
-> permission engine, the verify gate, your own CLI and HTTP tools, skills, sessions
-> you can resume (`edgar --continue`), compaction and cost caps. v1 is built
-> (M7 to M11) at exactly 8,000 of 8,000 lines of code: memory, session forks, MCP
-> servers and signing in, subagents, routing and fallback, extensions, hooks,
-> `edgar.run()`, `init` and `doctor`. The tour now has a page per v1 feature and a
-> [map of the harness](https://vespassassina.github.io/edgar/map.html). Next is v2, the daily driver
-> ([ADR-0057](docs/adr/0057-daily-driver-before-learning.md)). The documents in
-> `docs/` are the spec being built against.
+> **Status:** **4.0 is released and on PyPI.** Core (the REPL, tools behind the
+> permission engine, the verify gate, skills, resumable sessions) and v1 (memory,
+> MCP, subagents, routing and fallback, extensions and hooks) shipped as 0.1.0 and
+> 1.0.0. On 2026-09-24, three more releases: **2.0**, the daily driver — working
+> state, `@path`, plan mode, images, web search, git as an extension, worktrees
+> and sandboxes; **3.0**, learning — corrections and verified runs become
+> proposed skills, with a controller and escalation; **4.0**, unattended — a
+> sealed capability broker and `edgar schedule` for runs with no one watching.
+> Every tier is on PyPI (`uvx edgar-harness`), `ghcr.io` and as release binaries
+> for all three platforms. The tour has a page per feature and a
+> [map of the harness](https://vespassassina.github.io/edgar/map.html). A fifth
+> line, **Olivia** — governable, fully autonomous — is accepted in design
+> ([ADR-0067](docs/adr/0067-v5-fork-governable-autonomy.md),
+> [ADR-0068](docs/adr/0068-olivia-design-answers.md)) on its own branch, not yet
+> built. The documents in `docs/` are the spec being built against.
 
 ## Why edgar
 
@@ -212,15 +217,14 @@ model calls, and fallback kept apart from it because "not capable enough" and
 "not reachable" want different responses. Hooks that can veto a tool call, and
 extension folders that bundle any of the above and share it by copying.
 
-**Coming in 2.0, the daily driver (M18 to M22).** The tour pages per v1 feature
-and the [map of the harness](https://vespassassina.github.io/edgar/map.html) are
-built, and were M18. M19 added `@path` attachments, plan mode and a `todo` list
-that survive compaction, and three commands that show you what edgar is working
-from: `edgar context show`, `edgar sessions compact ID` and
-`edgar config show --resolved`. Still to come: images in the conversation. Web
-search and git as extensions you can read. A git worktree per subagent that
-writes, and a sandboxed shell. The rest of the inspection commands:
-`route explain`, `agents list`, the rest of `doctor`.
+**The daily driver (v2).** A tour page per feature and a
+[map of the harness](https://vespassassina.github.io/edgar/map.html). `@path`
+attachments, plan mode and a `todo` list that survive compaction, and commands
+that show you what edgar is working from: `edgar context show`,
+`edgar sessions compact ID`, `edgar config show --resolved`. Images in the
+conversation, web search and git as extensions you can read, a git worktree
+per subagent that writes, a sandboxed shell, and the rest of the inspection
+commands: `route explain`, `agents list`, the rest of `doctor`.
 
 **Long sessions that stay valid.** Context is compressed in stages, cheapest
 first: big outputs spill to disk, old tool results become stubs, old turns fold
