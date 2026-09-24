@@ -56,7 +56,13 @@ disabled in a machine-owned place and a person switches it on; learning a
 household's routines is user modelling, on the Never list and not amended
 by ADR-0067 (open).
 
-Still pending: accept ADR-0067; choose the name; a v5 tier ADR (budget,
+Asked for a guide note that streaming data uses JSONL when needed. Added
+BLUEPRINT §3.4: what counts as streaming, the line shape, append only, one
+write per line, and what is not JSONL. Found while checking it:
+`storage/transcript.py`'s reader raises on a torn last line after a crash
+instead of skipping it.
+
+Still pending: accept ADR-0067; the torn-line reader; choose the name; a v5 tier ADR (budget,
 milestone order), a v5 PRD and a plan before any code; the maintainer's
 hand edit of `AGENTS.md` on the v5 line. `docs/adr/README.md`'s index skips
 ADR-0059 to ADR-0066.
