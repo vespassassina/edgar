@@ -70,6 +70,7 @@ that did not need an ADR.
 | [0056](0056-m11-as-built.md) | M11 as built: Cookbook, EXTENDING, DEPENDENCIES, examples in CI, the docs-coverage test, release automation | Accepted · completes M11 and 1.0; implements NFR-10 in part |
 | [0057](0057-daily-driver-before-learning.md) | The daily driver comes before learning: v2 (M18–M22) is the daily driver, v3 (M12–M15) learning, v4 (M17, M16) unattended; every milestone ends with its tour | Accepted · supersedes ADR-0015's tier contents and v2 budget; assigns ADR-0052 to M20 |
 | [0058](0058-m18-the-tour-pages-and-the-map-as-built.md) | M18 as built: a tour page per v1 feature, the Core stops that were missing, a test that fails on a source file with no stop, and a generated map of the harness (tree only, no flow arrows, no JS library) | Accepted · completes M18; implements ADR-0057's tour condition; adds nothing to `src/` |
+| [0067](0067-v5-fork-governable-autonomy.md) | v5 forks onto a long-lived branch under a new name: a governable, fully autonomous agent, with amended rules on that line only; `main` stays edgar 4.x | Proposed |
 
 ## Writing a new ADR
 

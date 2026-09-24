@@ -5,6 +5,40 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-24 — v5 backlog, under discussion
+
+Asked: discuss a v5 backlog. Nothing built. The backlog, as the maintainer
+wrote it:
+
+- Pluggable orchestration strategies (Jev, cheap, smart, simple), and
+  swappable reasoning strategies built from pluggable components.
+- Pluggable memory: SQLite, vector, hybrid, NoSQL, Redis.
+- Pluggable observability: tap the run, show it in the terminal or audit it.
+- Pluggable capability broker: a sealed, out-of-process broker.
+- A swappable self-learning strategy: how the agent learns from its own runs.
+
+Jev is TypeSafe AI's "System 1" model (early access 2026-09-15): it returns
+typed decisions with confidence scores in one pass, not generated text, so
+it does not fit the Provider port. "Sealed" means enforcing policy in
+regulated environments, which PRD §3 rules out today ("anyone needing an
+enterprise audit story"); reopening that is a positioning decision, not a
+feature. The maintainer's direction: v5 is a fork with amended rules, from
+v5 on only, aiming at a governable, fully autonomous agent; hence the
+plugins and the external governance.
+
+Decided by the maintainer, drafted as ADR-0067 (Proposed): a long-lived
+`v5` branch in this repository under a new name with its own tag prefix;
+no human prompt at run time, an external governor decides, fail closed;
+amended on that line only: audience (PRD §3), the Never list (a governor
+service), one loop (strategies), the budget. Kept: no hidden behaviour,
+machines never widen, the learning boundary, no model on the authorisation
+path, done means verified.
+
+Still pending: accept ADR-0067; choose the name; a v5 tier ADR (budget,
+milestone order), a v5 PRD and a plan before any code; the maintainer's
+hand edit of `AGENTS.md` on the v5 line. `docs/adr/README.md`'s index skips
+ADR-0059 to ADR-0066.
+
 ## 2026-09-23 — M16 closes: `schedule_self`'s guardrails, the delivery hook, v4.0
 
 Continued the "next" instruction after M17: M16 was the last milestone
