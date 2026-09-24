@@ -248,6 +248,9 @@ extension formats freeze.
   name of an environment variable, never a key [CFG-2, CFG-6].
 
 ### Fixed
+- **A session whose last line was cut short by a crash opens again.** Resume,
+  forks and `save` used to fail on the torn line; they now drop it and keep
+  everything before it. Damage anywhere else still stops with an error.
 - A `[[route]]` rule keyed on `mode`, such as one routing `read-only` turns to a
   cheaper model, could never match your main turn: the routing context it was
   checked against left every field but the role at its default. `mode` and

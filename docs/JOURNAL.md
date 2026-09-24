@@ -5,6 +5,28 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-24 — Housekeeping after the v5 merge
+
+Asked: merge the v5 docs branch, push, delete it, then "next". Merged as
+`7df68aa`, pushed, branch deleted. Then three items from the pending list that
+needed no decision:
+
+- **Torn last line.** `storage/transcript.py`'s `entries()` raised on a line a
+  crash cut short, so one bad write made a session unreadable. It now drops
+  whatever follows the last `\n` and keeps the rest; a bad line in the middle
+  still raises. Test first (`tests/unit/test_transcript_read.py`), no lines of
+  code added: 9,497 of 9,500 outside the removable packages. Tour stop 17 says
+  so. `memory/recall.py` already waited for a whole line.
+- **ADR index.** Rows for 0059–0066 added.
+- **ROADMAP.** M17 and M16 said "not merged, not pushed"; both are on `main`.
+
+Found: no release since 1.0.0. The package still says `1.0.0`; 2.0, 3.0 and
+4.0 were never cut, though the M16 merge commit is titled "v4.0 release".
+Releasing needs the maintainer (tag, GitHub release, PyPI).
+
+Pending: the 2.0–4.0 release decision (one 4.0 release, or three); everything
+still open in the entry below.
+
 ## 2026-09-24 — v5 backlog, under discussion
 
 Asked: discuss a v5 backlog. Nothing built. The backlog, as the maintainer

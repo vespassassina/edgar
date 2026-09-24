@@ -531,13 +531,17 @@ flowchart TD
 <article class="stop" id="s17" data-files="src/edgar/storage/transcript.py src/edgar/core/session.py src/edgar/core/cancel.py">
   <h4><span class="n">17</span>Sessions on disk</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/storage/transcript.py"><code>storage/transcript.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/session.py"><code>core/session.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/core/cancel.py"><code>core/cancel.py</code></a></p>
-  <p class="look">Look for: <code>Log</code> <code>replay</code> <code>Session</code> <code>seal</code> <code>chain</code></p>
+  <p class="look">Look for: <code>Log</code> <code>entries</code> <code>replay</code> <code>Session</code> <code>seal</code> <code>chain</code></p>
   <p>A session is recorded as JSONL: one line per record, appended, never rewritten
   and never edited in place. Undo, compaction and a cancel each just append a new
   record, and <code>replay</code> rebuilds the exact current view by reading the
   file from the top. Check that the append-only claim really holds everywhere,
   including for a cancel and for <code>/undo</code> — a place where it's tempting
   to reach back and change an old line instead.</p>
+  <p>Each line goes out in one write, newline included. So a crash can only tear
+  the last line, and <code>entries</code> drops whatever comes after the final
+  newline and keeps the rest. A bad line anywhere else still raises: that's
+  damage, not a crash.</p>
   <p>A fork (v1) keeps the same rule: it's a new file whose second line names its
   parent session and a turn number. <code>chain</code> reads the parent's lines up
   to that turn, then the fork's own lines, with a loop rather than recursion.
