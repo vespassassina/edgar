@@ -12,6 +12,9 @@ autonomously and that an organisation can still govern. The backlog behind it:
   decider such as TypeSafe's Jev (typed decisions with confidence scores, not
   generated text);
 - a swappable self-learning strategy;
+- an autonomous trigger strategy: each incoming input runs through a
+  strategy that decides to buffer and defer it, steer a running session with
+  it, queue it as a new run, or refuse it;
 - pluggable observability: tap the run, show it, audit it;
 - pluggable memory;
 - a sealed capability broker, out of process, enforcing policy in regulated
@@ -78,6 +81,12 @@ permission path.
    - **Nothing on the authorisation path is a model.** A System 1 decider
      advises routing, strategy choice and learning triggers; it never feeds
      `decide()`, a ticket or the governor.
+   - **An input is data, never authority.** The trigger strategy decides what
+     happens to an input; the run it starts or steers gets its authority from
+     policy and the governor, never from the input's text. A steer from an
+     outside input is marked as outside data, not typed text: it taints the
+     session (tighter defaults, PERM-11..13), lands only at the loop's safe
+     point (ADR-0028), and can never become an active fact (ADR-0017).
    - **Done means verified**, and tool failures return to the model.
 6. **`AGENTS.md` on the v5 line** is hand-edited by the maintainer. Agents
    propose the diff (ADR-0007, ADR-0008).
@@ -99,6 +108,12 @@ permission path.
   real enforcement in a regulated environment also needs OS and network
   controls. The v5 line's job is to not be the gap, and to leave a record
   someone else can verify.
+- Open: how inputs arrive. A listener (webhook, socket) makes the agent itself
+  a service, which item 4 does not yet allow; only the governor is allowed. The
+  alternative needs no amendment: an inbox directory drained by the scheduler's
+  tick (ADR-0039's v4 machinery). Each trigger decision is an event and a
+  receipt line; a decision the strategy cannot make with confidence falls back
+  to a fixed rule, and the default rule refuses.
 - Before any v5 code: a tier ADR (budget, milestone order), a v5 PRD with
   acceptance criteria, and a plan, per the maintainer's design, spec, plan,
   test order.

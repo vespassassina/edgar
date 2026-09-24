@@ -16,6 +16,11 @@ wrote it:
 - Pluggable observability: tap the run, show it in the terminal or audit it.
 - Pluggable capability broker: a sealed, out-of-process broker.
 - A swappable self-learning strategy: how the agent learns from its own runs.
+- An autonomous trigger strategy: run each input through a strategy that
+  decides to buffer and defer, steer, queue or refuse it. Open: whether
+  "run now" is a fifth outcome or the same as queue; whether inputs arrive
+  through a listener (the agent becomes a service) or an inbox directory
+  drained by the scheduler's tick.
 
 Jev is TypeSafe AI's "System 1" model (early access 2026-09-15): it returns
 typed decisions with confidence scores in one pass, not generated text, so
