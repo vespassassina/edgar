@@ -129,8 +129,8 @@ permission path.
   strategy cannot make with confidence falls back to a fixed rule, and the
   default rule refuses.
 - The enterprise use cases the design is tested against, and what they change
-  in it, are in [`docs/v5/use-cases.md`](../v5/use-cases.md) (path kept;
-  Olivia-only docs going forward live under `docs/olivia/`).
+  in it, are in [`docs/olivia/use-cases.md`](../olivia/use-cases.md) (moved
+  from `docs/v5/` when the `olivia` branch took its first commit, ADR-0068 §11).
 - Before any v5 code: a tier ADR (budget, milestone order), a v5 PRD with
   acceptance criteria, and a plan, per the maintainer's design, spec, plan,
   test order.

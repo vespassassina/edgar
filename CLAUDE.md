@@ -44,7 +44,7 @@ governable, fully autonomous agent onto a long-lived `olivia` branch (cut from
 `main` on 2026-09-24), with amended rules on that line only; ADR-0068 records
 the design interview (governor, Jev's two Decider interfaces, memory and
 observability plugins, the home-routine learning amendment, a 20,000 LOC
-budget) and `docs/v5/use-cases.md` has the workloads. No Olivia code until its
+budget) and `docs/olivia/use-cases.md` has the workloads. No Olivia code until its
 own tier ADR, PRD and plan exist.
 
 Releases go out through trusted publishing when a `v*` GitHub release is
