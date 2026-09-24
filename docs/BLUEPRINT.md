@@ -497,6 +497,23 @@ Storage per [ADR-0010](adr/0010-session-storage.md): transcript as JSONL
 in a teaching repo than storage purity. Compaction appends a record rather than
 rewriting (§8.3).
 
+### 3.4 Streaming data is JSONL
+
+When data arrives or is produced over time, and something may read it while it
+grows, it is JSONL. Otherwise it is not.
+
+- **Where:** session transcripts, `--events` output, the broker's receipt, run
+  logs, and anything like them later (an inbox of inputs, an event tap).
+- **Shape:** one JSON object per line, UTF-8, ended with `\n` (§15). Each line
+  names what it is (`type`, `event` or `kind`), so a reader never guesses.
+- **Append only.** A line is never edited or removed; a correction is a new line
+  (compaction does this, §8.3).
+- **One write per line.** A line goes out whole, never in pieces.
+- **Why:** `tail -f` watches it happen, `jq` and `grep` read it, and a crash
+  loses at most the line being written.
+- **Not JSONL:** config (TOML), documents read whole (Markdown, TOML, JSON),
+  indices and state that are queried (SQLite).
+
 ## 4. The turn loop
 
 The single most important file. Kept under 200 lines of code by pushing every concern into
