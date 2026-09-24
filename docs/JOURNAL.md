@@ -24,8 +24,22 @@ Found: no release since 1.0.0. The package still says `1.0.0`; 2.0, 3.0 and
 4.0 were never cut, though the M16 merge commit is titled "v4.0 release".
 Releasing needs the maintainer (tag, GitHub release, PyPI).
 
-Pending: the 2.0–4.0 release decision (one 4.0 release, or three); everything
-still open in the entry below.
+**Releases.** The maintainer chose three releases over one. Each is a release
+commit on its own branch, cut where the tier was whole, so PyPI builds each
+version from the code it names:
+
+- `release/2.0` off `6b1048d` (M22 and the routing fix), with the Seatbelt
+  path fix and the image-spill test fix cherry-picked so its build is green.
+  870 tests, 9,306 of 9,500 lines of code.
+- `release/3.0` off `f5bbc67` (M15; it reached `main` through the M17 merge).
+  1,105 tests, 11,064 of 12,000.
+- 4.0.0 on `main`. 1,281 tests, 12,188 of 13,000.
+
+`main`'s changelog carries all three sections; each entry sits under the
+release that first shipped it.
+
+Pending: push the tags and publish the GitHub releases, in order 2.0, 3.0, 4.0
+(the maintainer's go). Everything still open in the entry below.
 
 ## 2026-09-24 — v5 backlog, under discussion
 
