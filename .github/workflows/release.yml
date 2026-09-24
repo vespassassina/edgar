@@ -113,6 +113,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      # `publish` finishing does not mean PyPI's index lists the version yet:
+      # 3.0.0's image build ran minutes too early and found nothing. So:
+      # 1. try to fetch exactly this version, every 5 s, for up to 5 minutes;
+      # 2. go on as soon as it resolves, fail with the reason if it never does.
+      - name: wait until PyPI lists this version
+        run: |
+          for _ in $(seq 60); do
+            python3 -m pip download --no-deps --no-cache-dir -q -d "$(mktemp -d)" "edgar-harness==$VERSION" >/dev/null 2>&1 && exit 0
+            sleep 5
+          done
+          echo "edgar-harness==$VERSION is not on PyPI after 300 s" >&2
+          exit 1
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .

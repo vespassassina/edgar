@@ -32,8 +32,8 @@ M21, M22** (v2), then **M12, M13, M14, M15** (v3), then **M17, M16** (v4): the
 capability broker comes before scheduling, which carries the 4.0 release
 ([ADR-0039](adr/0039-capability-broker.md)). The day-by-day record is
 [`JOURNAL.md`](JOURNAL.md); user-visible changes are in
-[`CHANGELOG.md`](../CHANGELOG.md); the coder's starting point is
-[`HANDOFF.md`](HANDOFF.md).
+[`CHANGELOG.md`](../CHANGELOG.md); the coder's starting point is the latest
+journal entry, or `HANDOFF.md` when a session stopped mid-task.
 
 | Milestone | Status | Shipped in |
 |---|---|---|

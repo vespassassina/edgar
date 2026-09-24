@@ -48,7 +48,16 @@ the user profile's ACL is the guard, as for every other file under `~`. The
 `v4.0.0` tag was pushed before this was found and moved to the fixed commit
 before its release was published. 12,191 of 13,000 lines of code.
 
-Pending: nothing for the releases. Everything still open in the entry below.
+Pending: nothing for the releases.
+
+**After the releases.** Asked: make the docker job wait for PyPI, and bring
+`CLAUDE.md`'s "Current state" up to date. The docker job now polls for the
+exact version (every 5 s, up to 5 minutes) before building; the loop was run
+by hand against 4.0.0 (found at once) and 9.9.9 (fails with the reason). It
+is only proven for real by the next release. `CLAUDE.md` now says all five
+tiers are released, gives the budget that binds (9,497 of 9,500 outside the
+removable packages), the v5 state, and the release steps; ROADMAP no longer
+points at a `HANDOFF.md` that was deleted after M17. Everything still open in the entry below.
 
 ## 2026-09-24 — v5 backlog, under discussion
 
