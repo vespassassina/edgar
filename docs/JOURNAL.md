@@ -5,6 +5,97 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-24 — Olivia: tier ADR, PRD and plan
+
+Asked: "we keep developing Edgar and Olivia", then to work directly on the
+`olivia` branch. Written on `olivia` only; `main` is untouched.
+
+**Branch housekeeping.** `olivia` was one commit behind `main` (the
+README and CLAUDE.md catch-up): fast-forwarded. ADR-0068 §11 moves the
+Olivia docs to `docs/olivia/` in the branch's first commit, which had not
+happened: moved, and ADR-0067 and CLAUDE.md now point there.
+
+**Written:** [ADR-0069](adr/0069-olivia-tiers-and-milestones.md), the tier
+ADR (Proposed); [`docs/olivia/PRD.md`](olivia/PRD.md), the spec, with
+requirement IDs OLV, GOV, INB, TRG, DEC, STR, OBS, MEM-O, LRN, HOME and
+ONFR, five journeys and success criteria per release;
+[`docs/olivia/ROADMAP.md`](olivia/ROADMAP.md), the plan, milestones O0–O7
+down to files, IDs and tests.
+
+What the code changed in the design, and so what ADR-0069 decides:
+
+- **Outside the removable packages, 3 lines of code are left** (9,497 of
+  9,500), and ADR-0068 §12 keeps that cap. There are 682 lines of
+  docstrings there, which ADR-0040 lets us turn into free comments. Each
+  seam pays for itself that way, in its own commit.
+- **The governor answers after the permission engine, never over a Deny.**
+  `Guard` already takes an `Asker`, but an engine Allow never reaches it,
+  and the `pre_tool` vetoes can only refuse. So there is one new slot,
+  `Guard.governor`, consulted for Allow and Ask. A governed run uses mode
+  `ask`; `auto` and `yolo` are refused with a governor, since both allow
+  without asking. Control-file writes are denied under a governor without
+  asking it: an unattended run editing its own instructions is the loop
+  OQ-2 closed.
+- **Four seams into `src/edgar/`, and that is all:** the governor slot,
+  `Session.steer(outside=True)` for inbox steers, two `ErrorKind`s, and the
+  `subject` caveat in the broker (removable, so free against the cap). No
+  strategy seam: alternative strategies compose edgar's collaborators in
+  `olivia.strategy`, and `core/loop.py` is not touched.
+- **Layout: `src/olivia/` beside an unchanged `src/edgar/`.** Renaming would
+  turn every merge from `main` into a 236-file rename merge. Olivia shares
+  `.edgar/` for what edgar owns: `.edgar` is a literal 54 times in 30
+  files, so making it injectable would be the biggest seam on the line.
+  `.olivia/` holds only Olivia's own config sections and state.
+- **Releases.** `release.yml` fires on any published release, not on a tag
+  pattern. Olivia's runs for `olivia-v*` only. edgar's on `main` needs the
+  mirror guard (`v*` only): a one-line change proposed for `main`, not made.
+- **Budget:** 7,809 lines of code for Olivia; the milestone caps add up to
+  5,300. Dependencies: 11 on this line (cedarpy, cryptography and
+  opentelemetry-sdk, all in extras).
+- Found: CLAUDE.md says CI deletes the removable packages. It does not; the
+  budget and import-graph tests carry NFR-12. Olivia's CI will delete
+  `src/olivia/` for real.
+
+**Proposed `AGENTS.md` edit for the `olivia` branch** (ADR-0067 item 6; for
+the maintainer to apply by hand, as a new section after "Non-negotiable
+constraints", so that merges from `main` do not conflict in the numbered
+list):
+
+```
+## On the `olivia` line
+
+These hold on this branch in addition to the constraints above, and amend
+them where they say so. [ADR-0067, ADR-0068, ADR-0069]
+
+13. **Fail closed.** A governor that is unreachable, slow, malformed or
+    unsigned denies. No setting turns a governor failure into an allow.
+14. **Policy written by a human widens.** Amends 3: a governor answer from
+    a human-written policy may allow; it is never stored as a grant and
+    never overrides the permission engine's Deny. Control-file writes are
+    denied under a governor.
+15. **An input is data, never authority.** Inbox text never becomes an
+    intent, `PromptTyped` or an active fact; an outside steer taints.
+16. **Nothing on the authorisation path is a model.** Deciders never feed
+    `decide()`, a ticket or the governor.
+17. **One-way imports.** `edgar.*` never imports `olivia.*`. `src/edgar/`
+    changes only at ADR-0069's seams, each paid for inside `src/edgar/`.
+18. **Learning is bounded by policy.** Amends 6 on this line only: a
+    learner's sources and destinations are governor requests; the default
+    policy denies tool output, fetched content, inbox text and attachments.
+
+Size on this line: `src/` ≤ 20,000 LOC; `src/edgar` without its removable
+packages ≤ 9,500; `core/loop.py` ≤ 200; direct dependencies ≤ 11, counting
+extras. The Never list's "server/daemon" and "user modelling" are amended
+by ADR-0067 item 4 and ADR-0068 §4, and nothing else in it is.
+```
+
+Still pending: accept ADR-0069; the `AGENTS.md` edit above; the `v*` guard
+on `main`'s `release.yml`; OOQ-1..5 in the Olivia PRD, OOQ-2 (the GitHub
+name) before 0.1.0; a local environment note: with the `keyring` extra
+installed, `mypy` fails on the unused ignore at `src/edgar/auth/store.py:28`,
+which CI never sees because it installs no extras (fix on `main`:
+`# type: ignore[import-not-found, unused-ignore]`). Then O0.
+
 ## 2026-09-24 — Olivia: the v5 fork named and interviewed
 
 Asked: "we can go for V5, name is sound. interview me for the open points."

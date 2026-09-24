@@ -39,13 +39,17 @@ Anything that touches Core, v1 or v2 code must free lines first (narration to
 entry of `docs/JOURNAL.md` and its pending list before starting; there is no
 `docs/HANDOFF.md` unless a session stopped mid-task.
 
-**A fifth line, Olivia, is accepted but not started**: ADR-0067 forks a
+**A fifth line, Olivia, is specified but has no code yet**: ADR-0067 forks a
 governable, fully autonomous agent onto a long-lived `olivia` branch (cut from
 `main` on 2026-09-24), with amended rules on that line only; ADR-0068 records
 the design interview (governor, Jev's two Decider interfaces, memory and
 observability plugins, the home-routine learning amendment, a 20,000 LOC
-budget) and `docs/olivia/use-cases.md` has the workloads. No Olivia code until its
-own tier ADR, PRD and plan exist.
+budget). On the `olivia` branch, ADR-0069 (Proposed) is the tier ADR: layout,
+the governor's place after the permission engine, the four seams into
+`src/edgar/`, the budget per milestone and milestones O0–O7. The spec is
+`docs/olivia/PRD.md`, the plan `docs/olivia/ROADMAP.md`, the workloads
+`docs/olivia/use-cases.md`. O0 waits on ADR-0069's acceptance and the
+maintainer's hand edit of `AGENTS.md` on that branch.
 
 Releases go out through trusted publishing when a `v*` GitHub release is
 published: bump the version in `pyproject.toml` and `src/edgar/__init__.py`,
