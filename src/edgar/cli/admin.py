@@ -166,7 +166,8 @@ def _cost(cwd: Path, home: Path) -> int:
 
 def _sign_in(what: str, name: str) -> int:
     # `edgar login PROVIDER` for a provider that issues a key through the browser
-    # [PRV-18]. The keyring holds it; nothing is written to a config file [CFG-6].
+    # [PRV-18], or, for the one subscription that grants it, a device flow [PRV-19].
+    # The keyring holds what comes back; nothing is written to a config file [CFG-6].
     import asyncio
 
     from edgar.auth import keys
@@ -175,13 +176,18 @@ def _sign_in(what: str, name: str) -> int:
     if what == "logout":
         print(f"signed out of {name}" if keys.logout(name) else f"nothing stored for {name}")
         return 0
-    row = quirks_for(name, None).oauth
-    if row is None:
+    quirks = quirks_for(name, None)
+    if quirks.device is not None:
+        from importlib import import_module  # reached by name: the removable seam [NFR-12]
+
+        import_module("edgar.providers.github_copilot").sign_in(name, quirks.device, print)
+        return 0
+    if quirks.oauth is None:
         raise UsageError(
             f"{name} does not issue keys through a browser",
             hint="set its API key variable, or api_key_command in ~/.edgar/config.toml",
         )
-    asyncio.run(keys.login(name, row, print))
+    asyncio.run(keys.login(name, quirks.oauth, print))
     return 0
 
 

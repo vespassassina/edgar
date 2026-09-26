@@ -26,7 +26,7 @@ import subprocess
 import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 from edgar.config.schema import ProviderSection
 from edgar.core.errors import ConfigError
@@ -62,6 +62,10 @@ class Quirks:
     images: bool = False  # the server takes ImageBlocks; a model without it is refused
     thinking_budget: int | None = None  # Anthropic: request extended thinking
     oauth: OAuth | None = None  # None: this provider issues keys its own way
+    # None: no device-flow subscription sign-in. Its own dataclass lives with the
+    # one vendor that needs it (Any here so this file stays removable-package-free).
+    device: Any | None = None
+    extra_headers: Mapping[str, str] | None = None  # sent on every request, e.g. Copilot's
 
 
 QUIRKS: dict[str, Quirks] = {
@@ -125,10 +129,28 @@ QUIRKS: dict[str, Quirks] = {
 _NOT_QUIRKS = {"kind", "prompt_profile"}
 
 
+def _optional_row(name: str) -> Quirks | None:
+    # A subscription vendor's row lives in its own removable file, not here, so
+    # the non-removable budget never pays for one [NFR-12]. Gated on the vendor's
+    # own terms, overridden knowingly by the maintainer for GitHub Copilot
+    # [ADR-0043, ADR-0069]. Reached by name through import_module, the same way
+    # setup.py's _escalation() reaches v3, so this stays a runtime seam rather
+    # than a static import a leaner build's test would have to special-case.
+    # Stripped from a build, the name falls through to "needs base_url" below.
+    if name != "github-copilot":
+        return None
+    from importlib import import_module
+
+    try:
+        return import_module("edgar.providers.github_copilot").ROW  # type: ignore[no-any-return]
+    except ModuleNotFoundError:  # pragma: no cover - the tier was removed
+        return None
+
+
 def quirks_for(name: str, block: ProviderSection | None) -> Quirks:
     """The built-in row for `name`, with the config block's keys laid over it. A new
     name starts from the conservative defaults, or Anthropic's row for kind anthropic."""
-    base = QUIRKS.get(name)
+    base = QUIRKS.get(name) or _optional_row(name)
     if base is None:
         if block is None or block.base_url is None:
             raise ConfigError(
@@ -192,7 +214,7 @@ def connect(name: str, quirks: Quirks, env: Mapping[str, str]) -> tuple[Quirks, 
             )
         quirks = dataclasses.replace(quirks, base_url=url)
     key: Key = env.get(quirks.api_key_env) if quirks.api_key_env else None
-    if not key and quirks.oauth is not None:
+    if not key and (quirks.oauth is not None or quirks.device is not None):
         # Nothing in the environment, but `edgar login` may have kept one [CFG-6].
         from edgar.auth.keys import stored
 
@@ -208,7 +230,7 @@ def connect(name: str, quirks: Quirks, env: Mapping[str, str]) -> tuple[Quirks, 
             f"{name}: the API key variable {quirks.api_key_env} is not set",
             hint=(
                 f"edgar login {name}, or export {quirks.api_key_env}=…"
-                if quirks.oauth is not None
+                if quirks.oauth is not None or quirks.device is not None
                 else f"export {quirks.api_key_env}=…, or api_key_command in ~/.edgar/config.toml"
             ),
         )

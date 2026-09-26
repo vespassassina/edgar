@@ -26,8 +26,10 @@ if TYPE_CHECKING:
 
 _OPENAI = "edgar.providers.openai_compat"
 _ANTHROPIC = "edgar.providers.anthropic"
-# Four built-ins share one adapter and differ only by their row in quirks.py.
-BUILTIN = dict.fromkeys(["openai", "azure", "openrouter", "ollama"], _OPENAI)
+# Five built-ins share one adapter and differ only by their row in quirks.py;
+# github-copilot's own row is optional, loaded lazily from its removable file, so
+# the name still resolves to this shared, non-removable adapter either way.
+BUILTIN = dict.fromkeys(["openai", "azure", "openrouter", "ollama", "github-copilot"], _OPENAI)
 BUILTIN |= {"anthropic": _ANTHROPIC, "fake": "edgar.providers.fake"}
 KINDS = {"openai-compatible": _OPENAI, "anthropic": _ANTHROPIC}
 

@@ -5,6 +5,51 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-09-26 — GitHub Copilot: built, then moved to stay in budget
+
+Asked: build the GitHub Copilot provider (OAuth device-flow sign-in only,
+Copilot-only scope per the maintainer's own scoped-down answers), then "move
+something to v3/v4" once it ran the budget over.
+
+**Done:**
+- The device flow, `edgar login github-copilot`, `edgar logout
+  github-copilot`, and a `github-copilot` row sharing the OpenAI-compatible
+  adapter.
+- After the first pass measured 82 lines over the "src/ without removable
+  packages" budget (9,582/9,500), moved the device-flow engine, its `Device`
+  dataclass, and the static Copilot `Quirks` row into a new removable file,
+  `src/edgar/providers/github_copilot.py`, reached only through
+  `importlib.import_module` by name (`quirks.py`'s `_optional_row`), never a
+  static import — the same seam `providers/escalation.py` already uses.
+  Landed at 12 lines over (9,512/9,500), recorded and reasoned through in
+  [ADR-0069](adr/0069-github-copilot-device-flow.md).
+- Along the way, tried and reverted giving Copilot its own dedicated adapter
+  module mapped directly in `registry.BUILTIN`: `resolve()`'s
+  `import_module(module)` for a `BUILTIN` name has no try/except, so on a
+  stripped v3/v4 build that would crash uncaught instead of degrading
+  cleanly (NFR-12). Kept the shared adapter with only the `Quirks` row
+  optional.
+- `docs/tour/index.html` gained stop 37 for the new file; `mcp.html` and
+  `media.html`'s size-table rows were corrected back to what `oauth.py`/
+  `keys.py`/`quirks.py` actually measure now; `just map` regenerated
+  `map.json`/`map.data.js`. `just check` is green except the budget itself,
+  which is the honest 12-line residual, not a stale doc.
+
+**Decided:** shipped ahead of ADR-0043's terms-check gate, by the
+maintainer's explicit override ("override it — build anyway"); the gate
+still applies before any tagged release reaches users.
+
+**Decided:** the maintainer accepted the 12-line overage (9,512/9,500 on "src/
+without removable packages") as the honest cost of the feature; no further
+cuts. Also clarified the mid-session ask: "update the process and dev guide
+from my global one" meant this repo's own `CLAUDE.md`, updated with a
+"Subagents here" section translating the global CLAUDE.md §4 workflow (one
+builder per task, its own worktree, Sonnet-builds/Haiku-paperwork/
+Opus-judgement, verify like a PR) into edgar's own tooling (`.venv`/`uv`
+sharing instead of a generic `target/`; the paperwork step points at
+`JOURNAL.md`/`ROADMAP.md`/ADRs/`CHANGELOG.md`, which this repo already uses
+in place of `docs/DECISIONS.md`).
+
 ## 2026-09-24 — Olivia: the v5 fork named and interviewed
 
 Asked: "we can go for V5, name is sound. interview me for the open points."

@@ -6,6 +6,17 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
+## Unreleased
+
+### Added
+- **GitHub Copilot as a provider** (`github-copilot/<model>`), signed in with
+  `edgar login github-copilot` through GitHub's OAuth device flow, edgar's
+  own registered app, never a borrowed client id [ADR-0043, ADR-0069].
+  Shares the OpenAI-compatible adapter; its row and device-flow engine live
+  in the removable `providers/github_copilot.py` so the feature does not
+  count against the non-removable budget [ADR-0069]. Shipped ahead of
+  ADR-0043's terms-check gate, by the maintainer's own choice.
+
 ## 4.0.0 — 2026-09-24
 
 v4, unattended: the capability broker and scheduling. Runs unattended under
