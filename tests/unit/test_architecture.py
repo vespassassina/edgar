@@ -15,6 +15,7 @@ V2 = (
     "edgar.schedule",
     "edgar.broker",
     "edgar.providers.escalation",
+    "edgar.providers.github_copilot",
 )
 
 CORE = ("edgar.core", "edgar.context", "edgar.permissions", "edgar.tools.execute")

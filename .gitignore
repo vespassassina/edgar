@@ -24,3 +24,16 @@ htmlcov/
 
 # Launch-prep drafts, not part of the shipped docs
 docs/HN_POST.md
+
+# edgar: generated state, not source. Everything else under .edgar/ (config.toml,
+# AGENTS.md, tools/, skills/, agents/, extensions/, prompts/, personality.md) is
+# hand-authored and belongs in version control.
+.edgar/sessions/
+.edgar/edgar.db
+# A worktree subagent's tree lives here; its branch is what you review [SUB-11].
+.edgar/worktrees/
+# What your runs did, and the readable log of them. One person's sessions, not
+# the project's; commit them deliberately or not at all [MEM-15, OQ-1].
+.edgar/learning.db
+.edgar/history.md
+.edgar/history.1.md

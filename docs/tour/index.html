@@ -64,7 +64,7 @@
     <li><a href="#s9"><span class="n">9</span>Tools that can hurt</a></li>
     <li><a href="#s10"><span class="n">10</span>Your own tools</a></li>
     <li><a href="#s11"><span class="n">11</span>The provider port</a></li>
-    <li><a href="#s12"><span class="n">12</span>Four vendors, one adapter</a></li>
+    <li><a href="#s12"><span class="n">12</span>Five vendors, one adapter</a></li>
     <li><a href="#s13"><span class="n">13</span>Anthropic's adapter</a></li>
     <li><a href="#s14"><span class="n">14</span>Repair and routing</a></li>
     <li><a href="#s15"><span class="n">15</span>The prompt</a></li>
@@ -95,6 +95,7 @@
     <li><a href="#s34"><span class="n">34</span>Escalation (M15)</a></li>
     <li><a href="#s35"><span class="n">35</span>Capability broker (M17)</a></li>
     <li><a href="#s36"><span class="n">36</span>Scheduling (M16)</a></li>
+    <li><a href="#s37"><span class="n">37</span>GitHub Copilot (ADR-0043)</a></li>
   </ol>
 </nav>
 
@@ -150,7 +151,7 @@ totals.</p>
     <tr data-package="core"><td><code>core/</code></td><td class="loc">~790</td><td>The turn loop and the types everything else speaks in</td></tr>
     <tr data-package="tools"><td><code>tools/</code></td><td class="loc">~1,450</td><td>What the model can do, and the pipeline every call goes through</td></tr>
     <tr data-package="permissions"><td><code>permissions/</code></td><td class="loc">~300</td><td>The decision, and the asking</td></tr>
-    <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,320</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
+    <tr data-package="providers"><td><code>providers/</code></td><td class="loc">~1,463</td><td>Five vendors, two adapters, a table of differences; declarative routing rules (v1)</td></tr>
     <tr data-package="skills"><td><code>skills/</code></td><td class="loc">~339</td><td>Finding skills, reading only their frontmatter, deterministic activation, and the audit before a copy (v1, v2)</td></tr>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~290</td><td>Sessions on disk, append-only</td></tr>
@@ -433,15 +434,15 @@ flowchart TD
 </article>
 
 <article class="stop" id="s12" data-files="src/edgar/providers/openai_compat.py src/edgar/providers/quirks.py">
-  <h4><span class="n">12</span>Four vendors, one adapter</h4>
+  <h4><span class="n">12</span>Five vendors, one adapter</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/openai_compat.py"><code>providers/openai_compat.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/quirks.py"><code>providers/quirks.py</code></a></p>
-  <p class="look">Look for: <code>OpenAICompatible</code> <code>Quirks</code> <code>QUIRKS</code> <code>connect</code> <code>Minted</code></p>
-  <p>OpenAI, Azure, OpenRouter, Ollama and any OpenAI-compatible server share one
-  adapter. How they differ from each other is a table of data, not a branch of
-  code written for each one. Check whether the table earns that claim: even what a
-  provider can do — its context window, whether it reasons, whether it runs tools
-  in parallel — is read off its row by <code>HttpAdapter</code>, never guessed from
-  its name.</p>
+  <p class="look">Look for: <code>OpenAICompatible</code> <code>Quirks</code> <code>QUIRKS</code> <code>connect</code> <code>Minted</code> <code>_optional_row</code></p>
+  <p>OpenAI, Azure, OpenRouter, Ollama, GitHub Copilot, and any OpenAI-compatible
+  server share one adapter. How they differ from each other is a table of data,
+  not a branch of code written for each one. Check whether the table earns that
+  claim: even what a provider can do — its context window, whether it reasons,
+  whether it runs tools in parallel, extra headers it needs on every request — is
+  read off its row by <code>HttpAdapter</code>, never guessed from its name.</p>
   <ul class="points">
     <li><code>connect</code> finds the credential before any request: a key from
     the environment, or else a token printed by a command the user named, such as
@@ -449,6 +450,11 @@ flowchart TD
     Vertex AI and Bedrock sign in, with no cloud SDK installed.</li>
     <li><code>Minted</code> runs that command again once its token turns ten
     minutes old, so a long session never sits on a stale token.</li>
+    <li>GitHub Copilot's row is the one this file does not hold: <code>_optional_row</code>
+    reaches it by name, through <code>import_module</code>, from
+    <code>providers/github_copilot.py</code> — a removable v4 file (stop 37), the same
+    way <code>cli/setup.py</code> reaches escalation (stop 34). Stripped from a build,
+    the name falls through to "needs base_url" instead of guessing at one.</li>
   </ul>
   <p>Notice that the config loader refuses to run this command when it comes from
   a project's own config file, only from the user's. Ask yourself why — a cloned
@@ -1069,6 +1075,37 @@ flowchart LR
   holds more authority than the one that created it. What to carry from here:
   a scheduled run's <code>scope</code> and <code>allowlist</code> become the
   same <code>--scope</code> caveats a human turn would pass (invariant 2).</p>
+</article>
+
+<article class="stop" id="s37" data-files="src/edgar/providers/github_copilot.py">
+  <h4><span class="n">37</span>GitHub Copilot</h4>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/providers/github_copilot.py"><code>providers/github_copilot.py</code></a></p>
+  <p class="look">Look for: <code>ROW</code> <code>Device</code> <code>sign_in</code> <code>_poll</code></p>
+  <p>Not a milestone — a single built-in provider, added by the maintainer's own
+  decision to override ADR-0043's shipping gate
+  (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0069-github-copilot-device-flow.md">ADR-0069</a>).
+  It lives here, in a removable v4 file, purely because of its size: the device
+  flow it needs (RFC 8628, the one exception to "edgar never signs in with
+  anyone's subscription") would not fit the non-removable budget otherwise. That
+  is a budget-driven placement, not a thematic one — Copilot is not learning, a
+  controller, a schedule or a broker.</p>
+  <ul class="points">
+    <li><code>ROW</code> is this vendor's <code>Quirks</code> row (stop 12):
+    its host, its context window, the headers it requires on every request, and
+    its <code>Device</code> table. <code>quirks.py</code>'s <code>_optional_row</code>
+    reaches it by name, through <code>import_module</code>, never a static
+    import — the same seam that keeps escalation removable (stop 34).</li>
+    <li><code>sign_in</code> is <code>edgar login github-copilot</code>: it reads
+    edgar's own OAuth app id from <code>GITHUB_COPILOT_CLIENT_ID</code> — there is
+    no working default to ship, since only the maintainer can register one on
+    their own GitHub account — then polls until a human approves the code
+    <code>_poll</code> printed, using <code>auth/oauth.py</code>'s plain
+    <code>post</code> helper rather than a second HTTP engine.</li>
+  </ul>
+  <p>Stripped from a build, <code>github-copilot</code> still names the shared
+  openai-compatible adapter in <code>registry.BUILTIN</code>, but with no row to
+  read: it falls through to quirks.py's "needs base_url" error, an honest message
+  instead of a broken one.</p>
 </article>
 
 <footer class="ak-footer">

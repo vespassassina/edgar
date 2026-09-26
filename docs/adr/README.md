@@ -80,6 +80,7 @@ that did not need an ADR.
 | [0066](0066-m15-escalation-as-built.md) | M15 as built: escalation | Accepted · follows ADR-0013 |
 | [0067](0067-v5-fork-governable-autonomy.md) | v5 forks onto a long-lived `olivia` branch: a governable, fully autonomous agent, with amended rules on that line only; `main` stays edgar 4.x | Accepted |
 | [0068](0068-olivia-design-answers.md) | Olivia's design interview: name, inbox input, five trigger outcomes, a pluggable governor and Cedar policy, Jev split into two Decider interfaces, pluggable memory and self-learning, the home-routine learning amendment, budget and branch topology | Accepted · amends ADR-0067 |
+| [0069](0069-github-copilot-device-flow.md) | Ship GitHub Copilot ahead of ADR-0043's terms-check gate; keep its device flow and row in the removable `providers/github_copilot.py` so the feature stays out of the non-removable budget | Accepted · amends ADR-0043's shipping gate |
 
 ## Writing a new ADR
 

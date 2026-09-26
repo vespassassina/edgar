@@ -39,6 +39,23 @@
 # base_url = "https://example.com/v1"
 # api_key_env = "EXAMPLE_API_KEY"   # the variable holding the key, never the key itself (CFG-6)
 
+# Your cloud identity instead of a key (az/gcloud/aws sign-in, docs/COOKBOOK.md):
+# [providers.azure]                    # Azure OpenAI with Entra ID: az login
+# base_url = "https://YOUR-RESOURCE.openai.azure.com"
+# api_key_command = ["az", "account", "get-access-token", "--resource",
+#                    "https://cognitiveservices.azure.com", "--query", "accessToken", "-o", "tsv"]
+
+# [providers.vertex]                   # Google Vertex AI: gcloud auth login
+# kind = "openai-compatible"
+# base_url = "https://us-central1-aiplatform.googleapis.com/v1beta1/projects/YOUR-PROJECT/locations/us-central1/endpoints/openapi"
+# api_key_command = ["gcloud", "auth", "print-access-token"]
+
+# [providers.bedrock]                  # Amazon Bedrock: aws sso login, and AWS_REGION set
+# kind = "openai-compatible"
+# base_url = "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1"
+# api_key_command = ["uv", "run", "--no-project", "--with", "aws-bedrock-token-generator", "python", "-c",
+#                    "from aws_bedrock_token_generator import provide_token; print(provide_token())"]
+
 # An MCP server, started only once a tool from it is actually called:
 # [mcp.NAME]
 # command = "npx"

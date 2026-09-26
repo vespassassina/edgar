@@ -121,6 +121,25 @@ the same rules.
   not stale prose, so reread the stop for any file you change. A milestone that
   adds a module turns its planned stop into a built one.
 
+## Subagents here
+
+The maintainer's standing subagent workflow (global `CLAUDE.md` §4), applied to
+this repo's tooling:
+
+- One fresh builder per task, its own worktree, its own context. At most two
+  small related tasks chained; never a builder kept alive past its task.
+- Worktrees sit under the scratchpad and share the checked-out `.venv`
+  (warm `uv` cache, clean checkout, no stray commit reminders): never let two
+  builders run `uv sync` or write into `.venv` at the same time, or the
+  environment shifts under the running one.
+- Sonnet builds: failing test, change, `just check`, push to the feature
+  branch. Haiku then does the paperwork this repo's "Keeping track" rule
+  requires: the `JOURNAL.md` entry, the `ROADMAP.md` tick, the ADR, the
+  `CHANGELOG.md` "Unreleased" line. Opus only for judgement calls (a tier
+  placement, an architecture trade-off); never save cost on those.
+- Verify a subagent's output like a PR: read the diff, run `just check`
+  yourself, don't take "done" on faith.
+
 ## Architecture in one pass
 
 `docs/BLUEPRINT.md` has the full module map, data model and interfaces. The shape worth

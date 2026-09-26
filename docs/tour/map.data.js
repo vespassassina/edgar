@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12090,
+    "loc": 12182,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6725,
+        "loc": 6817,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2222,
+            "loc": 2226,
             "status": "built",
             "children": [
               {
@@ -32,7 +32,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 261,
+                "loc": 265,
                 "summary": "The subcommands that look at a project rather than run a turn.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -437,7 +437,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1213,
+            "loc": 1301,
             "status": "built",
             "children": [
               {
@@ -477,6 +477,18 @@ window.EDGAR_MAP = {
                 "port": false
               },
               {
+                "path": "src/edgar/providers/github_copilot.py",
+                "name": "github_copilot.py",
+                "kind": "file",
+                "tier": "core",
+                "package": "providers",
+                "loc": 77,
+                "summary": "GitHub Copilot: the one built-in provider outside the non-removable budget,",
+                "stop": "index.html#s37",
+                "status": "built",
+                "port": false
+              },
+              {
                 "path": "src/edgar/providers/http.py",
                 "name": "http.py",
                 "kind": "file",
@@ -494,7 +506,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 220,
+                "loc": 221,
                 "summary": "One adapter for every OpenAI-compatible server [PRV-1, PRV-3, ADR-0002].",
                 "stop": "media.html#m4",
                 "status": "built",
@@ -518,7 +530,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 168,
+                "loc": 178,
                 "summary": "How providers differ, as data [PRV-3, ADR-0002, ADR-0020].",
                 "stop": "media.html#m3",
                 "status": "built",

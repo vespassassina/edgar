@@ -133,12 +133,13 @@ class OpenAICompatible(HttpAdapter):
         return f"{self.base}/chat/completions"
 
     def _headers(self) -> dict[str, str]:
+        headers = dict(self.quirks.extra_headers or {})  # Copilot's, sent on every request
         style = self.quirks.auth_style
         if style == "none" or not self.api_key:
-            return {}
+            return headers
         if style == "api-key":
-            return {"api-key": self.api_key}
-        return {"authorization": f"Bearer {self.api_key}"}
+            return {**headers, "api-key": self.api_key}
+        return {**headers, "authorization": f"Bearer {self.api_key}"}
 
     def _messages(
         self, messages: Sequence[Message], tools: Sequence[ToolSchema], bus: EventBus

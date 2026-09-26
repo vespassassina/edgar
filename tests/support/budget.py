@@ -30,8 +30,16 @@ TARGET_TIER = "v4"
 TIER_BUDGETS = {"core": 5_000, "v1": 8_000, "v2": 9_500, "v3": 12_000, "v4": 13_000}
 
 # Where the removable tiers live: v3 is learning, controller and escalation, v4 is
-# schedule and broker. Nothing outside these may import them (NFR-12).
-REMOVABLE_PATHS = ("learning", "controller", "schedule", "broker", "providers/escalation.py")
+# schedule, broker and the GitHub Copilot provider. Nothing outside these may
+# import them (NFR-12).
+REMOVABLE_PATHS = (
+    "learning",
+    "controller",
+    "schedule",
+    "broker",
+    "providers/escalation.py",
+    "providers/github_copilot.py",
+)
 
 
 @dataclass(frozen=True, slots=True)
