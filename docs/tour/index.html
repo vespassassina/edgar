@@ -156,7 +156,7 @@ totals.</p>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~290</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,543</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,661</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
@@ -898,9 +898,9 @@ flowchart LR
   <a href="https://github.com/vespassassina/edgar/blob/main/docs/ROADMAP.md#m10--extensions-hooks-plugins-embedding">Roadmap: M10</a></p>
 </article>
 
-<article class="stop" id="s30" data-files="src/edgar/cli/init.py src/edgar/cli/doctor.py src/edgar/templates/config.toml">
+<article class="stop" id="s30" data-files="src/edgar/cli/init.py src/edgar/cli/doctor.py src/edgar/templates/config.toml src/edgar/templates/wizard.toml src/edgar/templates/providers.toml">
   <h4><span class="n">30</span>Init and doctor</h4>
-  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/init.py"><code>cli/init.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/doctor.py"><code>cli/doctor.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/config.toml"><code>templates/config.toml</code></a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/init.py"><code>cli/init.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/doctor.py"><code>cli/doctor.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/config.toml"><code>templates/config.toml</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/wizard.toml"><code>templates/wizard.toml</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/providers.toml"><code>templates/providers.toml</code></a></p>
   <p class="look">Look for: <code>run</code> <code>_scaffold</code> <code>_gitignore</code> <code>command</code> <code>_connectivity</code></p>
   <p><code>edgar init</code> and <code>/init</code> [CFG-4] scaffold a new
   project. They write:</p>
@@ -917,6 +917,16 @@ flowchart LR
   <code>init.run()</code> is shared code: it's called both from the CLI and from
   <code>cli/repl.py</code>'s "nothing configured yet" startup path, so a fresh
   checkout gets real scaffolding, not just a model picker.</p>
+  <p>The setup wizard is two more data files. <code>wizard.toml</code> lists the
+  questions asked after the model (permissions mode, the verify command, a
+  session and a daily spending cap); an answer replaces the matching commented
+  line in <code>config.toml</code>, and Enter keeps the default. yolo is never
+  offered. <code>providers.toml</code> is the vendor list: Groq, Mistral,
+  DeepSeek, Together, Fireworks, Cerebras, xAI, Gemini, Perplexity, NVIDIA,
+  Hugging Face, Moonshot, Z.ai, LM Studio, llama.cpp and vLLM, each a host and a
+  key variable. The model picker shows them beside the built-ins. Choosing one
+  writes its <code>[providers.NAME]</code> block into the new config; nothing
+  from the list is used until you pick it.</p>
   <p><code>edgar doctor</code> [CFG-5] checks each provider's credentials
   (reusing <code>cli/models.py</code>'s <code>describe()</code>) and warns when a
   project sits inside iCloud Drive, OneDrive, Dropbox or Google Drive — a plain

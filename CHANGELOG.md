@@ -9,6 +9,16 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- **A fuller setup wizard.** `edgar init` now also asks for the permissions
+  mode, the verify command and a session and a daily spending cap; Enter keeps
+  each default and the line stays a comment. The questions are data in
+  `templates/wizard.toml`. yolo is never offered [PERM-9, ADR-0070].
+- **A vendor list in the model picker** (`edgar models`, `edgar init`): Groq,
+  Mistral, DeepSeek, Together, Fireworks, Cerebras, xAI, Gemini, Perplexity,
+  NVIDIA, Hugging Face, Moonshot, Z.ai, LM Studio, llama.cpp and vLLM, beside
+  the built-ins. Data in `templates/providers.toml`; picking one writes its
+  `[providers.NAME]` block into the new config and nothing is used before
+  that [ADR-0070].
 - **GitHub Copilot as a provider** (`github-copilot/<model>`), signed in with
   `edgar login github-copilot` through GitHub's OAuth device flow, edgar's
   own registered app, never a borrowed client id [ADR-0043, ADR-0069].

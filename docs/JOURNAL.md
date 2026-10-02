@@ -5,6 +5,31 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-02 — Setup wizard and vendor list
+
+Asked: "edgar setup menu, add more settings to the wizard, and add the whole
+provider list to the providers."
+
+**Assumed:** the setup menu is `edgar init` (the only wizard there is), and
+"the whole provider list" is the common OpenAI-compatible vendors, not every
+vendor that exists. I picked sixteen. Say if you want others.
+
+**Done** on `feat/setup-wizard`:
+- `templates/wizard.toml`: four questions after the model (permissions mode,
+  verify command, session cap, daily cap). Enter keeps the default.
+- `templates/providers.toml`: the vendor list. The picker shows it; picking one
+  writes its block into the new config. The REPL reads the config again after
+  `init`, so a first run with a vendor works at once.
+- Tests in `tests/unit/test_setup_wizard.py`; tour stop 30 and the size table.
+- ADR-0070.
+
+**Decided:** data files, not code, so the budget is not spent on lists.
+
+**Open:** the non-removable budget is 9,555 of 9,500 (55 over, was 12). `just
+check` fails on it and so will CI on `main`. Options: accept it as with ADR-0069,
+free lines elsewhere, or cut the REPL reload and the picker merge. Not merged.
+No call to any vendor was made, so the sixteen hosts are unchecked.
+
 ## 2026-09-26 — GitHub Copilot: built, then moved to stay in budget
 
 Asked: build the GitHub Copilot provider (OAuth device-flow sign-in only,

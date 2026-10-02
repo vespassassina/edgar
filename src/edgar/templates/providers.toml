@@ -1,0 +1,66 @@
+# The vendors `edgar init` and `edgar models` offer beside the built-in ones. Data,
+# not code: picking one writes its block into your config as `[providers.NAME]`,
+# so nothing here is used until you choose it. Hosts and key variables are the
+# vendors' own documented ones; a key is never stored here (CFG-6). A vendor with
+# no `api_key_env` takes no key (a server on your own machine).
+
+[groq]
+base_url = "https://api.groq.com/openai/v1"
+api_key_env = "GROQ_API_KEY"
+
+[mistral]
+base_url = "https://api.mistral.ai/v1"
+api_key_env = "MISTRAL_API_KEY"
+
+[deepseek]
+base_url = "https://api.deepseek.com/v1"
+api_key_env = "DEEPSEEK_API_KEY"
+
+[together]
+base_url = "https://api.together.xyz/v1"
+api_key_env = "TOGETHER_API_KEY"
+
+[fireworks]
+base_url = "https://api.fireworks.ai/inference/v1"
+api_key_env = "FIREWORKS_API_KEY"
+
+[cerebras]
+base_url = "https://api.cerebras.ai/v1"
+api_key_env = "CEREBRAS_API_KEY"
+
+[xai]
+base_url = "https://api.x.ai/v1"
+api_key_env = "XAI_API_KEY"
+
+[gemini]
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+api_key_env = "GEMINI_API_KEY"
+
+[perplexity]
+base_url = "https://api.perplexity.ai"
+api_key_env = "PERPLEXITY_API_KEY"
+
+[nvidia]
+base_url = "https://integrate.api.nvidia.com/v1"
+api_key_env = "NVIDIA_API_KEY"
+
+[huggingface]
+base_url = "https://router.huggingface.co/v1"
+api_key_env = "HF_TOKEN"
+
+[moonshot]
+base_url = "https://api.moonshot.ai/v1"
+api_key_env = "MOONSHOT_API_KEY"
+
+[zai]
+base_url = "https://api.z.ai/api/paas/v4"
+api_key_env = "ZAI_API_KEY"
+
+[lmstudio]
+base_url = "http://localhost:1234/v1"
+
+[llamacpp]
+base_url = "http://localhost:8080/v1"
+
+[vllm]
+base_url = "http://localhost:8000/v1"

@@ -17,17 +17,27 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import tomllib
 from collections.abc import Awaitable, Callable, Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 from edgar.config.load import load, project_config, user_config
-from edgar.config.schema import Config
+from edgar.config.schema import Config, ProviderSection
 from edgar.core.errors import ConfigError, EdgarError
 from edgar.providers.quirks import quirks_for
 from edgar.providers.registry import BUILTIN, resolve
 from edgar.providers.routing import Role, RoutingContext, select_model
 
 ROLES: tuple[Role, ...] = ("main", "compactor", "controller", "condenser")
+VENDORS = Path(__file__).resolve().parent.parent / "templates" / "providers.toml"
+
+
+def catalog() -> dict[str, dict[str, Any]]:
+    # Vendors edgar knows the host of but does not ship a row for: data in
+    # templates/providers.toml, written into config only once one is picked.
+    return tomllib.loads(VENDORS.read_text(encoding="utf-8"))
 
 
 def list_models(cwd: Path, env: Mapping[str, str] | None = None) -> int:
@@ -80,11 +90,25 @@ async def pick(
     and a model name can always be typed instead. Never asks you to type a key: for a
     provider that hands one out, it offers the browser sign-in instead."""
     env = os.environ if env is None else env
+    vendors = catalog()
+    # 1. Built-ins and your own blocks first, then the vendor list, each with its host.
     names = sorted({*BUILTIN, *config.providers} - {"fake"})
+    names += sorted(set(vendors) - set(names))
+    for n in names:
+        if n in vendors and n not in config.providers and n not in BUILTIN:
+            config = replace(
+                config, providers={**config.providers, n: ProviderSection(**vendors[n])}
+            )
     say("\n".join(f"{i:>3}. {n:<11} {describe(n, config, env)}" for i, n in enumerate(names, 1)))
     name = _choose(await ask("provider (number or name, empty to cancel): "), names)
     if name is None:
         return None
+    key = quirks_for(name, config.providers.get(name)).api_key_env
+    if name in vendors and key and not env.get(key):
+        # 2. A vendor with no key yet: say which variable, and take a typed model name.
+        say(f"set {key} before you run edgar; its model list needs it, so type a name.")
+        model = (await ask("model (empty to cancel): ")).strip()
+        return f"{name}/{model}" if model else None
     env = await _offer_sign_in(name, config, env, ask, say)
     try:
         provider, _ = resolve(f"{name}/-", config, env=env)
