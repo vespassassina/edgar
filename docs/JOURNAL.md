@@ -5,6 +5,12 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-02 — Every provider shows its whole model list
+
+Asked: "when i select the provider, show me all models". The 40-model cap, kept
+for non-subscription providers in 4.1.1, is gone: the picker lists every model
+a provider returns, numbered. OpenRouter's list is long; type a name to skip it.
+
 ## 2026-10-02 — Copilot: whole model list, registration guide
 
 Asked: let the picker show Copilot's whole model list; document how to register

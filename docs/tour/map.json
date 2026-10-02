@@ -5,7 +5,7 @@
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12231,
+    "loc": 12228,
     "status": "built",
     "children": [
       {
@@ -14,14 +14,14 @@
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6842,
+        "loc": 6839,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2251,
+            "loc": 2248,
             "status": "built",
             "children": [
               {
@@ -54,7 +54,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 155,
+                "loc": 152,
                 "summary": "`edgar models list` and the model picker.",
                 "stop": "index.html#s25",
                 "status": "built",

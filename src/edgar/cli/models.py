@@ -126,11 +126,8 @@ async def pick(
     except EdgarError as exc:
         say(f"could not list models: {exc}")
         models = []
-    shown = models if q.device else models[:40]  # a subscription's list is short: show it all
-    if shown:
-        say("\n".join(f"{i:>3}. {m}" for i, m in enumerate(shown, 1)))
-    if len(models) > len(shown):
-        say(f"     … and {len(models) - len(shown)} more; type a name")
+    if models:
+        say("\n".join(f"{i:>3}. {m}" for i, m in enumerate(models, 1)))
     answer = await ask("model (number or name, empty to cancel): ")
     model = _choose(answer, models) or answer.strip()
     return f"{name}/{model}" if model else None

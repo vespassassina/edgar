@@ -6,6 +6,11 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
+## Unreleased
+
+### Changed
+- `edgar models` shows every model a provider lists, numbered, not the first 40.
+
 ## 4.1.1 — 2026-10-02
 
 ### Added

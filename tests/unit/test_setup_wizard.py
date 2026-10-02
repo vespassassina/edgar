@@ -106,9 +106,10 @@ def test_copilot_shows_its_whole_model_list(monkeypatch: object, tmp_path: Path)
     assert got == "github-copilot/m74"
 
 
-def test_other_providers_keep_the_forty_model_cap(monkeypatch: object, tmp_path: Path) -> None:
-    _, said = _pick_from(monkeypatch, "openrouter", 75, tmp_path, "")
-    assert " 40. m39" in said and "41. m40" not in said and "and 35 more" in said
+def test_every_provider_shows_its_whole_model_list(monkeypatch: object, tmp_path: Path) -> None:
+    got, said = _pick_from(monkeypatch, "openrouter", 300, tmp_path, "300")
+    assert "300. m299" in said and "more; type a name" not in said
+    assert got == "openrouter/m299"
 
 
 def test_the_provider_list_lines_up_on_the_longest_name(tmp_path: Path) -> None:
