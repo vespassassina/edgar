@@ -6,7 +6,7 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
-## Unreleased
+## 4.1.0 — 2026-10-02
 
 ### Added
 - **A fuller setup wizard.** `edgar init` now also asks for the permissions
