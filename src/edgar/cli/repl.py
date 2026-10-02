@@ -5,7 +5,7 @@
 # bottom of the screen while a turn runs, so input is never blocked: plain text
 # queues, `/steer` reaches the turn at its next safe point, `/btw` asks on the side.
 # The status line is the prompt's bottom toolbar; everything else prints above the
-# prompt and stays in the terminal's scrollback.
+# prompt and stays in the terminal's scrollback. Esc cancels the running turn, as Ctrl-C does.
 
 from __future__ import annotations
 
@@ -216,6 +216,14 @@ class Shell:
             self.turn.cancel()
         return "\n".join(back)
 
+    def interrupt(self) -> str | None:
+        """Esc: what Ctrl-C does while something runs. None when there is nothing to
+        cancel, else the text to put back on the input line [CLI-12]."""
+        if self.question is not None and not self.question.done():
+            self.question.set_result("n")  # Esc at a question means no
+            return ""
+        return self.stop() if self.busy or self.queue else None
+
     def ask_aside(self, question: str) -> None:
         task = asyncio.create_task(self._aside(question))
         self.asides.add(task)
@@ -264,7 +272,9 @@ async def interact(
 ) -> int:
     # The interactive path's own dependency, loaded only here (NFR-1).
     from prompt_toolkit import PromptSession
+    from prompt_toolkit.filters import Condition
     from prompt_toolkit.history import FileHistory
+    from prompt_toolkit.key_binding import KeyBindings, KeyPressEvent
     from prompt_toolkit.output import ColorDepth
     from prompt_toolkit.patch_stdout import patch_stdout
 
@@ -280,12 +290,25 @@ async def interact(
     status = Status("")
     history = home / ".edgar" / "history"
     history.parent.mkdir(parents=True, exist_ok=True)
+    keys = KeyBindings()
+
+    @keys.add(
+        "escape", eager=True, filter=Condition(lambda: bool(shell_ref) and _running(shell_ref[0]))
+    )
+    def _(event: KeyPressEvent) -> None:
+        back = shell_ref[0].interrupt()  # Esc cancels the turn, as one Ctrl-C does
+        if back:
+            event.current_buffer.insert_text(back)
+
     prompt: PromptSession[str] = PromptSession(
+        key_bindings=keys,
         history=FileHistory(str(history)),
         bottom_toolbar=lambda: "\n".join(" " + row for row in status.rows()),
         refresh_interval=0.1,
         color_depth=None if color else ColorDepth.MONOCHROME,
     )
+
+    prompt.app.ttimeoutlen = 0.05  # a lone Esc counts after 50 ms, not a second
 
     async def ask(question: str) -> str:
         return await prompt.prompt_async(question)
@@ -354,6 +377,10 @@ async def _read(shell: Shell, read: Callable[..., Awaitable[str]]) -> None:
             break
         await shell.handle(line)
     await shell.close()
+
+
+def _running(shell: Shell) -> bool:
+    return shell.busy or bool(shell.queue) or shell.question is not None
 
 
 def _yolo() -> bool:

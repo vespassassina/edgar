@@ -591,3 +591,22 @@ def test_an_image_reaches_a_model_that_can_see(tmp_project: Path) -> None:
     rig = play(tmp_project, scenario, texts(1))
     (sent,) = rig.provider.requests
     assert [i.media_type for m in sent for i in m.images] == ["image/png"]
+
+
+def test_escape_cancels_the_turn_like_ctrl_c_and_idle_escape_does_nothing(
+    tmp_project: Path,
+) -> None:
+    gave: list[str | None] = []
+
+    async def scenario(r: Rig) -> None:
+        gave.append(r.shell.interrupt())  # idle: nothing to cancel
+        await r.type("work")
+        await asyncio.sleep(0.02)
+        await r.type("next thing")
+        gave.append(r.shell.interrupt())
+        await r.settle()
+
+    r = play(tmp_project, scenario, [slow(5.0)])
+    assert gave == [None, "next thing"]  # the queue comes back for the input line
+    assert pairing_violations(r.shell.session.transcript) == []
+    assert r.recorder.of(TurnFinished)[-1].reason == "cancelled"

@@ -5,6 +5,18 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-02 — Esc breaks a turn
+
+Asked: break a loop with Esc. `Shell.interrupt()` does what Ctrl-C does while a
+turn runs or a question waits; a prompt_toolkit key binding (eager, only while
+busy) calls it and puts queued text back on the line. `ttimeoutlen` is 50 ms so
+a lone Esc is not held for a second. Test: `test_escape_cancels_the_turn_...`.
+
+Also reported: Copilot lists few, old models. Still open, see the entry below.
+Likely cause: the raw GitHub token is used as-is. VS Code first exchanges it at
+`copilot_internal/v2/token` and lists models with that. Unverified, because
+probing with the stored token is blocked.
+
 ## 2026-10-02 — The first pick is remembered
 
 Reported: only 7 Copilot models listed, and starting edgar with no model asks

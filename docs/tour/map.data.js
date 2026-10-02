@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12244,
+    "loc": 12265,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6845,
+        "loc": 6866,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2254,
+            "loc": 2275,
             "status": "built",
             "children": [
               {
@@ -92,7 +92,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 313,
+                "loc": 334,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
