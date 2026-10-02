@@ -6,6 +6,13 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
+## Unreleased
+
+### Changed
+- **`keyring` is now a required dependency**, so `edgar login` keeps the key in
+  your OS keyring with nothing to install. The `[keyring]` extra still
+  installs, as a no-op [ADR-0072].
+
 ## 4.1.0 — 2026-10-02
 
 ### Added

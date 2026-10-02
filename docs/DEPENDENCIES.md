@@ -15,14 +15,9 @@ to the millisecond, since a version bump can move it either way.
 | [`PyYAML`](https://pyyaml.org/) (`import yaml`) | 6.0.3 | `safe_load` only, for a skill's or agent's frontmatter | lazily, the first time a project has a skill or agent to discover | ~9 ms |
 | [`prompt_toolkit`](https://python-prompt-toolkit.readthedocs.io/) | 3.0.53 | the REPL's input line, history file, and steering a running turn | only on the interactive path; never for `-p` | ~60 ms |
 
-**Optional extra, counted toward the cap:**
+| [`keyring`](https://github.com/jaraco/keyring) | 25.7.0 | keeps a key from `edgar login` in the OS keyring, and reads it back instead of the environment [CFG-6]. Required since 4.1.1 so signing in just works [ADR-0072] | lazily, only when a session reads or writes a keyring-stored secret | ~49 ms |
 
-| Extra | Version | Purpose | Loaded | Measured import cost |
-|---|---|---|---|---|
-| `edgar-harness[keyring]` (`import keyring`) | 25.7.0 | reads a provider's key from the OS keyring instead of the environment [CFG-6] | only if installed and a session actually reads a keyring-stored secret | ~49 ms |
-
-Four required, one optional: five of the eight slots NFR-5 allows, three
-free. `import edgar.cli.main` — the module every invocation loads first —
+Five required: five of the eight slots NFR-5 allows, three free. `import edgar.cli.main` — the module every invocation loads first —
 pulls in none of the above, nor any `edgar.providers.*` adapter; a CI test
 (`tests/e2e/test_startup.py`) enforces this on every push, the same way it
 enforces the ≤ 150 ms startup budget [NFR-1, ADR-0012]. A trivial `-p` run

@@ -1,9 +1,10 @@
 """Where a credential edgar was given lives: the OS keyring, and nowhere else
 [CFG-6, ADR-0032].
 
-`keyring` is an optional extra, so every function here works without it and says
-so. A secret read back is registered for redaction the moment it is read, so it
-cannot reach a transcript, an event or a log.
+`keyring` is a required dependency, but a machine may have no backend (a bare
+Linux box), so every function here still works without one and says so. A secret
+read back is registered for redaction the moment it is read, so it cannot reach
+a transcript, an event or a log.
 """
 
 # read(account)     the secret, or None; registers it with scrub() [TOOL-6]
@@ -21,13 +22,13 @@ from edgar.core.errors import ConfigError
 from edgar.tools.custom import SECRETS
 
 SERVICE = "edgar"
-MISSING = "install the extra that keeps secrets: pip install 'edgar-harness[keyring]'"
+MISSING = "no OS keyring is installed on this machine; export the key as an environment variable"
 
 
 def _keyring() -> Any | None:
     # Imported here, never at startup: nothing on the fast path needs it (NFR-1).
     try:
-        import keyring  # type: ignore[import-not-found]
+        import keyring
     except ImportError:
         return None
     return keyring

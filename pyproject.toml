@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "httpx>=0.28",
     "jsonschema>=4.23",
+    "keyring>=25",
     "prompt-toolkit>=3.0.48",
     "pyyaml>=6.0.2",
 ]
@@ -26,9 +27,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-# `pip install edgar-harness[keyring]` to keep a key from `edgar login` in the OS
-# keyring; without it edgar prints the key once and stores nothing [CFG-6].
-keyring = ["keyring>=25"]
+# keyring is a required dependency since 4.1.1 (ADR-0072); the extra stays so an
+# old `pip install edgar-harness[keyring]` line keeps working.
+keyring = []
 
 [project.scripts]
 edgar = "edgar.cli.main:main"

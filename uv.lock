@@ -315,13 +315,9 @@ source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "jsonschema" },
+    { name = "keyring" },
     { name = "prompt-toolkit" },
     { name = "pyyaml" },
-]
-
-[package.optional-dependencies]
-keyring = [
-    { name = "keyring" },
 ]
 
 [package.dev-dependencies]
@@ -339,7 +335,7 @@ dev = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "jsonschema", specifier = ">=4.23" },
-    { name = "keyring", marker = "extra == 'keyring'", specifier = ">=25" },
+    { name = "keyring", specifier = ">=25" },
     { name = "prompt-toolkit", specifier = ">=3.0.48" },
     { name = "pyyaml", specifier = ">=6.0.2" },
 ]

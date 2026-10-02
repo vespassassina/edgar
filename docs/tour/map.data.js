@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12225,
+    "loc": 12226,
     "status": "built",
     "children": [
       {
@@ -762,7 +762,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2278,
+        "loc": 2279,
         "status": "built",
         "children": [
           {
@@ -814,7 +814,7 @@ window.EDGAR_MAP = {
             "id": "v1/auth",
             "name": "auth/",
             "kind": "package",
-            "loc": 317,
+            "loc": 318,
             "status": "built",
             "children": [
               {
@@ -859,7 +859,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "auth",
-                "loc": 46,
+                "loc": 47,
                 "summary": "Where a credential edgar was given lives: the OS keyring, and nowhere else",
                 "stop": "mcp.html#p3",
                 "status": "built",
