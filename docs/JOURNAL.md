@@ -25,9 +25,9 @@ vendor that exists. I picked sixteen. Say if you want others.
 
 **Decided:** data files, not code, so the budget is not spent on lists.
 
-**Open:** the non-removable budget is 9,555 of 9,500 (55 over, was 12). `just
-check` fails on it and so will CI on `main`. Options: accept it as with ADR-0069,
-free lines elsewhere, or cut the REPL reload and the picker merge. Not merged.
+**Decided:** the maintainer accepted the overage: 9,555 of 9,500 (55 over, was
+12), as with ADR-0069. `just check` fails on it and so will CI on `main`.
+**Open:** not merged.
 No call to any vendor was made, so the sixteen hosts are unchecked.
 
 ## 2026-09-26 — GitHub Copilot: built, then moved to stay in budget

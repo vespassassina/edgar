@@ -31,8 +31,9 @@ line budget (ADR-0040), like `config.toml` and the prompts.
 
 - The code added is about 43 lines of code: the reader, the block writer, the
   picker merge and the REPL reload. That leaves the non-removable budget at
-  9,555 of 9,500, 55 over. The overage is the maintainer's decision; see the
-  journal entry of 2026-10-02.
+  9,555 of 9,500, 55 over. The maintainer accepted the overage on 2026-10-02,
+  as with ADR-0069. The test `src/ without removable packages` stays red until
+  lines are freed or the budget is revisited.
 - A vendor's host can change without a code release. Hosts and key variables
   are the vendors' documented ones as of this date and have not been called
   from here; a wrong one fails at the first request with the provider's error.
