@@ -8,6 +8,12 @@ extension formats freeze.
 
 ## Unreleased
 
+### Fixed
+- Picking a model at startup is saved to `~/.edgar/config.toml`, so other
+  directories no longer ask for the provider again. An unedited `edgar init`
+  placeholder line is filled in; a config you edited is never touched, and the
+  two lines to add are printed instead [ADR-0073].
+
 ### Changed
 - `edgar models` shows every model a provider lists, numbered, not the first 40.
 

@@ -32,7 +32,13 @@ def _read(raw: str, kind: str) -> str | None:
     return json.dumps(raw) if kind == "text" or raw in kind.split("|") else None
 
 
-async def run(cwd: Path, config: Config, ask: Ask | None, say: Callable[[str], None]) -> str | None:
+async def run(
+    cwd: Path,
+    config: Config,
+    ask: Ask | None,
+    say: Callable[[str], None],
+    home: Path | None = None,
+) -> str | None:
     # Returns the model chosen, if any, so a caller with a model already picked
     # but not yet saved (the REPL's own startup picker) can apply it itself.
     say(_scaffold(cwd / "AGENTS.md", "AGENTS.md"))
@@ -42,6 +48,12 @@ async def run(cwd: Path, config: Config, ask: Ask | None, say: Callable[[str], N
         from edgar.cli.models import pick  # interactive path only (NFR-1)
 
         choice = await pick(config, None, ask, say)
+        if choice is not None and home is not None:
+            # Saved for every project, so no other directory asks again [ADR-0073].
+            from edgar.cli.models import remember
+            from edgar.config.load import user_config
+
+            say(remember(choice, user_config(home)))
     dest = project_config(cwd)
     if dest.exists():
         say(f"{dest} exists, left alone")

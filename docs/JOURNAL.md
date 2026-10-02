@@ -5,6 +5,22 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-02 — The first pick is remembered
+
+Reported: only 7 Copilot models listed, and starting edgar with no model asks
+for the provider every time.
+
+**Cause of the second:** the pick was saved only into the current directory's
+`.edgar/config.toml`; `~/.edgar/config.toml` had `default` commented out and is
+never edited. Each new directory asked again. Fixed in [ADR-0073](adr/0073-first-pick-saved-for-every-project.md).
+
+**The first, not fixed:** GitHub's `/models` returns 7 chat models for the
+maintainer's token (8 with `X-GitHub-Api-Version: 2025-05-01`): gpt-3.5, gpt-4o,
+gpt-4o-mini and dated copies. No Claude or Gemini. Probably the plan or the app's
+entitlement, not edgar's parsing: the response lists what GitHub chose to send.
+A stored-token probe against other GitHub endpoints was blocked, so the plan
+and the headers VS Code sends are unchecked. Open.
+
 ## 2026-10-02 — Every provider shows its whole model list
 
 Asked: "when i select the provider, show me all models". The 40-model cap, kept

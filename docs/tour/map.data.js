@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12228,
+    "loc": 12244,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6839,
+        "loc": 6845,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2248,
+            "loc": 2254,
             "status": "built",
             "children": [
               {
@@ -56,7 +56,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 152,
+                "loc": 158,
                 "summary": "`edgar models list` and the model picker.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -762,7 +762,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2279,
+        "loc": 2289,
         "status": "built",
         "children": [
           {
@@ -871,7 +871,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 252,
+            "loc": 262,
             "status": "built",
             "children": [
               {
@@ -892,7 +892,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 74,
+                "loc": 84,
                 "summary": "`edgar init` and `/init`: a project's first config, AGENTS.md and gitignore.",
                 "stop": "index.html#s30",
                 "status": "built",

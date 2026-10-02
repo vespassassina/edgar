@@ -173,6 +173,14 @@ def remember(choice: str, path: Path) -> str:
     """Make `choice` the default: create the file if there is none, otherwise say
     what to add. An existing config is hand-authored and never edited [ADR-0034]."""
     line = f'[model]\ndefault = "{choice}"\n'
+    # An unedited `edgar init` template has this placeholder: filling it is not
+    # editing what a person wrote (ADR-0073).
+    holder = '# default = "provider/model"'
+    if path.exists() and holder in path.read_text(encoding="utf-8"):
+        path.write_text(
+            path.read_text(encoding="utf-8").replace(holder, f'default = "{choice}"', 1)
+        )
+        return f"set the default model in {path}"
     if path.exists():
         return f"{path} exists, so it is left alone. Set this in it:\n\n{line}"
     path.parent.mkdir(parents=True, exist_ok=True)

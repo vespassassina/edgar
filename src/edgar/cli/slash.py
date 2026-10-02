@@ -468,7 +468,7 @@ async def _tools(shell: Shell, arg: str) -> None:
 async def _init(shell: Shell, arg: str) -> None:
     from edgar.cli import init
 
-    chosen = await init.run(shell.setup.root, shell.config, shell.ask, shell.say)
+    chosen = await init.run(shell.setup.root, shell.config, shell.ask, shell.say, shell.setup.home)
     if chosen is not None and shell.config.model.default is None:
         shell.switch(chosen)
 

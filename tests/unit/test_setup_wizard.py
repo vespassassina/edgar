@@ -119,3 +119,32 @@ def test_the_provider_list_lines_up_on_the_longest_name(tmp_path: Path) -> None:
     rows = said[0].splitlines()
     starts = {row.index("http") for row in rows if "http" in row}
     assert len(starts) == 1, starts
+
+
+def test_a_startup_pick_is_saved_for_every_project(monkeypatch: object, tmp_path: Path) -> None:
+    from edgar.cli import models
+
+    async def pick_one(*a: object, **k: object) -> str:
+        return "openai/gpt-5"
+
+    monkeypatch.setattr(models, "pick", pick_one)  # type: ignore[attr-defined]
+    home = tmp_path / "home"
+    (home / ".edgar").mkdir(parents=True)
+    # An unedited init template: default is still the placeholder.
+    (home / ".edgar" / "config.toml").write_text('[model]\n# default = "provider/model"\n')
+    config = load(tmp_path, home=home, env={})
+    asyncio.run(init.run(tmp_path, config, scripted(), lambda _: None, home))  # type: ignore[arg-type]
+    saved = tomllib.loads((home / ".edgar" / "config.toml").read_text())
+    assert saved["model"]["default"] == "openai/gpt-5"
+    # Next directory: the default is found, so nothing would ask.
+    assert load(tmp_path / "other", home=home, env={}).model.default == "openai/gpt-5"
+
+
+def test_an_edited_user_config_is_never_rewritten(tmp_path: Path) -> None:
+    from edgar.cli.models import remember
+
+    path = tmp_path / "config.toml"
+    path.write_text("[budget]\ndaily_cost_cap = 3.0\n")
+    said = remember("openai/gpt-5", path)
+    assert path.read_text() == "[budget]\ndaily_cost_cap = 3.0\n"
+    assert "left alone" in said and 'default = "openai/gpt-5"' in said

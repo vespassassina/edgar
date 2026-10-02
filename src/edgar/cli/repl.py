@@ -312,7 +312,7 @@ async def interact(
             from edgar.config.load import load
 
             printer.block("Nothing configured yet. Let's fix that:")
-            chosen = await init.run(root, config, ask, printer.block)
+            chosen = await init.run(root, config, ask, printer.block, home)
             if chosen is None:
                 return 3
             # Read again: init may have written a vendor's block and the answers.

@@ -84,6 +84,7 @@ that did not need an ADR.
 | [0070](0070-setup-wizard-and-vendor-list-as-data.md) | The wizard's questions and the vendor list are TOML under `templates/`, not Python | Accepted · extends ADR-0034 |
 | [0071](0071-budget-margin.md) | Aggregate size budgets pass up to 10% over; the loop's 200 does not | Accepted · amends ADR-0040's checks |
 | [0072](0072-keyring-required.md) | `keyring` becomes a required dependency so `edgar login` keeps the key | Accepted · amends ADR-0019 |
+| [0073](0073-first-pick-saved-for-every-project.md) | The first model pick is saved to the user config; `remember()` fills the unedited init placeholder | Accepted · amends ADR-0034 |
 
 ## Writing a new ADR
 
