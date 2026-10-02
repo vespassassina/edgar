@@ -109,3 +109,12 @@ def test_copilot_shows_its_whole_model_list(monkeypatch: object, tmp_path: Path)
 def test_other_providers_keep_the_forty_model_cap(monkeypatch: object, tmp_path: Path) -> None:
     _, said = _pick_from(monkeypatch, "openrouter", 75, tmp_path, "")
     assert " 40. m39" in said and "41. m40" not in said and "and 35 more" in said
+
+
+def test_the_provider_list_lines_up_on_the_longest_name(tmp_path: Path) -> None:
+    config = load(tmp_path, home=tmp_path / "home", env={})
+    said: list[str] = []
+    asyncio.run(pick(config, {}, scripted(""), said.append))  # type: ignore[arg-type]
+    rows = said[0].splitlines()
+    starts = {row.index("http") for row in rows if "http" in row}
+    assert len(starts) == 1, starts

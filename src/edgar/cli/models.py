@@ -51,8 +51,9 @@ def list_models(cwd: Path, env: Mapping[str, str] | None = None) -> int:
             chosen = select_model(RoutingContext(role=role), config.model)
             out.write(f"{role:<11} {chosen.model:<36} {chosen.reason}\n")
     out.write("\n")
-    for name in sorted({*BUILTIN, *config.providers} - {"fake"}):
-        out.write(f"{name:<11} {describe(name, config, env)}\n")
+    names = sorted({*BUILTIN, *config.providers} - {"fake"})
+    for name in names:
+        out.write(f"{name:<{max(map(len, names))}} {describe(name, config, env)}\n")
     return 0
 
 
@@ -99,7 +100,10 @@ async def pick(
             config = replace(
                 config, providers={**config.providers, n: ProviderSection(**vendors[n])}
             )
-    say("\n".join(f"{i:>3}. {n:<11} {describe(n, config, env)}" for i, n in enumerate(names, 1)))
+    wide = max(map(len, names))  # the longest name sets the column
+    say(
+        "\n".join(f"{i:>3}. {n:<{wide}} {describe(n, config, env)}" for i, n in enumerate(names, 1))
+    )
     name = _choose(await ask("provider (number or name, empty to cancel): "), names)
     if name is None:
         return None
