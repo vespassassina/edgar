@@ -82,6 +82,7 @@ that did not need an ADR.
 | [0068](0068-olivia-design-answers.md) | Olivia's design interview: name, inbox input, five trigger outcomes, a pluggable governor and Cedar policy, Jev split into two Decider interfaces, pluggable memory and self-learning, the home-routine learning amendment, budget and branch topology | Accepted · amends ADR-0067 |
 | [0069](0069-github-copilot-device-flow.md) | Ship GitHub Copilot ahead of ADR-0043's terms-check gate; keep its device flow and row in the removable `providers/github_copilot.py` so the feature stays out of the non-removable budget | Accepted · amends ADR-0043's shipping gate |
 | [0070](0070-setup-wizard-and-vendor-list-as-data.md) | The wizard's questions and the vendor list are TOML under `templates/`, not Python | Accepted · extends ADR-0034 |
+| [0071](0071-budget-margin.md) | Aggregate size budgets pass up to 10% over; the loop's 200 does not | Accepted · amends ADR-0040's checks |
 
 ## Writing a new ADR
 

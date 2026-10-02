@@ -27,6 +27,9 @@ SRC = Path(__file__).resolve().parents[2] / "src" / "edgar"
 # outside the removable packages must still fit the tier below, which is what makes
 # "the suite is green with learning/ deleted" a budget fact and not a hope (NFR-12).
 TARGET_TIER = "v4"
+# The aggregate budgets pass up to 10% over (ADR-0071). The loop's 200 does not:
+# it is a shape, not a total. The numbers themselves never move.
+MARGIN = 0.10
 TIER_BUDGETS = {"core": 5_000, "v1": 8_000, "v2": 9_500, "v3": 12_000, "v4": 13_000}
 
 # Where the removable tiers live: v3 is learning, controller and escalation, v4 is
@@ -47,10 +50,11 @@ class Limit:
     label: str
     loc: int
     budget: int
+    margin: float = 0.0  # the share over budget that still passes (ADR-0071)
 
     @property
     def ok(self) -> bool:
-        return self.loc <= self.budget
+        return self.loc <= self.budget * (1 + self.margin)
 
 
 def count_loc(path: Path) -> int:
@@ -74,12 +78,12 @@ def limits(root: Path = SRC, tier: str = TARGET_TIER) -> list[Limit]:
     core = sum(count_loc(f) for f in files if f.relative_to(root).parts[0] == "core")
     # 2. Compare each total with its budget.
     result = [
-        Limit(f"src/ total ({tier} tier)", total, TIER_BUDGETS[tier]),
-        Limit("core/", core, 2_000),
+        Limit(f"src/ total ({tier} tier)", total, TIER_BUDGETS[tier], MARGIN),
+        Limit("core/", core, 2_000, MARGIN),
     ]
     if tier in ("v3", "v4"):
         result.append(
-            Limit("src/ without removable packages", without_removable, TIER_BUDGETS["v2"])
+            Limit("src/ without removable packages", without_removable, TIER_BUDGETS["v2"], MARGIN)
         )
     # 3. The loop, in lines of code like everything else: its comments are free.
     loop = root / "core" / "loop.py"
@@ -92,7 +96,7 @@ def report() -> int:
     # One line per limit; exit 1 if any is over.
     worst = 0
     for limit in limits():
-        mark = "ok " if limit.ok else "OVER"
+        mark = "OVER" if not limit.ok else "ok " if limit.loc <= limit.budget else "MARG"
         share = limit.loc / limit.budget
         print(f"{mark}  {limit.label:<30} {limit.loc:>6} / {limit.budget:<6} {share:>5.0%}")
         worst = worst if limit.ok else 1

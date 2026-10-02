@@ -5,6 +5,20 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-02 — Budget margin, 4.1.0
+
+Asked: allow a 10% margin in the budget checks, push and publish.
+
+**Done:** `MARGIN = 0.10` in `tests/support/budget.py` for the tier total,
+`core/` and the non-removable remainder; the loop's 200 stays strict.
+[ADR-0071](adr/0071-budget-margin.md). `just check` is green again (the
+remainder reads `MARG`, 9,555 of 9,500). `AGENTS.md` still states the budgets
+without the margin: yours to edit.
+
+**Open:** the `v4.1.0` tag was cut before the margin, so the release workflow's
+`pytest` would fail on it. It must move onto the margin commit before the
+release is published. Moving a pushed tag was blocked, so it is yours to do.
+
 ## 2026-10-02 — Setup wizard and vendor list
 
 Asked: "edgar setup menu, add more settings to the wizard, and add the whole

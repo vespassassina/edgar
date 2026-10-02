@@ -46,3 +46,9 @@ def test_removable_tiers_also_check_the_remainder(tmp_path: Path) -> None:
     remainder = next(lim for lim in limits(tmp_path, "v3") if "without removable" in lim.label)
     assert remainder.loc == 1
     assert not any("without removable" in lim.label for lim in limits(tmp_path, "v2"))
+
+
+def test_an_aggregate_budget_passes_ten_percent_over_and_no_further() -> None:
+    assert Limit("x", 1_100, 1_000, 0.10).ok
+    assert not Limit("x", 1_101, 1_000, 0.10).ok
+    assert not Limit("loop", 201, 200).ok  # the loop gets no margin
