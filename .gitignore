@@ -21,6 +21,7 @@ htmlcov/
 
 # Local agent tooling state
 .gstack/
+.claude/settings.local.json
 
 # Launch-prep drafts, not part of the shipped docs
 docs/HN_POST.md

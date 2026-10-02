@@ -1,0 +1,30 @@
+# The questions `edgar init` asks after the model, in order. Data, not code:
+# `marker` is the commented line in config.toml that an answer turns into
+# `key = value`; Enter keeps the default, so the line stays a comment.
+# `kind` is "text", "money" (a number above zero) or the words allowed, with `|`
+# between them. yolo is never offered: only a person typing it, with a
+# confirmation, can turn every check off (PERM-9).
+
+[[question]]
+ask = "permissions mode: read-only, ask or auto [ask]: "
+marker = '# mode = "ask"'
+key = "mode"
+kind = "read-only|ask|auto"
+
+[[question]]
+ask = "command that proves work is done, e.g. just test [none]: "
+marker = '# command = "just test"'
+key = "command"
+kind = "text"
+
+[[question]]
+ask = "most to spend in one session, in dollars [no cap]: "
+marker = "# session_cost_cap = 5.0"
+key = "session_cost_cap"
+kind = "money"
+
+[[question]]
+ask = "most to spend in one day, in dollars [no cap]: "
+marker = "# daily_cost_cap = 20.0"
+key = "daily_cost_cap"
+kind = "money"

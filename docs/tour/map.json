@@ -5,7 +5,7 @@
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12182,
+    "loc": 12225,
     "status": "built",
     "children": [
       {
@@ -14,14 +14,14 @@
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6817,
+        "loc": 6837,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2226,
+            "loc": 2246,
             "status": "built",
             "children": [
               {
@@ -54,7 +54,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 132,
+                "loc": 150,
                 "summary": "`edgar models list` and the model picker.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -90,7 +90,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 311,
+                "loc": 313,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -760,7 +760,7 @@
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2255,
+        "loc": 2278,
         "status": "built",
         "children": [
           {
@@ -869,7 +869,7 @@
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 229,
+            "loc": 252,
             "status": "built",
             "children": [
               {
@@ -890,7 +890,7 @@
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 51,
+                "loc": 74,
                 "summary": "`edgar init` and `/init`: a project's first config, AGENTS.md and gitignore.",
                 "stop": "index.html#s30",
                 "status": "built",

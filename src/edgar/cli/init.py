@@ -5,10 +5,14 @@
 #
 # 1. AGENTS.md and the .gitignore fragment: written if missing, left alone if not.
 # 2. config.toml: left alone if one exists; otherwise the template, with a model
-#    picked the same way `edgar models` does when there is somewhere to ask.
+#    picked the same way `edgar models` does when there is somewhere to ask, a
+#    provider block for a vendor from the catalog, and the answers to a few
+#    questions (each one: Enter keeps the default, which stays a comment).
 
 from __future__ import annotations
 
+import json
+import tomllib
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
@@ -17,6 +21,15 @@ from edgar.config.schema import Config
 
 TEMPLATES = Path(__file__).resolve().parent.parent / "templates"
 Ask = Callable[[str], Awaitable[str]]
+
+
+def _read(raw: str, kind: str) -> str | None:
+    if kind == "money":
+        try:
+            return repr(float(raw)) if float(raw) > 0 else None
+        except ValueError:
+            return None
+    return json.dumps(raw) if kind == "text" or raw in kind.split("|") else None
 
 
 async def run(cwd: Path, config: Config, ask: Ask | None, say: Callable[[str], None]) -> str | None:
@@ -36,10 +49,27 @@ async def run(cwd: Path, config: Config, ask: Ask | None, say: Callable[[str], N
     text = (TEMPLATES / "config.toml").read_text(encoding="utf-8")
     if choice is not None:
         text = text.replace('# default = "provider/model"', f'default = "{choice}"')
+        text += _vendor_block(choice.split("/")[0])
+    for q in tomllib.loads((TEMPLATES / "wizard.toml").read_text("utf-8"))["question"]:
+        raw = (await ask(q["ask"])).strip() if ask is not None else ""
+        value = _read(raw, q["kind"]) if raw else None
+        if raw and value is None:
+            say(f"{raw!r} not understood, kept the default")
+        elif value is not None:
+            text = text.replace(q["marker"], f"{q['key']} = {value}", 1)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(text, encoding="utf-8")
     say(f"wrote {dest}")
     return choice
+
+
+def _vendor_block(name: str) -> str:
+    from edgar.cli.models import catalog  # interactive path only (NFR-1)
+
+    row = catalog().get(name, {})
+    return (
+        f"\n[providers.{name}]\n" + "".join(f'{k} = "{v}"\n' for k, v in row.items()) if row else ""
+    )
 
 
 def _scaffold(dest: Path, template: str) -> str:

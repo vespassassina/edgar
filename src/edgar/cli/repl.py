@@ -309,12 +309,15 @@ async def interact(
         bus.subscribe(status)
         if config.model.default is None:
             from edgar.cli import init  # nothing configured: offer setup, not an error [CFG-4]
+            from edgar.config.load import load
 
             printer.block("Nothing configured yet. Let's fix that:")
             chosen = await init.run(root, config, ask, printer.block)
             if chosen is None:
                 return 3
-            s.config = replace(config, model=replace(config.model, default=chosen))
+            # Read again: init may have written a vendor's block and the answers.
+            fresh = load(root, home=home, env=env)
+            s.config = replace(fresh, model=replace(fresh.model, default=chosen))
         session, rt = begin(s, bus, resume, scope=tuple(scope or ()))
         status.model = rt.name
         shell = Shell(setup=s, session=session, rt=rt, renderer=renderer, status=status, ask=ask)
