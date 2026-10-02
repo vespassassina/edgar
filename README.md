@@ -59,6 +59,32 @@ edgar                           # the REPL, in the directory you are in
 No API key? Install [Ollama](https://ollama.com), `ollama pull qwen3:8b`, and run
 `edgar --model ollama/qwen3:8b`: everything stays on your machine.
 
+### GitHub Copilot
+
+Edgar signs in to Copilot with GitHub's device flow under an OAuth app you
+register yourself. There is no shared client id: it would be someone else's
+identity, and GitHub can revoke it.
+
+1. On GitHub: **Settings, Developer settings, OAuth Apps, New OAuth App**. Name
+   it `edgar`; the homepage can be this repo; the callback URL is required but
+   unused, so `http://localhost` will do.
+2. Open the app and tick **Enable Device Flow**.
+3. Copy its **Client ID**, the string starting `Ov23` (or `Iv1.` / `Iv23` for a
+   GitHub App). It is not a secret. The numeric "App ID" is not the client id.
+4. Sign in. Edgar prints a code; enter it at https://github.com/login/device.
+
+```bash
+export GITHUB_COPILOT_CLIENT_ID=Ov23...      # put it in your shell profile
+edgar login github-copilot
+edgar models                                  # pick github-copilot, then any model on the list
+```
+
+The token is kept in your OS keyring and never printed. Business and Enterprise
+plans set `base_url` under `[providers.github-copilot]`. Copilot bills in
+premium requests, so edgar cannot price a turn: cost caps stop at once unless
+`[pricing]` gives the model a price. Whether GitHub allows a third-party app to
+call Copilot is GitHub's call; see [ADR-0043](docs/adr/0043-github-copilot-provider.md).
+
 No `uv`, or no Python at all? Every [release](https://github.com/vespassassina/edgar/releases)
 also carries a self-installing binary per platform (Linux, macOS, Windows), and
 `docker run --rm -it -v "$PWD":/work ghcr.io/vespassassina/edgar:latest` runs the

@@ -56,6 +56,12 @@
 # api_key_command = ["uv", "run", "--no-project", "--with", "aws-bedrock-token-generator", "python", "-c",
 #                    "from aws_bedrock_token_generator import provide_token; print(provide_token())"]
 
+# GitHub Copilot: register your own OAuth app first (README, "GitHub Copilot"), then
+#   export GITHUB_COPILOT_CLIENT_ID=<its client id>; edgar login github-copilot
+# Business and Enterprise plans have their own host:
+# [providers.github-copilot]
+# base_url = "https://api.business.githubcopilot.com"
+
 # An MCP server, started only once a tool from it is actually called:
 # [mcp.NAME]
 # command = "npx"

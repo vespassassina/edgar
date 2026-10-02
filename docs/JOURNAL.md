@@ -5,6 +5,20 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-02 — Copilot: whole model list, registration guide
+
+Asked: let the picker show Copilot's whole model list; document how to register
+the app. Also: made `keyring` a required dependency (ADR-0072) after the first
+Copilot sign-in printed the token and kept nothing.
+
+**Done** on `feat/copilot-models-and-docs`: the picker shows every model for a
+provider with a device-flow row, the 40 cap stays for the rest; README section
+"GitHub Copilot" and a config-template comment; two tests.
+
+**Learned:** the first sign-in with the maintainer's client id worked (GitHub
+accepted the app). The model list against the real Copilot endpoint is not yet
+seen; that is the check for ADR-0043's open question.
+
 ## 2026-10-02 — Budget margin, 4.1.0
 
 Asked: allow a 10% margin in the budget checks, push and publish.

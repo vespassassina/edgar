@@ -8,7 +8,14 @@ extension formats freeze.
 
 ## Unreleased
 
+### Added
+- **GitHub Copilot setup guide** in the README: how to register the OAuth app,
+  enable the device flow and find the client id; a matching comment in the
+  config template.
+
 ### Changed
+- `edgar models` shows a subscription provider's whole model list (GitHub
+  Copilot), not the first 40; other providers keep the cap.
 - **`keyring` is now a required dependency**, so `edgar login` keeps the key in
   your OS keyring with nothing to install. The `[keyring]` extra still
   installs, as a no-op [ADR-0072].

@@ -73,3 +73,39 @@ def test_a_catalog_vendor_writes_its_own_block(tmp_path: Path) -> None:
     written = tomllib.loads((tmp_path / ".edgar" / "config.toml").read_text(encoding="utf-8"))
     assert written["providers"]["groq"]["base_url"].startswith("https://")
     assert written["model"]["default"] == chosen
+
+
+class _Many:
+    def __init__(self, n: int) -> None:
+        self._n = n
+
+    async def models(self) -> list[str]:
+        return [f"m{i}" for i in range(self._n)]
+
+
+def _pick_from(
+    monkeypatch: object, name: str, n: int, tmp: Path, *answers: str
+) -> tuple[str | None, str]:
+    from edgar.cli import models
+
+    monkeypatch.setattr(models, "resolve", lambda *a, **k: (_Many(n), "-"))  # type: ignore[attr-defined]
+    monkeypatch.setattr(models, "_offer_sign_in", _keep_env)  # type: ignore[attr-defined]
+    said: list[str] = []
+    config = load(tmp, home=tmp / "home", env={})
+    got = asyncio.run(pick(config, {}, scripted(name, *answers), said.append))  # type: ignore[arg-type]
+    return got, "\n".join(said)
+
+
+async def _keep_env(name: str, config: object, env: object, ask: object, say: object) -> object:
+    return env
+
+
+def test_copilot_shows_its_whole_model_list(monkeypatch: object, tmp_path: Path) -> None:
+    got, said = _pick_from(monkeypatch, "github-copilot", 75, tmp_path, "75")
+    assert "75. m74" in said and "more; type a name" not in said
+    assert got == "github-copilot/m74"
+
+
+def test_other_providers_keep_the_forty_model_cap(monkeypatch: object, tmp_path: Path) -> None:
+    _, said = _pick_from(monkeypatch, "openrouter", 75, tmp_path, "")
+    assert " 40. m39" in said and "41. m40" not in said and "and 35 more" in said

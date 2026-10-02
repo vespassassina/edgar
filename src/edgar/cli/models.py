@@ -103,7 +103,8 @@ async def pick(
     name = _choose(await ask("provider (number or name, empty to cancel): "), names)
     if name is None:
         return None
-    key = quirks_for(name, config.providers.get(name)).api_key_env
+    q = quirks_for(name, config.providers.get(name))
+    key = q.api_key_env
     if name in vendors and key and not env.get(key):
         # 2. A vendor with no key yet: say which variable, and take a typed model name.
         say(f"set {key} before you run edgar; its model list needs it, so type a name.")
@@ -121,7 +122,7 @@ async def pick(
     except EdgarError as exc:
         say(f"could not list models: {exc}")
         models = []
-    shown = models[:40]
+    shown = models if q.device else models[:40]  # a subscription's list is short: show it all
     if shown:
         say("\n".join(f"{i:>3}. {m}" for i, m in enumerate(shown, 1)))
     if len(models) > len(shown):

@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12226,
+    "loc": 12227,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6837,
+        "loc": 6838,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2246,
+            "loc": 2247,
             "status": "built",
             "children": [
               {
@@ -56,7 +56,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 150,
+                "loc": 151,
                 "summary": "`edgar models list` and the model picker.",
                 "stop": "index.html#s25",
                 "status": "built",
