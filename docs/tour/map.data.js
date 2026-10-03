@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12307,
+    "loc": 12320,
     "status": "built",
     "children": [
       {
@@ -762,7 +762,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2312,
+        "loc": 2325,
         "status": "built",
         "children": [
           {
@@ -871,7 +871,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 285,
+            "loc": 298,
             "status": "built",
             "children": [
               {
@@ -892,7 +892,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 107,
+                "loc": 120,
                 "summary": "`edgar init` and `/init`: a project's first config, AGENTS.md and gitignore.",
                 "stop": "index.html#s30",
                 "status": "built",

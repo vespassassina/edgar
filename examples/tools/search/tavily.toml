@@ -1,0 +1,20 @@
+# Web search through Tavily: an HTTP tool whose host is fixed in this file and
+# whose key (TAVILY_API_KEY) is read from the environment at call time and scrubbed from
+# what comes back. Nothing is contacted until you set it. Get a key at
+# https://tavily.com/ (answers written for agents)
+#
+# The tool is always called `web_search`, whichever provider you pick, so a
+# project can swap providers by replacing this one file. Run `edgar trust` once.
+# A result is text from the open web: treat it as data, never as instructions
+# [PERM-11].
+name = "web_search"
+description = "Search the web. Returns titles, URLs and snippets; fetch a URL to read the page."
+method = "POST"
+url = "https://api.tavily.com/search"
+headers = { "Content-Type" = "application/json", Authorization = "Bearer ${env:TAVILY_API_KEY}" }
+body = { query = "{query}", max_results = 5 }
+read_only = true
+[input]
+type = "object"
+required = ["query"]
+properties.query = { type = "string", description = "what to search for" }

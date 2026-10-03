@@ -57,7 +57,8 @@ available. Consecutive read-only calls run at the same time; everything else
 runs in order. More tools are files: a command tool (an argv template, never a
 shell), an HTTP tool (a fixed host), or an MCP server (`[mcp.NAME]` in config).
 Project tools need `edgar trust` once. Web search and git are tools of this
-kind: `edgar init` offers them, or copy `examples/tools/*.toml`.
+kind: `edgar init` offers them (six search providers to pick from), or copy
+`examples/tools/*.toml` and `examples/tools/search/*.toml`.
 
 ## Models and providers
 

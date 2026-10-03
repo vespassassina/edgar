@@ -9,7 +9,8 @@
 #    provider block for a vendor from the catalog, and the answers to a few
 #    questions (each one: Enter keeps the default, which stays a comment).
 # 3. Tools offered from templates/tools/ (git, web search): copied into
-#    .edgar/tools/ on a yes, never over a file that is there, never unasked.
+#    .edgar/tools/ on a yes, never over a file that is there, never unasked; one
+#    search provider among six, or none.
 
 from __future__ import annotations
 
@@ -101,8 +102,24 @@ async def _tools(cwd: Path, ask: Ask | None, say: Callable[[str], None]) -> None
             )
         say(f"wrote {', '.join(todo)} in {folder}")
         wrote = True
+    wrote = await _search(folder, ask, say) or wrote
     if wrote:
         say("they run once you trust this project: `edgar trust`")
+
+
+async def _search(folder: Path, ask: Ask, say: Callable[[str], None]) -> bool:
+    # One provider or none; an existing web_search.toml is the user's and stays.
+    dest = folder / "web_search.toml"
+    q = tomllib.loads((TEMPLATES / "wizard.toml").read_text("utf-8"))["search"]
+    if dest.exists():
+        return False
+    pick = (await ask(q["ask"])).strip().lower()
+    if pick not in q["providers"]:
+        return False
+    folder.mkdir(parents=True, exist_ok=True)
+    dest.write_text((TEMPLATES / "tools" / "search" / f"{pick}.toml").read_text("utf-8"), "utf-8")
+    say(f"wrote {dest}; set {q['providers'][pick]} before you search")
+    return True
 
 
 def _vendor_block(name: str) -> str:

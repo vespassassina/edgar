@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
 
+import pytest
+
 from edgar.cli import init
 from edgar.cli.models import catalog, pick
 from edgar.config.load import load
+from edgar.core.events import EventBus
 
 
 def scripted(*answers: str) -> Callable[[str], object]:
@@ -161,10 +165,71 @@ def test_enter_gives_the_agent_git_and_not_web_search(tmp_path: Path) -> None:
     assert "edgar trust" in said
 
 
-def test_yes_to_web_search_and_no_to_git(tmp_path: Path) -> None:
-    # provider, four settings, then git, then search
-    run(tmp_path, "", "", "", "", "", "n", "y")
+def test_naming_a_search_provider_copies_it_as_web_search_and_names_its_key(
+    tmp_path: Path,
+) -> None:
+    # provider, four settings, then git, then the search provider
+    _, said = run(tmp_path, "", "", "", "", "", "n", "Exa")
     assert _tools_in(tmp_path) == ["web_search"]
+    assert "EXA_API_KEY" in said and "api.exa.ai" in (
+        tmp_path / ".edgar" / "tools" / "web_search.toml"
+    ).read_text(encoding="utf-8")
+
+
+def test_an_unknown_search_provider_writes_nothing_and_an_existing_one_is_not_asked(
+    tmp_path: Path,
+) -> None:
+    run(tmp_path, "", "", "", "", "", "n", "bing")
+    assert _tools_in(tmp_path) == []
+    folder = tmp_path / ".edgar" / "tools"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "web_search.toml").write_text("mine", encoding="utf-8")
+    run(tmp_path, "", "", "", "", "", "n", "brave")
+    assert (folder / "web_search.toml").read_text(encoding="utf-8") == "mine"
+
+
+@pytest.mark.parametrize(
+    "name", sorted(p.name for p in (init.TEMPLATES / "tools" / "search").iterdir())
+)
+def test_every_search_provider_sends_a_request_its_api_can_read(
+    name: str, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import httpx
+
+    from edgar.tools.base import ToolContext
+    from edgar.tools.custom import load
+
+    provider = name.removesuffix(".toml")
+    key = tomllib.loads((init.TEMPLATES / "wizard.toml").read_text("utf-8"))["search"]["providers"][
+        provider
+    ]
+    folder = tmp_path / "tools"
+    folder.mkdir()
+    (folder / "web_search.toml").write_text(
+        (init.TEMPLATES / "tools" / "search" / name).read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    monkeypatch.setenv(key, "sekret-1")
+    seen: list[httpx.Request] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, text="results")
+
+    real = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kw: real(**{**kw, "transport": httpx.MockTransport(handle)})
+    )
+    (tool,) = load([(folder, "project")])
+    ctx = ToolContext(cwd=tmp_path, bus=EventBus(), blob_dir=tmp_path, max_output_tokens=8000)
+    result = asyncio.run(tool.run({"query": 'say "hi" & more'}, ctx))
+    (request,) = seen
+    assert result.error is None and tool.schema.read_only
+    assert any(b"sekret-1" in v for _, v in request.headers.raw) and "sekret-1" not in result.text
+    if request.method == "POST":  # a JSON object carrying the query, not a JSON string
+        body = json.loads(request.content)
+        assert isinstance(body, dict) and 'say "hi" & more' in body.values()
+    else:
+        assert request.url.params.get("q") == 'say "hi" & more'
 
 
 def test_an_existing_tool_file_is_never_overwritten_or_asked_about_again(tmp_path: Path) -> None:
@@ -185,7 +250,8 @@ def test_nothing_is_written_when_nobody_can_answer(tmp_path: Path) -> None:
 
 def test_the_shipped_tool_templates_match_the_examples() -> None:
     root = Path(__file__).resolve().parents[2]
-    for f in (init.TEMPLATES / "tools").glob("*.toml"):
-        assert f.read_text(encoding="utf-8") == (root / "examples" / "tools" / f.name).read_text(
+    for f in (init.TEMPLATES / "tools").glob("**/*.toml"):
+        mine = f.relative_to(init.TEMPLATES / "tools")
+        assert f.read_text(encoding="utf-8") == (root / "examples" / "tools" / mine).read_text(
             encoding="utf-8"
         )

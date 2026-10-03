@@ -31,14 +31,19 @@ kind = "money"
 
 # Tools `edgar init` offers to copy into .edgar/tools/, from templates/tools/.
 # `default` is what Enter does. A command or HTTP tool runs only after
-# `edgar trust`, and web search names its host and key in its own file.
+# `edgar trust`.
 
 [[tool]]
 ask = "give the agent git: status, diff, log and commit? [Y/n]: "
 default = true
 files = ["git-status", "git-diff", "git-log", "git-commit"]
 
-[[tool]]
-ask = "give it web search (Brave, needs BRAVE_SEARCH_API_KEY)? [y/N]: "
-default = false
-files = ["web_search"]
+# One web search provider, copied from templates/tools/search/NAME.toml to
+# .edgar/tools/web_search.toml: the tool is always called web_search, so swapping
+# providers is replacing that file. Each provider is paired with the variable
+# holding its key. Enter picks none, because every one needs a key and edgar
+# chooses no host for you.
+
+[search]
+ask = "web search provider: brave, tavily, exa, serper, kagi or perplexity [none]: "
+providers = { brave = "BRAVE_SEARCH_API_KEY", tavily = "TAVILY_API_KEY", exa = "EXA_API_KEY", serper = "SERPER_API_KEY", kagi = "KAGI_API_KEY", perplexity = "PERPLEXITY_API_KEY" }

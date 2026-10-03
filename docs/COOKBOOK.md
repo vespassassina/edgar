@@ -274,12 +274,26 @@ can stop a call.
 
 edgar ships no search engine and no default search host: web search is an HTTP
 tool you copy in, so the host is in a file you can read [PRV-15].
-[`examples/tools/web_search.toml`](../examples/tools/web_search.toml) has three
-variants — Brave, Tavily, and your own SearXNG instance. Brave is the active one;
-uncomment the one you want and delete the rest.
+`edgar init` offers one provider and copies it as `.edgar/tools/web_search.toml`.
+Six are ready in [`examples/tools/search/`](../examples/tools/search/); the tool is
+always called `web_search`, so swapping providers is replacing that one file.
+
+| Provider | File | Key variable | Notes |
+|---|---|---|---|
+| Brave Search | `brave.toml` | `BRAVE_SEARCH_API_KEY` | free tier |
+| Tavily | `tavily.toml` | `TAVILY_API_KEY` | answers written for agents |
+| Exa | `exa.toml` | `EXA_API_KEY` | neural search |
+| Serper | `serper.toml` | `SERPER_API_KEY` | Google results, free credits |
+| Kagi | `kagi.toml` | `KAGI_API_KEY` | paid account |
+| Perplexity | `perplexity.toml` | `PERPLEXITY_API_KEY` | Search API |
+
+[`examples/tools/web_search.toml`](../examples/tools/web_search.toml) also shows a
+self-hosted SearXNG instance, which needs your own host and no key. The request
+shapes follow each vendor's documentation; they are tested against a mock server,
+not against the live services.
 
 ```bash
-cp examples/tools/web_search.toml .edgar/tools/
+cp examples/tools/search/brave.toml .edgar/tools/web_search.toml
 export BRAVE_SEARCH_API_KEY=...
 edgar trust
 edgar tools list             # web_search  http  project  Search the web…

@@ -5,6 +5,18 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-03 — More search providers
+
+Asked: a few more search providers. Added Exa, Serper, Kagi and Perplexity beside
+Brave and Tavily, as `templates/tools/search/NAME.toml` (copies in
+`examples/tools/search/`). `init` asks for one and writes `web_search.toml`.
+
+Bug found by the new per-provider test: an HTTP tool's `body` written as a string
+is sent as a JSON string, not an object, so the old Tavily example could never
+have worked. Bodies are TOML tables now. Vendor request shapes are from their
+docs and run only against a mock server: no key, so none was called live. Jina
+and Google Programmable Search left out (the latter needs a second id in the URL).
+
 ## 2026-10-03 — What edgar lacked next to Claude Code
 
 Asked: edgar seems unaware of itself and short on capability; do all three of the
