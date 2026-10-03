@@ -32,6 +32,7 @@ ADMIN = {
     "ext",
     "login",
     "logout",
+    "keys",
 }
 
 # v3/v4 verbs reached by name only, routed to their own cli module [NFR-12, ADR-0015].
@@ -48,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
         "edgar sessions list|show ID|rm ID, edgar tools list|describe NAME, "
         "edgar skills list|validate, edgar memory list|add|edit|review|forget ID|undo, "
         "edgar cost, edgar mcp list|test|login|logout NAME, "
-        "edgar login PROVIDER, edgar logout PROVIDER, "
+        "edgar login PROVIDER, edgar logout PROVIDER, edgar keys [set|remove NAME], "
         "edgar receipt [ID] [--refused] [--verify], "
         "edgar schedule list|add|remove|run, edgar tick, edgar install-tick|uninstall-tick",
     )

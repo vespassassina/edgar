@@ -9,6 +9,9 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- `edgar keys`: list where every model and search key is, `edgar keys set NAME`
+  keeps one in the OS keyring (hidden prompt), `remove NAME` forgets it. The
+  environment still wins over the keyring.
 - Six web search providers: Brave, Tavily, Exa, Serper, Kagi and Perplexity.
   `edgar init` copies the one you name as `.edgar/tools/web_search.toml`.
 

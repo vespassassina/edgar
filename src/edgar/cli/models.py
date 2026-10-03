@@ -111,7 +111,9 @@ async def pick(
     key = q.api_key_env
     if name in vendors and key and not env.get(key):
         # 2. A vendor with no key yet: say which variable, and take a typed model name.
-        say(f"set {key} before you run edgar; its model list needs it, so type a name.")
+        say(
+            f"run edgar keys set {name} (or export {key}); its model list needs it, so type a name."
+        )
         model = (await ask("model (empty to cancel): ")).strip()
         return f"{name}/{model}" if model else None
     env = await _offer_sign_in(name, config, env, ask, say)

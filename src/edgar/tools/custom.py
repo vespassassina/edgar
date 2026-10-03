@@ -14,7 +14,6 @@ what the tool returns.
 from __future__ import annotations
 
 import json
-import os
 import re
 import shlex
 import tomllib
@@ -38,11 +37,14 @@ SECRETS: set[str] = set()  # every value ${env:…} resolved, for scrub()
 
 
 def expand(text: str) -> str:
-    """`${env:NAME}` read from the environment, for an HTTP tool's headers and an MCP
-    server's env and headers. Every value it resolves is remembered for scrub()."""
+    """`${env:NAME}` read from the environment, else the keyring (`edgar keys set`), for an
+    HTTP tool's headers and an MCP server's env and headers. Every value it resolves is
+    remembered for scrub()."""
 
     def value(match: re.Match[str]) -> str:
-        found = os.environ.get(match[1])
+        from edgar.auth.store import secret  # the keyring is read only when unset (NFR-1)
+
+        found = secret(match[1])
         if found is None:
             raise KeyError(f"environment variable {match[1]} is not set")
         if len(found) >= 4:
@@ -197,7 +199,7 @@ class HttpTool:
             url = _fill(expand(self.url), args, encode=True)  # env first: args never reach it
             headers = {k: expand(v) for k, v in self.headers.items()}
         except KeyError as missing:
-            return ToolResult(f"environment variable {missing} is not set", "validation")
+            return ToolResult(f"{missing.args[0]}; export it, or run `edgar keys`", "validation")
         if urlsplit(url).netloc != urlsplit(expand(self.url)).netloc:
             return ToolResult("an argument tried to change the host", "validation")
         body = self._body(self.body, args) if self.body is not None else None

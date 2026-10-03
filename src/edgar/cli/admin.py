@@ -41,7 +41,7 @@ USAGE = """usage: edgar init | edgar doctor [--network]
        edgar skills audit PATH [--strict] [--diff]
        edgar mcp list | test NAME | login NAME | logout NAME
        edgar ext list | edgar ext validate PATH | edgar ext add PATH [--yes]
-       edgar login PROVIDER | edgar logout PROVIDER
+       edgar login PROVIDER | edgar logout PROVIDER | edgar keys [set|remove NAME]
        edgar context show [SESSION] | edgar config show --resolved
        edgar route explain [PROMPT] | edgar agents list | validate"""
 
@@ -76,6 +76,10 @@ def command(argv: list[str], cwd: Path, home: Path | None = None) -> int:
         return _cost(cwd, home)
     if argv[0] == "mcp" and len(argv) in (2, 3):
         return _mcp(argv, cwd, home)
+    if argv[0] == "keys":
+        from edgar.cli.keys import command as keys_command  # the keyring and the catalogs
+
+        return keys_command(argv[1:], cwd)
     if argv[0] in ("login", "logout") and len(argv) == 2:
         return _sign_in(argv[0], argv[1])
     if argv[:2] == ["sessions", "compact"] and len(argv) == 3:

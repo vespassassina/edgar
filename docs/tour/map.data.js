@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12320,
+    "loc": 12406,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6885,
+        "loc": 6959,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2275,
+            "loc": 2345,
             "status": "built",
             "children": [
               {
@@ -32,8 +32,20 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 265,
+                "loc": 268,
                 "summary": "The subcommands that look at a project rather than run a turn.",
+                "stop": "index.html#s25",
+                "status": "built",
+                "port": false
+              },
+              {
+                "path": "src/edgar/cli/keys.py",
+                "name": "keys.py",
+                "kind": "file",
+                "tier": "core",
+                "package": "cli",
+                "loc": 64,
+                "summary": "`edgar keys`: where the API keys for models and for web search are kept [CFG-6, ADR-0076].",
                 "stop": "index.html#s25",
                 "status": "built",
                 "port": false
@@ -44,7 +56,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 173,
+                "loc": 174,
                 "summary": "",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -56,7 +68,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 158,
+                "loc": 160,
                 "summary": "`edgar models list` and the model picker.",
                 "stop": "index.html#s25",
                 "status": "built",
@@ -437,7 +449,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1301,
+            "loc": 1304,
             "status": "built",
             "children": [
               {
@@ -530,7 +542,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 178,
+                "loc": 181,
                 "summary": "How providers differ, as data [PRV-3, ADR-0002, ADR-0020].",
                 "stop": "media.html#m3",
                 "status": "built",
@@ -644,7 +656,7 @@ window.EDGAR_MAP = {
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 613,
+            "loc": 614,
             "status": "built",
             "children": [
               {
@@ -665,7 +677,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 179,
+                "loc": 180,
                 "summary": "Command and HTTP tools, declared in TOML: a CLI or an API for the agent, without",
                 "stop": "index.html#s10",
                 "status": "built",
@@ -762,7 +774,7 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2325,
+        "loc": 2337,
         "status": "built",
         "children": [
           {
@@ -814,7 +826,7 @@ window.EDGAR_MAP = {
             "id": "v1/auth",
             "name": "auth/",
             "kind": "package",
-            "loc": 318,
+            "loc": 327,
             "status": "built",
             "children": [
               {
@@ -859,7 +871,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "auth",
-                "loc": 47,
+                "loc": 56,
                 "summary": "Where a credential edgar was given lives: the OS keyring, and nowhere else",
                 "stop": "mcp.html#p3",
                 "status": "built",
@@ -871,7 +883,7 @@ window.EDGAR_MAP = {
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 298,
+            "loc": 301,
             "status": "built",
             "children": [
               {
@@ -892,7 +904,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 120,
+                "loc": 123,
                 "summary": "`edgar init` and `/init`: a project's first config, AGENTS.md and gitignore.",
                 "stop": "index.html#s30",
                 "status": "built",

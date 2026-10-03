@@ -66,7 +66,8 @@ kind: `edgar init` offers them (six search providers to pick from), or copy
 one and can save it as the default. Providers: OpenAI, Anthropic, Azure,
 OpenRouter, Ollama, GitHub Copilot, and any OpenAI-compatible server in a
 `[providers.NAME]` block. A key lives in an environment variable or the OS
-keyring, never in a file.
+keyring, never in a file. `edgar keys` shows where each model and search key is;
+`edgar keys set NAME` (a provider, `search:NAME` or a variable) keeps one.
 
 ## Memory, skills, verification
 

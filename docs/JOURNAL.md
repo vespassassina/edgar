@@ -5,6 +5,14 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-03 — `edgar keys`
+
+Asked: an edgar command to configure the keys of models and search. Added
+`edgar keys [set|remove NAME]` (`cli/keys.py`) and `auth/store.secret`, which
+provider connect and `${env:NAME}` now share: environment first, then the keyring
+account `env:VAR`. ADR-0076. Tested with a fake keyring; no real key was touched.
+Pending: `init` and the model picker still say "export VAR"; Copilot token swap.
+
 ## 2026-10-03 — More search providers
 
 Asked: a few more search providers. Added Exa, Serper, Kagi and Perplexity beside

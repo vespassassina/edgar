@@ -118,7 +118,10 @@ async def _search(folder: Path, ask: Ask, say: Callable[[str], None]) -> bool:
         return False
     folder.mkdir(parents=True, exist_ok=True)
     dest.write_text((TEMPLATES / "tools" / "search" / f"{pick}.toml").read_text("utf-8"), "utf-8")
-    say(f"wrote {dest}; set {q['providers'][pick]} before you search")
+    say(
+        f"wrote {dest}; run edgar keys set search:{pick} "
+        f"(or export {q['providers'][pick]}) before you search"
+    )
     return True
 
 

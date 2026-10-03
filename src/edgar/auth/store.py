@@ -10,12 +10,15 @@ a transcript, an event or a log.
 # read(account)     the secret, or None; registers it with scrub() [TOOL-6]
 # write(account, s) keep it, or raise if there is no keyring to keep it in
 # erase(account)    forget it; True if there was something to forget
+# secret(var, env)  an environment variable, else the key `edgar keys set` kept for it
 #
 # An account is "provider:openrouter" or "mcp:<url>": one namespace, so
 # `edgar logout` and `edgar mcp logout` see the same store.
 
 from __future__ import annotations
 
+import os
+from collections.abc import Mapping
 from typing import Any
 
 from edgar.core.errors import ConfigError
@@ -68,3 +71,12 @@ def erase(account: str) -> bool:
     except Exception:
         return False
     return True
+
+
+def secret(var: str, env: Mapping[str, str] | None = None) -> str | None:
+    """The variable if it is set; otherwise the keyring's `env:VAR`, but only for the
+    real environment, so a test or a caller passing its own mapping never reaches it."""
+    env = os.environ if env is None else env
+    if env.get(var):
+        return env[var]
+    return read(f"env:{var}") if env is os.environ else None

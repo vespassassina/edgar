@@ -87,6 +87,7 @@ that did not need an ADR.
 | [0073](0073-first-pick-saved-for-every-project.md) | The first model pick is saved to the user config; `remember()` fills the unedited init placeholder | Accepted · amends ADR-0034 |
 | [0074](0074-parallel-read-only-calls.md) | Consecutive read-only calls run at the same time, up to 8 | Accepted · amends TOOL-12 |
 | [0075](0075-built-in-self-skill-and-tool-offers.md) | A built-in `edgar` skill, and `init` offers git and web search | Accepted · amends ADR-0023, ADR-0057 |
+| [0076](0076-edgar-keys.md) | `edgar keys`: one place for model and search keys | Accepted · amends ADR-0032 |
 
 ## Writing a new ADR
 

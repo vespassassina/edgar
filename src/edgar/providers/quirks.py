@@ -213,7 +213,12 @@ def connect(name: str, quirks: Quirks, env: Mapping[str, str]) -> tuple[Quirks, 
                 hint=f"set base_url in [providers.{name}], or {quirks.base_url_env}",  # Azure's
             )
         quirks = dataclasses.replace(quirks, base_url=url)
-    key: Key = env.get(quirks.api_key_env) if quirks.api_key_env else None
+    key: Key = None
+    if quirks.api_key_env:
+        # The environment first, then what `edgar keys set` kept in the keyring.
+        from edgar.auth.store import secret
+
+        key = secret(quirks.api_key_env, env)
     if not key and (quirks.oauth is not None or quirks.device is not None):
         # Nothing in the environment, but `edgar login` may have kept one [CFG-6].
         from edgar.auth.keys import stored

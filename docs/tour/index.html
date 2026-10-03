@@ -156,7 +156,7 @@ totals.</p>
     <tr data-package="context"><td><code>context/</code></td><td class="loc">~380</td><td>Building the prompt, and compacting it</td></tr>
     <tr data-package="storage"><td><code>storage/</code></td><td class="loc">~290</td><td>Sessions on disk, append-only</td></tr>
     <tr data-package="config"><td><code>config/</code></td><td class="loc">~400</td><td>Loading, layering and checking config</td></tr>
-    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,661</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
+    <tr data-package="cli"><td><code>cli/</code></td><td class="loc">~2,804</td><td>The REPL, one-shot runs, rendering, setup, and the commands that inspect a project (v1, v2)</td></tr>
     <tr data-package="memory"><td><code>memory/</code></td><td class="loc">~400</td><td>Facts, their undo log, and lexical search (v1)</td></tr>
     <tr data-package="auth"><td><code>auth/</code></td><td class="loc">~300</td><td>Signing in: PKCE, the loopback redirect, the OS keyring (v1)</td></tr>
     <tr data-package="agents"><td><code>agents/</code></td><td class="loc">~320</td><td>A subagent's definition, finding them, spawning one (v1), and its own git worktree (v2)</td></tr>
@@ -744,9 +744,9 @@ named by some stop on this tour, and a test fails if one stops being.</p>
   always wins over it.</p>
 </article>
 
-<article class="stop" id="s25" data-files="src/edgar/cli/main.py src/edgar/cli/admin.py src/edgar/cli/models.py src/edgar/cli/trust.py src/edgar/__main__.py">
+<article class="stop" id="s25" data-files="src/edgar/cli/main.py src/edgar/cli/admin.py src/edgar/cli/models.py src/edgar/cli/keys.py src/edgar/cli/trust.py src/edgar/__main__.py">
   <h4><span class="n">25</span>The command line</h4>
-  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/main.py"><code>cli/main.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/admin.py"><code>cli/admin.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/models.py"><code>cli/models.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/trust.py"><code>cli/trust.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__main__.py"><code>edgar/__main__.py</code></a></p>
+  <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/main.py"><code>cli/main.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/admin.py"><code>cli/admin.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/models.py"><code>cli/models.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/keys.py"><code>cli/keys.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/trust.py"><code>cli/trust.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/__main__.py"><code>edgar/__main__.py</code></a></p>
   <p class="look">Look for: <code>main</code> <code>build_parser</code> <code>ADMIN</code> <code>USAGE</code> <code>command</code> <code>describe</code> <code>pick</code> <code>ROLES</code> <code>trusted</code> <code>digest</code> <code>executable</code></p>
   <p>Read <code>main.py</code> with the startup budget invariant in mind: nothing
   heavy may be imported at module level, because every single run of edgar passes
@@ -773,6 +773,14 @@ named by some stop on this tour, and a test fails if one stops being.</p>
   [PRV-15]. <code>pick</code> is the sensible-defaults rule made concrete: press
   Enter to save the choice for every project, <code>p</code> for just this one,
   <code>n</code> for neither.</p>
+  <p><code>keys.py</code> backs <code>edgar keys</code>: it lists every model and
+  search provider with the variable that holds its key and where the key is now
+  (environment, keyring, or nowhere). <code>edgar keys set NAME</code> asks for
+  the key without echoing it and keeps it in the OS keyring, never in a file.
+  Every lookup of a key variable, a provider's or a tool file's
+  <code>${env:NAME}</code>, tries the environment first and the keyring second
+  (<code>auth/store.py</code>'s <code>secret</code>), so exporting still wins
+  [CFG-6, ADR-0076].</p>
   <p><code>trust.py</code> is why cloning a repository and running edgar in it
   can't silently run someone else's code [PERM-13, CLI-19]. The parts of project
   config that can execute something — command and HTTP tools, a
