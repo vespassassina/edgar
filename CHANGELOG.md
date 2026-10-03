@@ -8,6 +8,8 @@ extension formats freeze.
 
 ## Unreleased
 
+## 4.4.0 — 2026-10-03
+
 ### Added
 - Token prices for the major models: Anthropic through Fable 5.1 and Opus 5.5,
   OpenAI GPT-6 and 5.x, Gemini 3.x and 2.5, DeepSeek, xAI and Mistral, in
