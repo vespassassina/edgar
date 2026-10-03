@@ -8,6 +8,8 @@ extension formats freeze.
 
 ## Unreleased
 
+## 4.3.0 — 2026-10-03
+
 ### Added
 - `edgar keys`: list where every model and search key is, `edgar keys set NAME`
   keeps one in the OS keyring (hidden prompt), `remove NAME` forgets it. The
