@@ -421,3 +421,21 @@ def test_reasoning_origin_names_the_family() -> None:
 def test_an_unreadable_stream_event_is_a_provider_error() -> None:
     with pytest.raises(ProviderError, match="unreadable stream event"):
         run("openai/gpt-5", [ok("data: {not json\n\n")])
+
+
+def test_the_shipped_price_table_covers_the_major_vendors_and_is_sane() -> None:
+    for vendor in ("anthropic", "openai", "gemini", "deepseek", "xai", "mistral"):
+        assert any(k.startswith(f"{vendor}/") for k in BUILTIN), vendor
+    for name, row in BUILTIN.items():
+        assert 0 < row.input <= row.output, name
+        assert row.cache_read is None or row.cache_read <= row.input, name
+        assert row.cache_write is None or row.cache_write >= row.input, name
+
+
+def test_a_dated_id_and_an_openrouter_route_cost_what_the_alias_does() -> None:
+    usage = Usage(1_000_000, 1_000_000)
+    base = cost_of("anthropic/claude-haiku-4-5", usage, BUILTIN)
+    assert base == 6.0
+    assert cost_of("anthropic/claude-haiku-4-5-20251001", usage, BUILTIN) == base
+    assert cost_of("openrouter/anthropic/claude-haiku-4-5", usage, BUILTIN) == base
+    assert cost_of("anthropic/claude-nobody-9", usage, BUILTIN) is None

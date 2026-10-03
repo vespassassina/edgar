@@ -8,22 +8,23 @@ models or overrides these, and wins.
 
 from __future__ import annotations
 
+import re
+import tomllib
 from collections.abc import Mapping
+from pathlib import Path
 
 from edgar.config.schema import PriceSection
 from edgar.providers.base import Usage
 
-CHECKED = "2026-09-13"  # when these were last compared with the providers' price pages
+CHECKED = "2026-10-03"  # when prices.toml was last compared with the providers' price pages
 
-# USD per million tokens: input, output, cache read, cache write.
+# USD per million tokens: input, output, cache read, cache write. The numbers live in
+# templates/prices.toml, which is data and costs no lines of code.
+_FILE = Path(__file__).resolve().parent.parent / "templates" / "prices.toml"
 BUILTIN: dict[str, PriceSection] = {
-    "openai/gpt-5": PriceSection(1.25, 10.0, 0.125),
-    "openai/gpt-5-mini": PriceSection(0.25, 2.0, 0.025),
-    "openai/gpt-5-nano": PriceSection(0.05, 0.40, 0.005),
-    "anthropic/claude-opus-4-5": PriceSection(5.0, 25.0, 0.50, 6.25),
-    "anthropic/claude-sonnet-4-5": PriceSection(3.0, 15.0, 0.30, 3.75),
-    "anthropic/claude-haiku-4-5": PriceSection(1.0, 5.0, 0.10, 1.25),
+    name: PriceSection(**row) for name, row in tomllib.loads(_FILE.read_text("utf-8")).items()
 }
+_DATED = re.compile(r"-(\d{8}|\d{4}-\d{2}-\d{2})$")  # claude-haiku-4-5-20251001, gpt-5-2025-08-07
 
 
 def prices(configured: Mapping[str, PriceSection]) -> dict[str, PriceSection]:
@@ -32,7 +33,9 @@ def prices(configured: Mapping[str, PriceSection]) -> dict[str, PriceSection]:
 
 def cost_of(model: str, usage: Usage, table: Mapping[str, PriceSection]) -> float | None:
     """`usage.input_tokens` counts every input token, cached ones included."""
-    price = table.get(model)
+    # A dated id costs what its alias does; OpenRouter passes the vendor's price through.
+    undated = _DATED.sub("", model)
+    price = table.get(model) or table.get(undated) or table.get(undated.removeprefix("openrouter/"))
     if price is None:
         return None
     read, write = usage.cache_read_tokens, usage.cache_write_tokens

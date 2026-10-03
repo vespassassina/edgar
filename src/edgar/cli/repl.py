@@ -240,6 +240,7 @@ class Shell:
         choice = Selection(model, "user", "/model")
         self.rt = runtime(self.setup, self.rt.bus, choice=choice)
         self.session.model = self.status.model = model
+        self.status.window = self.rt.provider.capabilities.max_context
         self.session.record({"type": "model", "model": model})
 
     async def close(self) -> None:
@@ -342,7 +343,7 @@ async def interact(
             fresh = load(root, home=home, env=env)
             s.config = replace(fresh, model=replace(fresh.model, default=chosen))
         session, rt = begin(s, bus, resume, scope=tuple(scope or ()))
-        status.model = rt.name
+        status.model, status.window = rt.name, rt.provider.capabilities.max_context
         shell = Shell(setup=s, session=session, rt=rt, renderer=renderer, status=status, ask=ask)
         shell_ref.append(shell)
         if resume is not None:  # the conversation as it was left [CLI-11]

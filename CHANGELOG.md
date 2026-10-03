@@ -8,6 +8,14 @@ extension formats freeze.
 
 ## Unreleased
 
+### Added
+- Token prices for the major models: Anthropic through Fable 5.1 and Opus 5.5,
+  OpenAI GPT-6 and 5.x, Gemini 3.x and 2.5, DeepSeek, xAI and Mistral, in
+  `templates/prices.toml` (checked 2026-10-03). Dated ids and OpenRouter routes
+  of these models are priced too. Others still show "cost unknown".
+- The status bar shows the context window used (`52.0k/200k (26%)`), the
+  session's tokens in and out, and the cache hit rate.
+
 ## 4.3.0 — 2026-10-03
 
 ### Added

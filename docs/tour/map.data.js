@@ -7,7 +7,7 @@ window.EDGAR_MAP = {
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12406,
+    "loc": 12424,
     "status": "built",
     "children": [
       {
@@ -16,14 +16,14 @@ window.EDGAR_MAP = {
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6959,
+        "loc": 6977,
         "status": "built",
         "children": [
           {
             "id": "core/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 2345,
+            "loc": 2362,
             "status": "built",
             "children": [
               {
@@ -80,7 +80,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 177,
+                "loc": 179,
                 "summary": "`edgar -p`: one turn, non-interactive [CLI-2, CLI-3, CLI-7, CLI-18].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -104,7 +104,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 334,
+                "loc": 335,
                 "summary": "The interactive REPL [CLI-1, CLI-12, CLI-13, CLI-23, CLI-24, CLI-27].",
                 "stop": "index.html#s18",
                 "status": "built",
@@ -140,7 +140,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "cli",
-                "loc": 164,
+                "loc": 178,
                 "summary": "The status line, rebuilt from events alone [CLI-5, CLI-6, CLI-8].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -449,7 +449,7 @@ window.EDGAR_MAP = {
             "id": "core/providers",
             "name": "providers/",
             "kind": "package",
-            "loc": 1304,
+            "loc": 1305,
             "status": "built",
             "children": [
               {
@@ -530,7 +530,7 @@ window.EDGAR_MAP = {
                 "kind": "file",
                 "tier": "core",
                 "package": "providers",
-                "loc": 35,
+                "loc": 36,
                 "summary": "What a request cost [BUD-1, BUD-5].",
                 "stop": "index.html#s24",
                 "status": "built",

@@ -68,7 +68,14 @@ def test_the_status_line_is_built_from_events() -> None:
     assert line.endswith("read · 1 tool · 1.2k tok · $0.000 · 1 queued · 3s")
     status(RequestFinished(usage=Usage(1500, 100), cost=None, cached=0))
     status(TurnFinished(turn_id="t", usage=Usage(), cost=None, reason="completed"))
-    assert status.line() == "fake/test · 1.6k tok · cost unknown · 1 queued"
+    assert status.line() == "fake/test · 1.6k tok · ↑1.5k ↓0.1k cache 0% · cost unknown · 1 queued"
+
+
+def test_the_bar_shows_how_full_the_window_is_and_what_the_cache_served() -> None:
+    status = Status("fake/test")
+    status.window = 200_000
+    status(RequestFinished(usage=Usage(50_000, 2_000), cost=0.5, cached=40_000))
+    assert status.line() == "fake/test · 52.0k/200k (26%) · ↑50.0k ↓2.0k cache 80% · $0.500"
 
 
 def test_concurrent_subagents_get_their_own_row_until_they_finish() -> None:  # [SUB-9]

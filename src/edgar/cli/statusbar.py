@@ -56,6 +56,8 @@ class Status:
         self.phase = ""  # empty between turns
         self.tools = 0
         self.context = 0  # tokens in the last request
+        self.window = 0  # the model's context window; 0 until a provider says
+        self.sent = self.got = self.hit = 0  # this session's input, output, cached tokens
         self.cost: float | None = 0.0  # this session; None once a price is unknown
         self.queued = 0
         self.paused = False
@@ -79,6 +81,9 @@ class Status:
         elif isinstance(event, RequestFinished | AsideFinished | Compacted):
             if isinstance(event, RequestFinished):  # an aside is not in the context
                 self.context = event.usage.input_tokens + event.usage.output_tokens
+                self.sent += event.usage.input_tokens
+                self.got += event.usage.output_tokens
+                self.hit += event.cached
             elif isinstance(event, Compacted):
                 self.context = event.after
             self.cost = None if self.cost is None or event.cost is None else self.cost + event.cost
@@ -111,7 +116,14 @@ class Status:
             row.phase, row.tools = event.tool, row.tools + 1
 
     def line(self) -> str:
-        parts = [self.model, f"{self.context / 1000:.1f}k tok", _money(self.cost)]
+        used = f"{self.context / 1000:.1f}k tok"
+        if self.window:  # how full the window is, so compaction is no surprise
+            full = self.context * 100 // self.window
+            used = f"{self.context / 1000:.1f}k/{self.window // 1000}k ({full}%)"
+        parts = [self.model, used]
+        if self.sent:  # the whole session so far, and how much of it the cache served
+            parts.append(f"↑{_k(self.sent)} ↓{_k(self.got)} cache {self.hit * 100 // self.sent}%")
+        parts.append(_money(self.cost))
         if self.todo:
             parts.append(self.todo)
         if self.queued:
@@ -134,6 +146,10 @@ class Status:
         frame = FRAMES[int(elapsed * 10) % len(FRAMES)]
         tools = f"{row.tools} tool{'s' * (row.tools != 1)}"
         return f"  {frame} {agent_id}: {row.phase} · {tools} · {elapsed:.0f}s"
+
+
+def _k(tokens: int) -> str:
+    return f"{tokens / 1000:.1f}k" if tokens < 1_000_000 else f"{tokens / 1_000_000:.1f}M"
 
 
 def _money(cost: float | None) -> str:

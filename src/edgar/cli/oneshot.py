@@ -95,6 +95,8 @@ def run_prompt(
     # `prompt` is the -p argument exactly as given. Piped stdin arrived as `attached`
     # and @path bodies are read below, so neither can reach a learner [MEM-9, CLI-3].
     bus.emit(PromptTyped(text=prompt))
+    if status is not None:
+        status.window = rt.provider.capabilities.max_context
     if plan:  # --plan is the human choosing read-only up front [CLI-20]
         enter(session)
     if session.log is not None:

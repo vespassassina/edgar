@@ -5,6 +5,18 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-03 — Prices and a fuller bar
+
+Asked: token cost for all major models and providers; more info on the bar.
+Prices read off the vendors' own pages (Anthropic, OpenAI, Gemini, DeepSeek, xAI,
+Mistral) into `templates/prices.toml`; the code is a loader. Judgement calls:
+OpenAI short-context rates, DeepSeek peak rates, Gemini's introductory Flash
+prices (they double on 2027-01-01, so recheck then), Mistral `-latest` aliases.
+Left unpriced on purpose: Groq, Together, Fireworks, Cerebras, Azure, Copilot
+(host-set or per-deployment prices; add `[pricing]` in config). Bar: window
+percent, session tokens in/out, cache hit rate. Pending: price API ids are
+unverified against a live `models` list.
+
 ## 2026-10-03 — `edgar keys`
 
 Asked: an edgar command to configure the keys of models and search. Added

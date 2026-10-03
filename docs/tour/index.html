@@ -736,7 +736,9 @@ named by some stop on this tour, and a test fails if one stops being.</p>
   before you've configured a single API key, and why almost every test in the
   suite can drive the real loop without needing a recorded cassette
   (<a href="https://github.com/vespassassina/edgar/blob/main/docs/adr/0009-testing-strategy.md">ADR-0009</a>).</p>
-  <p><code>pricing.py</code> is thirty-five lines with one opinion baked in:
+  <p><code>pricing.py</code> is a short loader over <code>templates/prices.toml</code>
+  (Anthropic, OpenAI, Gemini, DeepSeek, xAI and Mistral, per million tokens; a
+  dated id costs what its alias does) with one opinion baked in:
   unknown pricing is <code>None</code>, shown to you as "unknown" — never a wrong
   zero [BUD-1, BUD-5]. A cost cap that silently counts nothing toward its total is
   worse than one that admits it can't count. <code>CHECKED</code> dates the
