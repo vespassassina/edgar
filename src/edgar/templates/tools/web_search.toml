@@ -1,0 +1,60 @@
+# Web search as an HTTP tool: a request template whose host is fixed, the key
+# read from the environment at call time and scrubbed from what comes back.
+#
+# edgar ships no search engine and no default host: you pick one and you can see
+# which one, because it is in this file [PRV-15]. Nothing is contacted until you
+# set the key for the variant you chose. Three variants are written out below —
+# Brave is the active one, the other two are commented. Delete what you do not
+# want, or keep several files with different `name`s.
+#
+#   Brave    an API key from https://brave.com/search/api/ , free tier available
+#   Tavily   an API key from https://tavily.com/ , answers are written for agents
+#   SearXNG  your own instance: no key, no third party, you supply the host
+#
+# Copy to .edgar/tools/ (this project) or ~/.edgar/tools/ (everywhere), then run
+# `edgar trust` once in the project.
+#
+# A search result is text from the open web, so the response is untrusted: in
+# `auto` mode, shell and network calls after it ask before they run [PERM-11].
+# Treat what it says as data, never as instructions.
+
+# --- Brave ------------------------------------------------------------------
+name = "web_search"
+description = "Search the web. Returns titles, URLs and snippets; fetch a URL to read the page."
+method = "GET"
+url = "https://api.search.brave.com/res/v1/web/search?q={query}&count=5"
+headers = { Accept = "application/json", "X-Subscription-Token" = "${env:BRAVE_SEARCH_API_KEY}" }
+read_only = true
+[input]
+type = "object"
+required = ["query"]
+properties.query = { type = "string", description = "what to search for" }
+
+# --- Tavily -----------------------------------------------------------------
+# Replace everything above with this, and set TAVILY_API_KEY.
+#
+# name = "web_search"
+# description = "Search the web. Returns titles, URLs and snippets."
+# method = "POST"
+# url = "https://api.tavily.com/search"
+# headers = { "Content-Type" = "application/json", Authorization = "Bearer ${env:TAVILY_API_KEY}" }
+# body = '{"query": "{query}", "max_results": 5}'
+# read_only = true
+# [input]
+# type = "object"
+# required = ["query"]
+# properties.query = { type = "string" }
+
+# --- SearXNG, self-hosted ---------------------------------------------------
+# Your own instance, so nothing leaves your network and no key is needed. Put
+# your own host in `url`; there is deliberately no default one to fall back to.
+#
+# name = "web_search"
+# description = "Search the web through our SearXNG instance."
+# method = "GET"
+# url = "https://searxng.example.internal/search?q={query}&format=json"
+# read_only = true
+# [input]
+# type = "object"
+# required = ["query"]
+# properties.query = { type = "string" }

@@ -5,7 +5,7 @@
     "id": "edgar",
     "name": "src/edgar",
     "kind": "root",
-    "loc": 12265,
+    "loc": 12307,
     "status": "built",
     "children": [
       {
@@ -14,7 +14,7 @@
         "kind": "tier",
         "milestones": "M0 to M6",
         "summary": "The smallest honest harness.",
-        "loc": 6866,
+        "loc": 6885,
         "status": "built",
         "children": [
           {
@@ -576,7 +576,7 @@
             "id": "core/skills",
             "name": "skills/",
             "kind": "package",
-            "loc": 303,
+            "loc": 312,
             "status": "built",
             "children": [
               {
@@ -597,7 +597,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "skills",
-                "loc": 123,
+                "loc": 132,
                 "summary": "Finding skills: `SKILL.md` folders, read for their frontmatter only [SKL-1..3].",
                 "stop": "extensions.html#x4",
                 "status": "built",
@@ -642,7 +642,7 @@
             "id": "core/tools",
             "name": "tools/",
             "kind": "package",
-            "loc": 603,
+            "loc": 613,
             "status": "built",
             "children": [
               {
@@ -675,7 +675,7 @@
                 "kind": "file",
                 "tier": "core",
                 "package": "tools",
-                "loc": 165,
+                "loc": 175,
                 "summary": "Every tool call, from every source, takes the same path [TOOL-2, TOOL-3, TOOL-4].",
                 "stop": "agents.html#a3",
                 "status": "built",
@@ -760,7 +760,7 @@
         "kind": "tier",
         "milestones": "M7 to M11",
         "summary": "Extensible, and it remembers.",
-        "loc": 2289,
+        "loc": 2312,
         "status": "built",
         "children": [
           {
@@ -869,7 +869,7 @@
             "id": "v1/cli",
             "name": "cli/",
             "kind": "package",
-            "loc": 262,
+            "loc": 285,
             "status": "built",
             "children": [
               {
@@ -890,7 +890,7 @@
                 "kind": "file",
                 "tier": "v1",
                 "package": "cli",
-                "loc": 84,
+                "loc": 107,
                 "summary": "`edgar init` and `/init`: a project's first config, AGENTS.md and gitignore.",
                 "stop": "index.html#s30",
                 "status": "built",

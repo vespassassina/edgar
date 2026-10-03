@@ -65,8 +65,22 @@ def split(text: str) -> tuple[dict[str, Any], str]:
     return head, match[2]
 
 
+# What edgar knows about itself. Spelled out here, not parsed from its SKILL.md,
+# because reading frontmatter imports PyYAML and a trivial run must not pay for
+# that [NFR-1]; a test keeps the two in step. Any scope below replaces it.
+SELF = Skill(
+    "edgar",
+    "How edgar itself works. Load it when asked about edgar's commands, config, permission "
+    "modes, tools, skills, agents, hooks, extensions, memory, sessions or limits, or how to "
+    "change any of them.",
+    Path(__file__).resolve().parent / "builtin" / "edgar" / "SKILL.md",
+    "built-in",
+    keywords=("edgar",),
+)
+
+
 def discover(root: Path, home: Path) -> Found:
-    found = Found()
+    found = Found(skills={SELF.name: SELF})
     # Scopes, lowest priority first: each later one may replace an earlier one.
     scopes = [
         (home / ".edgar" / "skills" / "learned", "user learned"),

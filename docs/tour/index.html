@@ -212,7 +212,7 @@ flowchart TD
     caps -->|yes| budget(["budget_exceeded"])
     caps -->|no| ask["5 · ask the model<br/>_ask"]
     ask --> calls{"6 · tool<br/>calls?"}
-    calls -->|yes| run["run them in order<br/>_run_tools"] --> safe
+    calls -->|yes| run["run them: reads together,<br/>the rest in order<br/>_run_tools"] --> safe
     calls -->|no| steer{"7 · steer<br/>pending?"}
     steer -->|yes| safe
     steer -->|no| acted{"8 · changed<br/>something?"}
@@ -325,6 +325,9 @@ flowchart TD
     err --> block
     block --> back(["back to the model"])
 </pre></div>
+  <p><code>execute_many</code> decides which calls overlap: a run of consecutive
+  reads goes together (up to 8), a run of <code>task</code> calls goes together,
+  and anything that writes runs alone, in order (ADR-0074).</p>
   <p>Nothing here raises an exception into the loop. A timeout or a crashing tool
   also becomes an error result — the model sees it and can recover from it, the
   same way it recovers from a bad argument.</p>
@@ -596,6 +599,10 @@ flowchart TD
     <li><code>discover</code> has an order: the project's own skills beat the
     user's, and anything a human wrote beats anything the harness learned on its
     own.</li>
+    <li>One skill is always there: <code>edgar</code>, which tells the model how
+    edgar itself works (<code>SELF</code> in <code>discover</code>, body in
+    <code>skills/builtin/edgar/SKILL.md</code>). Any skill of that name you write
+    replaces it (ADR-0075).</li>
   </ul>
   <p>A skill is instructions, never code that runs on its own. If it bundles a
   script, that script goes through the <code>shell</code> tool and its permission
@@ -901,7 +908,7 @@ flowchart LR
 <article class="stop" id="s30" data-files="src/edgar/cli/init.py src/edgar/cli/doctor.py src/edgar/templates/config.toml src/edgar/templates/wizard.toml src/edgar/templates/providers.toml">
   <h4><span class="n">30</span>Init and doctor</h4>
   <p class="files"><a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/init.py"><code>cli/init.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/cli/doctor.py"><code>cli/doctor.py</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/config.toml"><code>templates/config.toml</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/wizard.toml"><code>templates/wizard.toml</code></a> <a href="https://github.com/vespassassina/edgar/blob/main/src/edgar/templates/providers.toml"><code>templates/providers.toml</code></a></p>
-  <p class="look">Look for: <code>run</code> <code>_scaffold</code> <code>_gitignore</code> <code>command</code> <code>_connectivity</code></p>
+  <p class="look">Look for: <code>run</code> <code>_scaffold</code> <code>_gitignore</code> <code>_tools</code> <code>command</code> <code>_connectivity</code></p>
   <p><code>edgar init</code> and <code>/init</code> [CFG-4] scaffold a new
   project. They write:</p>
   <ul class="points">
@@ -910,6 +917,10 @@ flowchart LR
     state,</li>
     <li>and a working, commented <code>config.toml</code>.</li>
   </ul>
+  <p>Then it offers two bundles of tools from <code>templates/tools/</code>: git
+  (Enter says yes) and web search (Enter says no, it needs a key). A yes copies
+  the files into <code>.edgar/tools/</code>; none is ever overwritten, and with
+  nobody to ask nothing is written (ADR-0075).</p>
   <p>All three come from plain files under <code>templates/</code>, not Python
   code, so they cost nothing against the line-of-code budget — same as
   <code>prompts/*.md</code>. Every write checks whether the file already exists

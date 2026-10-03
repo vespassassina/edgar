@@ -53,7 +53,7 @@ def test_discovery_reads_the_frontmatter_of_each_scope(tmp_project: Path, home: 
     _skill(_project(tmp_project), "deploy", "Use when deploying.")
     _skill(_user(home), "review", "Use when reviewing\n  a change.")
     found = discover(tmp_project, home)
-    assert sorted(found.skills) == ["deploy", "review"]
+    assert sorted(found.skills) == ["deploy", "edgar", "review"]
     assert found.skills["review"].description == "Use when reviewing a change."  # one line
     assert found.skills["deploy"].origin == "project"
     assert found.problems == found.warnings == []
@@ -95,7 +95,7 @@ def test_a_broken_skill_is_skipped_with_its_reason(
     (_project(tmp_project) / "broken" / "SKILL.md").write_text(text, encoding="utf-8")
     _skill(_project(tmp_project), "fine")
     found = discover(tmp_project, home)
-    assert list(found.skills) == ["fine"]
+    assert sorted(found.skills) == ["edgar", "fine"]
     assert len(found.problems) == 1 and problem in found.problems[0]
 
 
@@ -127,19 +127,19 @@ def test_the_tool_returns_the_body_and_where_it_lives(tmp_project: Path, home: P
     assert result.error is None
     assert "Run ./deploy.sh" in result.text and str(folder) in result.text
     assert "description:" not in result.text  # the frontmatter is not repeated
-    assert tool.schema.input_schema["properties"]["name"]["enum"] == ["deploy"]
+    assert tool.schema.input_schema["properties"]["name"]["enum"] == ["deploy", "edgar"]
     missing = asyncio.run(tool.run({"name": "nope"}, _ctx(tmp_project)))
     assert missing.error == "not_found" and "deploy" in missing.text
 
 
 def test_the_prompt_holds_the_index_and_never_a_body(tmp_project: Path, home: Path) -> None:
     config = Config(model=ModelSection(default="fake/test"))
-    assert "skill" not in setup(tmp_project, config, home=home, env={}).tools.names()
+    assert "skill" in setup(tmp_project, config, home=home, env={}).tools.names()  # edgar's own
     _skill(_project(tmp_project), "deploy", "Use when deploying.", body="SECRET STEPS")
     s = setup(tmp_project, config, home=home, env={})
     prompt = build_runtime(s, EventBus()).system_prompt
     assert "- deploy: Use when deploying." in prompt and "SECRET STEPS" not in prompt
-    assert "skill" in s.tools.names()
+    assert "- edgar: How edgar itself works." in prompt  # every session knows it can ask
 
 
 def test_a_broken_skill_is_a_startup_warning(tmp_project: Path, home: Path) -> None:
@@ -172,7 +172,7 @@ def test_skills_list_and_validate(
     tmp_project: Path, home: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     assert admin.command(["skills", "list"], tmp_project, home) == 0
-    assert "no skills" in capsys.readouterr().out
+    assert "edgar" in capsys.readouterr().out
     _skill(_project(tmp_project), "deploy", "Use when deploying.")
     assert admin.command(["skills", "list"], tmp_project, home) == 0
     assert "deploy" in capsys.readouterr().out
@@ -181,7 +181,7 @@ def test_skills_list_and_validate(
     (_project(tmp_project) / "bad" / "SKILL.md").write_text("x", encoding="utf-8")
     assert admin.command(["skills", "validate"], tmp_project, home) == 1
     out = capsys.readouterr()
-    assert "1 skills ok, 1 with problems" in out.out and "no frontmatter" in out.err
+    assert "2 skills ok, 1 with problems" in out.out and "no frontmatter" in out.err
     assert admin.command(["skills", "frob"], tmp_project, home) == 2
 
 
@@ -275,3 +275,15 @@ def test_verify_command_chains_loaded_skills_in_order(tmp_project: Path) -> None
     assert verify_command([first, second]) == "one && two"
     assert verify_command([Skill("c", "Use when c.", folder / "SKILL.md", "project")]) is None
     assert verify_command([]) is None
+
+
+def test_the_built_in_edgar_skill_matches_its_file_and_is_always_found(tmp_path: Path) -> None:
+    from edgar.skills.discovery import SELF, discover, read
+
+    assert read(SELF.path, "built-in") == SELF  # the code and the file cannot drift
+    assert discover(tmp_path, tmp_path).skills["edgar"] == SELF
+    mine = tmp_path / ".edgar" / "skills" / "edgar"
+    mine.mkdir(parents=True)
+    (mine / "SKILL.md").write_text("---\nname: edgar\ndescription: mine\n---\nbody\n")
+    found = discover(tmp_path, tmp_path)
+    assert found.skills["edgar"].origin == "project"  # a project's own wins

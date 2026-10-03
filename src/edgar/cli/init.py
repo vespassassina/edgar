@@ -8,6 +8,8 @@
 #    picked the same way `edgar models` does when there is somewhere to ask, a
 #    provider block for a vendor from the catalog, and the answers to a few
 #    questions (each one: Enter keeps the default, which stays a comment).
+# 3. Tools offered from templates/tools/ (git, web search): copied into
+#    .edgar/tools/ on a yes, never over a file that is there, never unasked.
 
 from __future__ import annotations
 
@@ -57,6 +59,7 @@ async def run(
     dest = project_config(cwd)
     if dest.exists():
         say(f"{dest} exists, left alone")
+        await _tools(cwd, ask, say)
         return choice
     text = (TEMPLATES / "config.toml").read_text(encoding="utf-8")
     if choice is not None:
@@ -72,7 +75,34 @@ async def run(
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(text, encoding="utf-8")
     say(f"wrote {dest}")
+    await _tools(cwd, ask, say)
     return choice
+
+
+async def _tools(cwd: Path, ask: Ask | None, say: Callable[[str], None]) -> None:
+    # 1. Offer each bundle whose files are not all there already; with nobody to
+    #    ask, offer nothing: an executable file is never written unasked.
+    if ask is None:
+        return
+    folder = cwd / ".edgar" / "tools"
+    wrote = False
+    for t in tomllib.loads((TEMPLATES / "wizard.toml").read_text("utf-8"))["tool"]:
+        todo = [f for f in t["files"] if not (folder / f"{f}.toml").exists()]
+        if not todo:
+            continue
+        # 2. Enter takes the bundle's default; anything else that starts with y is yes.
+        raw = (await ask(t["ask"])).strip().lower()
+        if not (raw[:1] == "y" if raw else t["default"]):
+            continue
+        folder.mkdir(parents=True, exist_ok=True)
+        for f in todo:
+            (folder / f"{f}.toml").write_text(
+                (TEMPLATES / "tools" / f"{f}.toml").read_text(encoding="utf-8"), encoding="utf-8"
+            )
+        say(f"wrote {', '.join(todo)} in {folder}")
+        wrote = True
+    if wrote:
+        say("they run once you trust this project: `edgar trust`")
 
 
 def _vendor_block(name: str) -> str:

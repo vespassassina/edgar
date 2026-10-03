@@ -294,7 +294,7 @@ def test_model_switches_for_the_rest_of_the_session(tmp_project: Path) -> None:
         ("/sessions", "no sessions yet"),
         ("/load NOPE", "none found"),
         ("/compact", "nothing to compact"),
-        ("/skills", "no skills"),
+        ("/skills", "How edgar itself works"),
         ("/agents", "no agents"),
         ("/tools", "tools:"),
         ("/scope", "no scope set"),

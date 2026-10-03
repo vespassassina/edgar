@@ -13,7 +13,7 @@ from harness import Recorder, guard, tool_use
 
 from edgar.core.events import EventBus, ToolFinished
 from edgar.core.message import ToolResultBlock, ToolUseBlock
-from edgar.tools.base import ToolContext, ToolResult, ToolSchema
+from edgar.tools.base import Category, ToolContext, ToolResult, ToolSchema
 from edgar.tools.execute import _fan_out_group, execute, execute_many
 from edgar.tools.registry import ToolRegistry, core_registry
 
@@ -131,14 +131,14 @@ def test_error_record_names_only_what_the_harness_knows(tmp_project: Path) -> No
     )
 
 
-# execute_many(): consecutive `task` calls fan out, everything else stays in
-# order, one at a time [TOOL-12].
+# execute_many(): consecutive `task` calls fan out, and so do consecutive reads;
+# everything else stays in order, one at a time [TOOL-12, ADR-0074].
 
 
 class _Waiter:
     """A tool under any name that sleeps `seconds` before answering with its id."""
 
-    def __init__(self, name: str, seconds: float = 0.1) -> None:
+    def __init__(self, name: str, seconds: float = 0.1, category: Category = "read") -> None:
         self.seconds = seconds
         self.schema = ToolSchema(
             name=name,
@@ -146,7 +146,7 @@ class _Waiter:
             input_schema={"type": "object"},
             kind="builtin",
             origin="builtin",
-            category="read",
+            category=category,
         )
 
     async def run(self, args: dict[str, Any], ctx: ToolContext) -> ToolResult:
@@ -154,36 +154,60 @@ class _Waiter:
         return ToolResult(self.schema.name)
 
 
+_GROUPS = ToolRegistry(
+    [
+        _Waiter("task", category="agent"),
+        _Waiter("read"),
+        _Waiter("grep"),
+        _Waiter("edit", category="write"),
+    ]
+)
+
+
 @pytest.mark.parametrize(
     ("names", "expected"),
     [
         ([], []),
-        (["read"], [["read"]]),
+        (["edit"], [["edit"]]),
         (["task"], [["task"]]),
         (["task", "task"], [["task", "task"]]),
+        (["read", "grep"], [["read", "grep"]]),
         (["read", "task"], [["read"], ["task"]]),
         (["task", "read", "task"], [["task"], ["read"], ["task"]]),
-        (["task", "task", "read", "task"], [["task", "task"], ["read"], ["task"]]),
+        (["task", "task", "edit", "task"], [["task", "task"], ["edit"], ["task"]]),
+        (["read", "edit", "read", "grep"], [["read"], ["edit"], ["read", "grep"]]),
+        (["edit", "edit"], [["edit"], ["edit"]]),
+        (["read", "nosuchtool", "read"], [["read"], ["nosuchtool"], ["read"]]),
     ],
 )
-def test_fan_out_group_splits_on_runs_of_task_calls(
+def test_fan_out_group_splits_on_runs_of_task_calls_and_runs_of_reads(
     names: list[str], expected: list[list[str]]
 ) -> None:
     calls = [tool_use(n, {}, id=f"c{i}") for i, n in enumerate(names)]
     groups: list[list[str]] = []
     i = 0
     while i < len(calls):
-        group = _fan_out_group(calls, i)
+        group = _fan_out_group(calls, i, _GROUPS)
         groups.append([c.name for c in group])
         i += len(group)
     assert groups == expected
 
 
+def test_a_todo_call_is_never_run_beside_a_read() -> None:
+    registry = ToolRegistry([_Waiter("todo"), _Waiter("read")])
+    calls = [tool_use(n, {}, id=n) for n in ("read", "todo", "read")]
+    assert [len(_fan_out_group(calls, i, registry)) for i in (0, 1, 2)] == [1, 1, 1]
+
+
 def _many(
-    tmp_project: Path, calls: list[ToolUseBlock], registry: ToolRegistry, max_parallel: int = 4
+    tmp_project: Path,
+    calls: list[ToolUseBlock],
+    registry: ToolRegistry,
+    max_parallel: int = 4,
+    mode: str = "read-only",
 ) -> tuple[list[ToolResultBlock], float]:
     ctx = _ctx(tmp_project)
-    gate = guard(tmp_project, "read-only")
+    gate = guard(tmp_project, mode)
     started = time.monotonic()
     results = asyncio.run(
         execute_many(
@@ -191,7 +215,7 @@ def _many(
             registry=registry,
             ctx=ctx,
             guard=gate,
-            mode="read-only",
+            mode=mode,
             tainted=False,
             max_parallel=max_parallel,
         )
@@ -214,10 +238,18 @@ def test_execute_many_bounds_concurrency_by_max_parallel(tmp_project: Path) -> N
     assert 0.1 * 2 <= elapsed < 0.1 * 4  # two batches of two, not four at once
 
 
-def test_execute_many_keeps_non_task_calls_sequential(tmp_project: Path) -> None:
-    registry = ToolRegistry([_Waiter("slow", seconds=0.1)])
+def test_execute_many_runs_consecutive_reads_concurrently(tmp_project: Path) -> None:
+    registry = ToolRegistry([_Waiter("read", seconds=0.15)])
+    calls = [tool_use("read", {}, id=f"r{i}") for i in range(4)]
+    results, elapsed = _many(tmp_project, calls, registry, max_parallel=1)  # no task tool needed
+    assert [r.tool_use_id for r in results] == ["r0", "r1", "r2", "r3"]
+    assert elapsed < 0.15 * 2
+
+
+def test_execute_many_keeps_writes_sequential(tmp_project: Path) -> None:
+    registry = ToolRegistry([_Waiter("slow", seconds=0.1, category="write")])
     calls = [tool_use("slow", {}, id=f"s{i}") for i in range(2)]
-    _, elapsed = _many(tmp_project, calls, registry)
+    _, elapsed = _many(tmp_project, calls, registry, mode="yolo")
     assert elapsed >= 0.1 * 2 - 0.02  # one at a time, not fanned out
 
 

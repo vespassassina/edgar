@@ -1,0 +1,17 @@
+# git as four command tools, one verb each. An argv template is started
+# directly, never through a shell, so a branch or a commit message containing
+# `; rm -rf ~` is one odd argument and not a second command.
+#
+# Copy all four to .edgar/tools/ (this project) or ~/.edgar/tools/ (everywhere),
+# then run `edgar trust` once in the project. Needs `git` on PATH.
+#
+# Three of them are read_only, so they run without asking in every mode.
+# `git-commit` is not: it writes, so it goes through the guard like any other
+# write and the user sees the message before it lands.
+name = "git-status"
+description = "Show the working tree: branch, staged, unstaged and untracked files."
+argv = ["git", "status", "--short", "--branch"]
+read_only = true
+[input]
+type = "object"
+properties = {}

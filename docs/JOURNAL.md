@@ -5,6 +5,23 @@ first. Decisions with alternatives worth keeping get an ADR; user-visible change
 also go in [`CHANGELOG.md`](../CHANGELOG.md); milestone state is the table at the
 top of [`ROADMAP.md`](ROADMAP.md).
 
+## 2026-10-03 — What edgar lacked next to Claude Code
+
+Asked: edgar seems unaware of itself and short on capability; do all three of the
+fixes I proposed. Done on `feat/self-knowledge-search-parallel` (on top of the Esc
+branch): [ADR-0074](adr/0074-parallel-read-only-calls.md) parallel reads;
+[ADR-0075](adr/0075-built-in-self-skill-and-tool-offers.md) the built-in `edgar`
+skill and the git / web search offers in `init`.
+
+Found on the way: an always-present skill makes the `skill` tool and its index
+line part of every request, and made the "trivial run imports no yaml" test fail
+until `SELF` was written out in code. Reads in a loop-level test finish before the
+next one starts unless the tool awaits, so overlap is proven with `slow`.
+
+Pending: background processes, language-server tools and notebook editing remain
+absent (the skill says so). Web search is a Brave default only; a keyless option
+is not offered. Copilot's old model list is still open (see below).
+
 ## 2026-10-02 — Esc breaks a turn
 
 Asked: break a loop with Esc. `Shell.interrupt()` does what Ctrl-C does while a

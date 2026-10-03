@@ -239,7 +239,7 @@ Written down so scope creep has something to argue with.
 ### 5.3 Deferred past v4
 
 Concurrent execution of independent read-only tool calls within one response
-(calls run in order; consecutive `task` calls already fan out, TOOL-12),
+(consecutive reads now run together, ADR-0074; consecutive `task` calls fan out, TOOL-12),
 remote/shared memory, embedding or graph retrievers in core (a retriever port
 exists for plugins, ADR-0024), a TUI mode, language-server tools, generating
 HTTP tools from an OpenAPI spec, Homebrew and Scoop manifests, prompt-caching
@@ -492,7 +492,7 @@ Requirements are numbered for traceability. Each milestone in
 | TOOL-9 | Tool names collide-resolve deterministically: project custom > user custom > extensions (by name) > MCP > built-in, with a startup warning | Must |
 | TOOL-10 | Every tool call is cancellable | Must |
 | TOOL-11 | `shell` runs `shell.program`: on Windows, Git Bash when found, then PowerShell 7, then Windows PowerShell (`cmd.exe` only when configured); elsewhere `$SHELL` if POSIX-compatible, otherwise `/bin/sh`. The tool description names the shell | Must |
-| TOOL-12 | Tool calls from one model response execute in order. Consecutive `task` calls form one fan-out group and run concurrently (SUB-5). Permission prompts from any agent go through one queue and are asked one at a time, labelled with the agent | Must |
+| TOOL-12 | Tool calls from one model response execute in order. Consecutive `task` calls form one fan-out group and run concurrently (SUB-5); so do consecutive read-only calls, at most 8 at once, never mixed with a task ([ADR-0074](adr/0074-parallel-read-only-calls.md)). Permission prompts from any agent go through one queue and are asked one at a time, labelled with the agent | Must |
 | TOOL-13 | Results from network-sourced tools (`fetch`, HTTP tools, MCP tools) are marked untrusted and set the session taint (PERM-11) | Must |
 | TOOL-14 | `todo` built-in: one call replaces the whole list of `{text, status}` items with status `pending`, `in_progress` or `done`; emits `TodoUpdated`; the list is pinned working state (CTX-18). Moved to v2 ([ADR-0053](adr/0053-what-1-0-actually-ships.md)) | Must |
 | TOOL-15 | Deferred tool schemas: when the schemas of all exposed tools exceed `tools.schema_budget` tokens (default 4,000), MCP and extension tools are listed by name and one line, and their schemas are loaded on demand through a `tool_search` meta-tool. Built-ins are never deferred | Must |

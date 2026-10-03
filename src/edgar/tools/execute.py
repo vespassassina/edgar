@@ -21,10 +21,12 @@ from edgar.core.message import ErrorKind, ErrorRecord, TextBlock, ToolResultBloc
 from edgar.extensions.hooks import veto as hooks_veto
 from edgar.permissions.guard import Guard
 from edgar.permissions.matcher import subject as resolve
-from edgar.permissions.policy import Deny, network_allowed
+from edgar.permissions.policy import Deny, category, network_allowed
 from edgar.tools.base import ToolContext, ToolResult, ToolSchema
 from edgar.tools.registry import ToolRegistry
 from edgar.tools.spill import spill
+
+READ_PARALLEL = 8  # reads in flight at once; a read is cheap, a task is a whole agent
 
 
 async def execute(
@@ -144,13 +146,15 @@ async def execute_many(
     tainted: bool,
     max_parallel: int,
 ) -> list[ToolResultBlock]:
-    # One call at a time, except a run of consecutive `task` calls, which fan
-    # out together bounded by max_parallel; results still come back in call
-    # order either way, so a caller's own bookkeeping never races [TOOL-12].
-    sem = asyncio.Semaphore(max(max_parallel, 1))
+    # One call at a time, except a run of consecutive `task` calls (bounded by
+    # max_parallel) or a run of consecutive reads (bounded by READ_PARALLEL),
+    # which go together; results still come back in call order either way, so
+    # a caller's own bookkeeping never races [TOOL-12, ADR-0074].
+    tasks = asyncio.Semaphore(max(max_parallel, 1))
+    reads = asyncio.Semaphore(READ_PARALLEL)
 
     async def bounded(call: ToolUseBlock) -> ToolResultBlock:
-        async with sem:
+        async with tasks if call.name == "task" else reads:
             return await execute(
                 call, registry=registry, ctx=ctx, guard=guard, mode=mode, tainted=tainted
             )
@@ -158,18 +162,30 @@ async def execute_many(
     results: list[ToolResultBlock] = []
     i = 0
     while i < len(calls):
-        group = _fan_out_group(calls, i)
+        group = _fan_out_group(calls, i, registry)
         results.extend(await asyncio.gather(*(bounded(c) for c in group)))
         i += len(group)
     return results
 
 
-def _fan_out_group(calls: Sequence[ToolUseBlock], i: int) -> Sequence[ToolUseBlock]:
-    """`calls[i]` alone, unless it starts a run of consecutive `task` calls."""
-    if calls[i].name != "task":
-        return calls[i : i + 1]
+def _kind(call: ToolUseBlock, registry: ToolRegistry) -> str | None:
+    # "task", "read", or None for a call that always runs on its own. `todo` says
+    # "read" but writes the session's list, so its order matters.
+    if call.name == "task":
+        return "task"
+    tool = registry.get(call.name)
+    if tool is None or call.name == "todo" or category(tool.schema) != "read":
+        return None
+    return "read"
+
+
+def _fan_out_group(
+    calls: Sequence[ToolUseBlock], i: int, registry: ToolRegistry
+) -> Sequence[ToolUseBlock]:
+    """`calls[i]` alone, unless it starts a run of calls of one kind that may overlap."""
+    kind = _kind(calls[i], registry)
     j = i + 1
-    while j < len(calls) and calls[j].name == "task":
+    while kind and j < len(calls) and _kind(calls[j], registry) == kind:
         j += 1
     return calls[i:j]
 

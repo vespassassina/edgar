@@ -9,6 +9,12 @@ extension formats freeze.
 ## Unreleased
 
 ### Added
+- A built-in `edgar` skill: every session can load a guide to edgar's own
+  commands, config, modes, tools and limits, so it stops guessing about itself.
+- `edgar init` and `/init` offer git tools (Enter: yes) and web search (Enter:
+  no, needs `BRAVE_SEARCH_API_KEY`), copied into `.edgar/tools/`.
+- Consecutive read-only tool calls (`read`, `ls`, `glob`, `grep`) run at the
+  same time, up to 8, and the prompt tells the model to batch them.
 - Esc cancels the running turn, like one Ctrl-C (and answers a permission
   question with no). Queued text returns to the input line.
 

@@ -28,3 +28,17 @@ ask = "most to spend in one day, in dollars [no cap]: "
 marker = "# daily_cost_cap = 20.0"
 key = "daily_cost_cap"
 kind = "money"
+
+# Tools `edgar init` offers to copy into .edgar/tools/, from templates/tools/.
+# `default` is what Enter does. A command or HTTP tool runs only after
+# `edgar trust`, and web search names its host and key in its own file.
+
+[[tool]]
+ask = "give the agent git: status, diff, log and commit? [Y/n]: "
+default = true
+files = ["git-status", "git-diff", "git-log", "git-commit"]
+
+[[tool]]
+ask = "give it web search (Brave, needs BRAVE_SEARCH_API_KEY)? [y/N]: "
+default = false
+files = ["web_search"]

@@ -148,3 +148,44 @@ def test_an_edited_user_config_is_never_rewritten(tmp_path: Path) -> None:
     said = remember("openai/gpt-5", path)
     assert path.read_text() == "[budget]\ndaily_cost_cap = 3.0\n"
     assert "left alone" in said and 'default = "openai/gpt-5"' in said
+
+
+def _tools_in(tmp: Path) -> list[str]:
+    folder = tmp / ".edgar" / "tools"
+    return sorted(p.stem for p in folder.glob("*.toml")) if folder.is_dir() else []
+
+
+def test_enter_gives_the_agent_git_and_not_web_search(tmp_path: Path) -> None:
+    _, said = run(tmp_path)
+    assert _tools_in(tmp_path) == ["git-commit", "git-diff", "git-log", "git-status"]
+    assert "edgar trust" in said
+
+
+def test_yes_to_web_search_and_no_to_git(tmp_path: Path) -> None:
+    # provider, four settings, then git, then search
+    run(tmp_path, "", "", "", "", "", "n", "y")
+    assert _tools_in(tmp_path) == ["web_search"]
+
+
+def test_an_existing_tool_file_is_never_overwritten_or_asked_about_again(tmp_path: Path) -> None:
+    folder = tmp_path / ".edgar" / "tools"
+    folder.mkdir(parents=True)
+    mine = 'name = "git-status"\n'
+    (folder / "git-status.toml").write_text(mine, encoding="utf-8")
+    run(tmp_path)
+    assert (folder / "git-status.toml").read_text(encoding="utf-8") == mine
+    assert (folder / "git-log.toml").exists()
+
+
+def test_nothing_is_written_when_nobody_can_answer(tmp_path: Path) -> None:
+    config = load(tmp_path, home=tmp_path / "home", env={})
+    asyncio.run(init.run(tmp_path, config, None, lambda _: None))
+    assert _tools_in(tmp_path) == []
+
+
+def test_the_shipped_tool_templates_match_the_examples() -> None:
+    root = Path(__file__).resolve().parents[2]
+    for f in (init.TEMPLATES / "tools").glob("*.toml"):
+        assert f.read_text(encoding="utf-8") == (root / "examples" / "tools" / f.name).read_text(
+            encoding="utf-8"
+        )

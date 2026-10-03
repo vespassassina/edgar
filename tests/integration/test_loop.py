@@ -6,7 +6,15 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from harness import Recorder, new_session, run_turn_sync, runtime, scripted, tool_use
+from harness import (
+    Recorder,
+    new_session,
+    run_turn_sync,
+    runtime,
+    scripted,
+    slow_registry,
+    tool_use,
+)
 from scripted import ScriptedProvider, ScriptedResponse
 
 from edgar.core.errors import ProviderError
@@ -229,3 +237,22 @@ def test_usage_adds_up_across_requests(tmp_project: Path) -> None:
     result = run_turn_sync(new_session(tmp_project), "list", runtime(provider))
     assert result.usage.output_tokens == 10
     assert result.usage.input_tokens > 0
+
+
+def test_reads_in_one_response_overlap_and_a_write_waits_for_them(
+    tmp_project: Path, recorder: Recorder
+) -> None:
+    calls = [
+        tool_use("slow", {"seconds": 0.1}, id="r1"),
+        tool_use("slow", {"seconds": 0.1}, id="r2"),
+        tool_use("write", {"path": "c.txt", "content": "c"}, id="w1"),
+    ]
+    provider = scripted(ScriptedResponse(tool_calls=calls), ScriptedResponse(text="done"))
+    session = new_session(tmp_project, mode="auto")
+    run_turn_sync(session, "look", runtime(provider, recorder, tools=slow_registry()))
+
+    names = [n for n in recorder.names if n in ("ToolStarted", "ToolFinished")]
+    # both reads were in flight before either finished; the write came after
+    assert names == ["ToolStarted"] * 2 + ["ToolFinished"] * 2 + ["ToolStarted", "ToolFinished"]
+    assert [r.tool_use_id for r in session.transcript[-2].tool_results] == ["r1", "r2", "w1"]
+    assert pairing_violations(session.transcript) == []
