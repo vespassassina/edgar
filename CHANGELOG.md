@@ -6,7 +6,7 @@ Versions follow the tiers in [`docs/ROADMAP.md`](docs/ROADMAP.md): 0.0.x while
 Core was being built, 0.1 the first release you can work in, 1.0 when v1's
 extension formats freeze.
 
-## Unreleased
+## 4.2.0 — 2026-10-03
 
 ### Added
 - A built-in `edgar` skill: every session can load a guide to edgar's own
